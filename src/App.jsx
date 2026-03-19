@@ -1014,6 +1014,8 @@ function WhatsAppView({ tenant, onRefresh }) {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
   const [syncing, setSyncing] = useState(false);
+  const [instanceToken, setInstanceToken] = useState('');
+  const [showTokenInput, setShowTokenInput] = useState(false);
 
   const instanceName = `tenant_${tenant.id}`;
 
@@ -1027,21 +1029,44 @@ function WhatsAppView({ tenant, onRefresh }) {
     try {
       const data = await api.getWhatsAppStatus(tenant.id);
       setStatus(data);
+      
+      if (data.needsToken) {
+        setShowTokenInput(true);
+      }
     } catch (err) {
       console.error('Erro ao verificar status:', err);
+    }
+  };
+
+  const handleSaveToken = async () => {
+    if (!instanceToken.trim()) {
+      alert('Por favor, insira o token da instância!');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const data = await api.connectWhatsApp(tenant.id, instanceToken);
+      alert(data.message || 'Token salvo com sucesso!');
+      setShowTokenInput(false);
+      setInstanceToken('');
+      checkStatus();
+    } catch (err) {
+      alert('Erro ao salvar token: ' + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleCheckConnection = async () => {
     setLoading(true);
     try {
-      const data = await api.connectWhatsApp(tenant.id);
+      await checkStatus();
       
-      if (data.connected) {
+      if (status?.connected) {
         alert('✅ WhatsApp conectado com sucesso!');
-        checkStatus();
       } else {
-        alert(data.message || 'WhatsApp não está conectado. Siga as instruções abaixo.');
+        alert('⚠️ WhatsApp não está conectado. Verifique se escaneou o QR Code no Evolution Manager.');
       }
     } catch (err) {
       alert('Erro: ' + err.message);
@@ -1122,6 +1147,13 @@ function WhatsAppView({ tenant, onRefresh }) {
                 >
                   Desconectar
                 </button>
+
+                <button
+                  onClick={() => setShowTokenInput(true)}
+                  className="w-full px-4 py-2 bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 rounded-lg transition-colors text-sm"
+                >
+                  Atualizar Token
+                </button>
               </div>
             </div>
           ) : (
@@ -1135,7 +1167,44 @@ function WhatsAppView({ tenant, onRefresh }) {
                 <p className="font-medium mb-2">⚠️ Instância não conectada</p>
                 <p>Siga as instruções ao lado para conectar o WhatsApp.</p>
               </div>
+
+              {showTokenInput && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-zinc-300">
+                      Token da Instância
+                    </label>
+                    <input
+                      type="text"
+                      value={instanceToken}
+                      onChange={(e) => setInstanceToken(e.target.value)}
+                      placeholder="Cole aqui o token da instância..."
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-sm font-mono"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Copie o token exibido no Evolution Manager
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleSaveToken}
+                    disabled={loading}
+                    className="w-full px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {loading ? 'Salvando...' : 'Salvar Token'}
+                  </button>
+                </div>
+              )}
               
+              {!showTokenInput && (
+                <button
+                  onClick={() => setShowTokenInput(true)}
+                  disabled={loading}
+                  className="w-full px-4 py-2 bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Configurar Token
+                </button>
+              )}
+
               <button
                 onClick={handleCheckConnection}
                 disabled={loading}
@@ -1152,7 +1221,7 @@ function WhatsAppView({ tenant, onRefresh }) {
           
           <div className="bg-zinc-800 rounded-lg p-4 mb-4">
             <div className="flex items-center justify-between">
-              <code className="text-amber-400 font-mono">{instanceName}</code>
+              <code className="text-amber-400 font-mono text-sm">{instanceName}</code>
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(instanceName);
@@ -1165,10 +1234,17 @@ function WhatsAppView({ tenant, onRefresh }) {
             </div>
           </div>
 
-          <div className="text-sm text-zinc-400">
-            <p className="mb-2">Use exatamente este nome ao criar a instância no Evolution Manager.</p>
+          <div className="text-sm text-zinc-400 space-y-2">
+            <p>Use exatamente este nome ao criar a instância no Evolution Manager.</p>
             <p className="text-xs text-zinc-500">
               Cada cliente tem um nome único baseado no ID do tenant.
+            </p>
+          </div>
+
+          <div className="mt-4 bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+            <p className="text-sm text-blue-400 font-medium mb-2">💡 Onde encontrar o token:</p>
+            <p className="text-xs text-zinc-400">
+              No Evolution Manager, após criar a instância, o token aparece na tela principal da instância (uma sequência como: 1F59A8FA1003-41DB-8C9A-2D9E6D2BBD1F)
             </p>
           </div>
         </div>
@@ -1192,9 +1268,17 @@ function WhatsAppView({ tenant, onRefresh }) {
           
           <li>
             <strong className="text-white">Crie uma nova instância</strong> com o nome:
-            <div className="ml-6 mt-1 bg-zinc-800 rounded px-3 py-2 font-mono text-amber-400">
+            <div className="ml-6 mt-1 bg-zinc-800 rounded px-3 py-2 font-mono text-amber-400 text-xs">
               {instanceName}
             </div>
+          </li>
+          
+          <li>
+            <strong className="text-white">Copie o token da instância</strong> que aparece na tela principal
+          </li>
+          
+          <li>
+            <strong className="text-white">Cole o token no campo acima</strong> e clique em "Salvar Token"
           </li>
           
           <li>
@@ -1206,16 +1290,11 @@ function WhatsAppView({ tenant, onRefresh }) {
           </li>
           
           <li>
-            <strong className="text-white">Escaneie o QR Code</strong> que aparecerá no Manager com seu WhatsApp
-            <ul className="ml-6 mt-1 space-y-1 text-zinc-500">
-              <li>• WhatsApp → Configurações → Aparelhos conectados</li>
-              <li>• Conectar aparelho</li>
-              <li>• Escaneie o código</li>
-            </ul>
+            <strong className="text-white">Escaneie o QR Code</strong> que aparecerá no Manager
           </li>
           
           <li>
-            <strong className="text-white">Configure o Webhook</strong> (opcional, mas recomendado):
+            <strong className="text-white">Configure o Webhook</strong> (recomendado):
             <div className="ml-6 mt-1 bg-zinc-800 rounded px-3 py-2 font-mono text-xs break-all">
               https://borsato-crm-api.vercel.app/api/whatsapp/webhook
             </div>
@@ -1229,7 +1308,6 @@ function WhatsAppView({ tenant, onRefresh }) {
     </div>
   );
 }
-
 // ============================================================================
 // CHAT VIEW (ATUALIZADO COM ENVIO REAL)
 // ============================================================================
