@@ -1007,14 +1007,15 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
 }
 
 // ============================================================================
-// WHATSAPP VIEW
+// WHATSAPP VIEW - ATUALIZADO
 // ============================================================================
 
 function WhatsAppView({ tenant, onRefresh }) {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
-  const [qrCode, setQrCode] = useState(null);
   const [syncing, setSyncing] = useState(false);
+
+  const instanceName = `tenant_${tenant.id}`;
 
   useEffect(() => {
     checkStatus();
@@ -1026,22 +1027,24 @@ function WhatsAppView({ tenant, onRefresh }) {
     try {
       const data = await api.getWhatsAppStatus(tenant.id);
       setStatus(data);
-      if (data.connected) {
-        setQrCode(null);
-      }
     } catch (err) {
       console.error('Erro ao verificar status:', err);
     }
   };
 
-  const handleConnect = async () => {
+  const handleCheckConnection = async () => {
     setLoading(true);
     try {
       const data = await api.connectWhatsApp(tenant.id);
-      setQrCode(data.qrCode);
-      alert('QR Code gerado! Escaneie com seu WhatsApp.');
+      
+      if (data.connected) {
+        alert('✅ WhatsApp conectado com sucesso!');
+        checkStatus();
+      } else {
+        alert(data.message || 'WhatsApp não está conectado. Siga as instruções abaixo.');
+      }
     } catch (err) {
-      alert('Erro ao conectar: ' + err.message);
+      alert('Erro: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -1054,8 +1057,8 @@ function WhatsAppView({ tenant, onRefresh }) {
     try {
       await api.disconnectWhatsApp(tenant.id);
       setStatus(null);
-      setQrCode(null);
       alert('WhatsApp desconectado!');
+      checkStatus();
     } catch (err) {
       alert('Erro ao desconectar: ' + err.message);
     } finally {
@@ -1080,7 +1083,7 @@ function WhatsAppView({ tenant, onRefresh }) {
     <div>
       <h2 className="text-2xl font-bold mb-6">Conexão WhatsApp</h2>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-6 mb-6">
         <div className="bg-zinc-900 rounded-xl p-6">
           <h3 className="text-lg font-medium mb-4">Status da Conexão</h3>
           
@@ -1128,59 +1131,99 @@ function WhatsAppView({ tenant, onRefresh }) {
                 <span className="text-zinc-400 font-medium">Desconectado</span>
               </div>
               
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 text-sm text-amber-400">
+                <p className="font-medium mb-2">⚠️ Instância não conectada</p>
+                <p>Siga as instruções ao lado para conectar o WhatsApp.</p>
+              </div>
+              
               <button
-                onClick={handleConnect}
+                onClick={handleCheckConnection}
                 disabled={loading}
                 className="w-full px-4 py-2 bg-green-500/20 text-green-400 hover:bg-green-500/30 rounded-lg transition-colors disabled:opacity-50"
               >
-                {loading ? 'Gerando QR Code...' : 'Conectar WhatsApp'}
+                {loading ? 'Verificando...' : 'Verificar Conexão'}
               </button>
             </div>
           )}
         </div>
 
         <div className="bg-zinc-900 rounded-xl p-6">
-          <h3 className="text-lg font-medium mb-4">QR Code</h3>
+          <h3 className="text-lg font-medium mb-4">Nome da Instância</h3>
           
-          {qrCode ? (
-            <div className="space-y-4">
-              <div className="bg-white p-4 rounded-lg">
-                <img 
-                  src={qrCode} 
-                  alt="QR Code WhatsApp"
-                  className="w-full h-auto"
-                />
-              </div>
-              <div className="text-sm text-zinc-400 text-center">
-                Escaneie o QR Code com seu WhatsApp
-              </div>
-              <div className="text-xs text-zinc-500 text-center">
-                WhatsApp → Configurações → Aparelhos conectados → Conectar aparelho
-              </div>
+          <div className="bg-zinc-800 rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <code className="text-amber-400 font-mono">{instanceName}</code>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(instanceName);
+                  alert('Nome copiado!');
+                }}
+                className="text-zinc-400 hover:text-white"
+              >
+                📋 Copiar
+              </button>
             </div>
-          ) : status?.connected ? (
-            <div className="flex items-center justify-center h-64 text-zinc-500">
-              WhatsApp conectado com sucesso! ✅
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-64 text-zinc-500">
-              Clique em "Conectar WhatsApp" para gerar o QR Code
-            </div>
-          )}
+          </div>
+
+          <div className="text-sm text-zinc-400">
+            <p className="mb-2">Use exatamente este nome ao criar a instância no Evolution Manager.</p>
+            <p className="text-xs text-zinc-500">
+              Cada cliente tem um nome único baseado no ID do tenant.
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="mt-6 bg-zinc-900 rounded-xl p-6">
-        <h3 className="text-lg font-medium mb-4">Como conectar:</h3>
-        <ol className="list-decimal list-inside space-y-2 text-sm text-zinc-400">
-          <li>Clique no botão "Conectar WhatsApp"</li>
-          <li>Aguarde o QR Code aparecer</li>
-          <li>Abra o WhatsApp no seu celular</li>
-          <li>Vá em Configurações → Aparelhos conectados</li>
-          <li>Toque em "Conectar aparelho"</li>
-          <li>Escaneie o QR Code que apareceu aqui</li>
-          <li>Aguarde a conexão ser estabelecida</li>
-          <li>Pronto! Agora você pode receber e enviar mensagens pelo CRM</li>
+      <div className="bg-zinc-900 rounded-xl p-6">
+        <h3 className="text-lg font-medium mb-4">📱 Como conectar:</h3>
+        <ol className="list-decimal list-inside space-y-3 text-sm text-zinc-400">
+          <li>
+            <strong className="text-white">Acesse o Evolution Manager:</strong>
+            <div className="ml-6 mt-1">
+              <a 
+                href="http://yowlingcentipede-evolution.cloudfy.live/manager" 
+                target="_blank"
+                className="text-amber-400 hover:underline"
+              >
+                yowlingcentipede-evolution.cloudfy.live/manager
+              </a>
+            </div>
+          </li>
+          
+          <li>
+            <strong className="text-white">Crie uma nova instância</strong> com o nome:
+            <div className="ml-6 mt-1 bg-zinc-800 rounded px-3 py-2 font-mono text-amber-400">
+              {instanceName}
+            </div>
+          </li>
+          
+          <li>
+            <strong className="text-white">Configure a instância:</strong>
+            <ul className="ml-6 mt-1 space-y-1 text-zinc-500">
+              <li>• Integração: WHATSAPP-BAILEYS</li>
+              <li>• QR Code: Ativado</li>
+            </ul>
+          </li>
+          
+          <li>
+            <strong className="text-white">Escaneie o QR Code</strong> que aparecerá no Manager com seu WhatsApp
+            <ul className="ml-6 mt-1 space-y-1 text-zinc-500">
+              <li>• WhatsApp → Configurações → Aparelhos conectados</li>
+              <li>• Conectar aparelho</li>
+              <li>• Escaneie o código</li>
+            </ul>
+          </li>
+          
+          <li>
+            <strong className="text-white">Configure o Webhook</strong> (opcional, mas recomendado):
+            <div className="ml-6 mt-1 bg-zinc-800 rounded px-3 py-2 font-mono text-xs break-all">
+              https://borsato-crm-api.vercel.app/api/whatsapp/webhook
+            </div>
+          </li>
+          
+          <li>
+            <strong className="text-white">Volte aqui e clique em "Verificar Conexão"</strong>
+          </li>
         </ol>
       </div>
     </div>
