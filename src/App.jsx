@@ -257,9 +257,14 @@ function LoginScreen({ onLogin, loading, error }) {
 // ============================================================================
 // PAINEL SUPER ADMIN
 // ============================================================================
-
 function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTenant, loading, error }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingTenant, setEditingTenant] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterPlan, setFilterPlan] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  
   const [newTenant, setNewTenant] = useState({
     name: '',
     plan: 'Pro',
@@ -283,7 +288,88 @@ function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTena
     });
   };
 
+  const handleEdit = (tenant) => {
+    setEditingTenant(tenant);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateTenant = async (updatedData) => {
+    try {
+      await api.updateTenant(editingTenant.id, updatedData);
+      setShowEditModal(false);
+      setEditingTenant(null);
+      window.location.reload(); // Recarrega para atualizar lista
+    } catch (err) {
+      alert('Erro ao atualizar cliente: ' + err.message);
+    }
+  };
+
+  const handleDelete = async (tenant) => {
+    const confirm = window.confirm(
+      `⚠️ ATENÇÃO!\n\nVocê tem certeza que deseja DELETAR o cliente "${tenant.name}"?\n\n` +
+      `Isso irá APAGAR PERMANENTEMENTE:\n` +
+      `• Todos os ${tenant.leadCount || 0} leads\n` +
+      `• Todos os ${tenant.groupCount || 0} grupos\n` +
+      `• Todos os ${tenant.userCount || 0} usuários\n` +
+      `• Toda a base de conhecimento\n` +
+      `• Todo o histórico de conversas\n\n` +
+      `Esta ação NÃO PODE SER DESFEITA!\n\n` +
+      `Digite SIM para confirmar:`
+    );
+
+    if (!confirm) return;
+
+    const confirmText = window.prompt('Digite "SIM" (em maiúsculas) para confirmar:');
+    if (confirmText !== 'SIM') {
+      alert('Operação cancelada');
+      return;
+    }
+
+    try {
+      await api.deleteTenant(tenant.id);
+      window.location.reload();
+    } catch (err) {
+      alert('Erro ao deletar cliente: ' + err.message);
+    }
+  };
+
+  const handleToggleActive = async (tenant) => {
+    const newStatus = !tenant.active;
+    const action = newStatus ? 'reativar' : 'suspender';
+    
+    if (!window.confirm(`Tem certeza que deseja ${action} o cliente "${tenant.name}"?`)) {
+      return;
+    }
+
+    try {
+      await api.updateTenant(tenant.id, {
+        name: tenant.name,
+        plan: tenant.plan,
+        monthlyValue: tenant.monthly_value,
+        aiPrompt: tenant.ai_prompt,
+        customFields: JSON.parse(tenant.custom_fields || '[]'),
+        active: newStatus
+      });
+      window.location.reload();
+    } catch (err) {
+      alert('Erro ao atualizar status: ' + err.message);
+    }
+  };
+
+  // Filtros
+  const filteredTenants = tenants.filter(t => {
+    const matchSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchPlan = filterPlan === 'all' || t.plan === filterPlan;
+    const matchStatus = filterStatus === 'all' || 
+      (filterStatus === 'active' && t.active !== false) ||
+      (filterStatus === 'suspended' && t.active === false);
+    
+    return matchSearch && matchPlan && matchStatus;
+  });
+
   const totalRevenue = tenants.reduce((sum, t) => sum + (parseFloat(t.monthly_value || t.monthlyValue) || 0), 0);
+  const activeClients = tenants.filter(t => t.active !== false).length;
+  const suspendedClients = tenants.filter(t => t.active === false).length;
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -315,13 +401,17 @@ function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTena
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-6 mb-8">
+        {/* Métricas */}
+        <div className="grid grid-cols-4 gap-6 mb-8">
           <div className="bg-zinc-900 rounded-xl p-6">
             <div className="flex items-center gap-3 mb-2">
               <Building2 className="w-5 h-5 text-amber-500" />
               <span className="text-sm text-zinc-400">Total de Clientes</span>
             </div>
             <p className="text-3xl font-bold">{tenants.length}</p>
+            <p className="text-xs text-zinc-500 mt-1">
+              {activeClients} ativos, {suspendedClients} suspensos
+            </p>
           </div>
 
           <div className="bg-zinc-900 rounded-xl p-6">
@@ -341,8 +431,19 @@ function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTena
               R$ {tenants.length > 0 ? (totalRevenue / tenants.length).toFixed(2) : '0.00'}
             </p>
           </div>
+
+          <div className="bg-zinc-900 rounded-xl p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <Users className="w-5 h-5 text-purple-500" />
+              <span className="text-sm text-zinc-400">Total de Usuários</span>
+            </div>
+            <p className="text-3xl font-bold">
+              {tenants.reduce((sum, t) => sum + (t.userCount || 0), 0)}
+            </p>
+          </div>
         </div>
 
+        {/* Lista de Clientes */}
         <div className="bg-zinc-900 rounded-xl p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold">Gerenciar Clientes</h2>
@@ -355,29 +456,120 @@ function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTena
             </button>
           </div>
 
+          {/* Filtros */}
+          <div className="flex gap-4 mb-6">
+            <div className="flex-1 relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar cliente..."
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg pl-10 pr-4 py-2"
+              />
+            </div>
+            <select
+              value={filterPlan}
+              onChange={(e) => setFilterPlan(e.target.value)}
+              className="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2"
+            >
+              <option value="all">Todos os Planos</option>
+              <option value="Basic">Basic</option>
+              <option value="Pro">Pro</option>
+              <option value="Enterprise">Enterprise</option>
+            </select>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2"
+            >
+              <option value="all">Todos os Status</option>
+              <option value="active">Ativos</option>
+              <option value="suspended">Suspensos</option>
+            </select>
+          </div>
+
           {loading ? (
             <div className="text-center py-8 text-zinc-400">Carregando...</div>
-          ) : tenants.length === 0 ? (
-            <div className="text-center py-8 text-zinc-400">Nenhum cliente ainda</div>
+          ) : filteredTenants.length === 0 ? (
+            <div className="text-center py-8 text-zinc-400">Nenhum cliente encontrado</div>
           ) : (
             <div className="space-y-3">
-              {tenants.map(tenant => (
-                <div key={tenant.id} className="bg-zinc-800 rounded-lg p-4 flex items-center justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-medium mb-1">{tenant.name}</h3>
-                    <div className="flex items-center gap-4 text-sm text-zinc-400">
-                      <span>{tenant.plan}</span>
-                      <span>R$ {parseFloat(tenant.monthly_value || tenant.monthlyValue || 0).toFixed(2)}/mês</span>
-                      <span>{tenant.active !== false ? '✅ Ativo' : '❌ Inativo'}</span>
+              {filteredTenants.map(tenant => (
+                <div key={tenant.id} className={`rounded-lg p-4 ${
+                  tenant.active === false ? 'bg-zinc-800/50 opacity-60' : 'bg-zinc-800'
+                }`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="font-medium text-lg">{tenant.name}</h3>
+                        {tenant.active === false && (
+                          <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs font-medium rounded">
+                            SUSPENSO
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-4 gap-4 text-sm mb-3">
+                        <div>
+                          <span className="text-zinc-500">Plano:</span>
+                          <span className="ml-2 font-medium">{tenant.plan}</span>
+                        </div>
+                        <div>
+                          <span className="text-zinc-500">Valor:</span>
+                          <span className="ml-2 font-medium text-green-400">
+                            R$ {parseFloat(tenant.monthly_value || tenant.monthlyValue || 0).toFixed(2)}/mês
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-zinc-500">Leads:</span>
+                          <span className="ml-2 font-medium">{tenant.leadCount || 0}</span>
+                        </div>
+                        <div>
+                          <span className="text-zinc-500">Usuários:</span>
+                          <span className="ml-2 font-medium">{tenant.userCount || 0}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleToggleActive(tenant)}
+                        className={`px-3 py-2 rounded-lg transition-colors ${
+                          tenant.active === false
+                            ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                            : 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30'
+                        }`}
+                        title={tenant.active === false ? 'Reativar' : 'Suspender'}
+                      >
+                        {tenant.active === false ? 'Reativar' : 'Suspender'}
+                      </button>
+                      
+                      <button
+                        onClick={() => handleEdit(tenant)}
+                        className="px-3 py-2 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-lg transition-colors"
+                        title="Editar"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => onAccessTenant(tenant.id)}
+                        className="px-3 py-2 bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 rounded-lg transition-colors"
+                        title="Acessar Painel"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => handleDelete(tenant)}
+                        className="px-3 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg transition-colors"
+                        title="Deletar"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                  <button
-                    onClick={() => onAccessTenant(tenant.id)}
-                    className="flex items-center gap-2 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors"
-                  >
-                    <Eye className="w-4 h-4" />
-                    Acessar
-                  </button>
                 </div>
               ))}
             </div>
@@ -385,6 +577,7 @@ function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTena
         </div>
       </div>
 
+      {/* Modal Criar Cliente */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
           <div className="bg-zinc-900 rounded-xl p-6 w-full max-w-md">
@@ -480,10 +673,144 @@ function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTena
           </div>
         </div>
       )}
+
+      {/* Modal Editar Cliente */}
+      {showEditModal && editingTenant && (
+        <EditTenantModal
+          tenant={editingTenant}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingTenant(null);
+          }}
+          onSave={handleUpdateTenant}
+        />
+      )}
     </div>
   );
 }
 
+// Modal de Edição
+function EditTenantModal({ tenant, onClose, onSave }) {
+  const [formData, setFormData] = useState({
+    name: tenant.name,
+    plan: tenant.plan,
+    monthlyValue: parseFloat(tenant.monthly_value || tenant.monthlyValue),
+    aiPrompt: tenant.ai_prompt || '',
+    active: tenant.active !== false
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave({
+      name: formData.name,
+      plan: formData.plan,
+      monthlyValue: formData.monthlyValue,
+      aiPrompt: formData.aiPrompt,
+      customFields: JSON.parse(tenant.custom_fields || '[]'),
+      active: formData.active
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+      <div className="bg-zinc-900 rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-bold mb-6">Editar Cliente: {tenant.name}</h2>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Nome do Cliente</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Plano</label>
+              <select
+                value={formData.plan}
+                onChange={(e) => setFormData({ ...formData, plan: e.target.value })}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2"
+              >
+                <option value="Basic">Basic</option>
+                <option value="Pro">Pro</option>
+                <option value="Enterprise">Enterprise</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Valor Mensal (R$)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.monthlyValue}
+                onChange={(e) => setFormData({ ...formData, monthlyValue: parseFloat(e.target.value) })}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Prompt da IA</label>
+            <textarea
+              value={formData.aiPrompt}
+              onChange={(e) => setFormData({ ...formData, aiPrompt: e.target.value })}
+              rows={4}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2"
+              placeholder="Ex: Você é assistente virtual da Clínica..."
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={formData.active}
+              onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+              className="w-4 h-4"
+            />
+            <label className="text-sm">Cliente Ativo</label>
+          </div>
+
+          <div className="bg-zinc-800 rounded-lg p-4 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-zinc-400">Leads:</span>
+              <span className="font-medium">{tenant.leadCount || 0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-400">Grupos:</span>
+              <span className="font-medium">{tenant.groupCount || 0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-400">Usuários:</span>
+              <span className="font-medium">{tenant.userCount || 0}</span>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg transition-colors"
+            >
+              Salvar Alterações
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 // ============================================================================
 // DASHBOARD DO CLIENTE
 // ============================================================================
