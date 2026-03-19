@@ -176,22 +176,12 @@ class ApiService {
   }
 
   // WhatsApp
-connectWhatsApp: async (tenantId, instanceToken) => {
-  const response = await fetch(`${API_URL}/api/whatsapp/connect`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
-    },
-    body: JSON.stringify({ tenantId, instanceToken })
-  });
-  
-  if (!response.ok) {
-    throw new Error('Erro ao conectar WhatsApp');
+  async connectWhatsApp(tenantId, instanceToken) {
+    return await this.request('/api/whatsapp/connect', {
+      method: 'POST',
+      body: JSON.stringify({ tenantId, instanceToken })
+    });
   }
-  
-  return await response.json();
-},
 
   async getWhatsAppStatus(tenantId) {
     return await this.request(`/api/whatsapp/status?tenantId=${tenantId}`);
@@ -216,7 +206,7 @@ connectWhatsApp: async (tenantId, instanceToken) => {
       method: 'POST'
     });
   }
-  
+
   // Health check
   async healthCheck() {
     return await this.request('/api/health');
