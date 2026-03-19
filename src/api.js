@@ -173,6 +173,39 @@ async updateTenant(id, data) {
       method: 'DELETE'
     });
   }
+
+  // WhatsApp
+  async connectWhatsApp(tenantId) {
+    return await this.request('/api/whatsapp/connect', {
+      method: 'POST',
+      body: JSON.stringify({ tenantId })
+    });
+  }
+
+  async getWhatsAppStatus(tenantId) {
+    return await this.request(`/api/whatsapp/status?tenantId=${tenantId}`);
+  }
+
+  async disconnectWhatsApp(tenantId) {
+    return await this.request('/api/whatsapp/disconnect', {
+      method: 'POST',
+      body: JSON.stringify({ tenantId })
+    });
+  }
+
+  async sendWhatsAppMessage(leadId, message) {
+    return await this.request('/api/whatsapp/send', {
+      method: 'POST',
+      body: JSON.stringify({ leadId, message })
+    });
+  }
+
+  async syncWhatsAppGroups() {
+    return await this.request('/api/whatsapp/sync-groups', {
+      method: 'POST'
+    });
+  }
+  
   // Health check
   async healthCheck() {
     return await this.request('/api/health');
