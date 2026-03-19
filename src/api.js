@@ -81,6 +81,12 @@ class ApiService {
     });
   }
 
+  async deleteTenant(id) {
+    return await this.request(`/api/tenants/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
   // Leads
   async createLead(leadData) {
     return await this.request('/api/leads', {
@@ -143,7 +149,8 @@ class ApiService {
       method: 'DELETE'
     });
   }
-// Usuários
+
+  // Usuários
   async getUsers() {
     return await this.request('/api/users');
   }
@@ -155,16 +162,10 @@ class ApiService {
     });
   }
 
-async updateTenant(id, data) {
-    return await this.request(`/api/tenants/${id}`, {
+  async updateUser(id, data) {
+    return await this.request(`/api/users/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data)
-    });
-  }
-
-  async deleteTenant(id) {
-    return await this.request(`/api/tenants/${id}`, {
-      method: 'DELETE'
     });
   }
 
