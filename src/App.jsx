@@ -8,7 +8,7 @@ import {
   FileText, FolderOpen, AlertCircle, CheckCircle2, XCircle, Calendar,
   Bell, Repeat, Sparkles, Brain, Database, Save, Edit2, ChevronRight,
   Building2, Shield, Key, LogOut, Eye, Trash, UserPlus, Copy, ExternalLink,
-  GripVertical, ArrowLeft
+  GripVertical, ArrowLeft, Smartphone
 } from 'lucide-react';
 
 // ============================================================================
@@ -298,7 +298,7 @@ function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTena
       await api.updateTenant(editingTenant.id, updatedData);
       setShowEditModal(false);
       setEditingTenant(null);
-      window.location.reload(); // Recarrega para atualizar lista
+      window.location.reload();
     } catch (err) {
       alert('Erro ao atualizar cliente: ' + err.message);
     }
@@ -356,7 +356,6 @@ function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTena
     }
   };
 
-  // Filtros
   const filteredTenants = tenants.filter(t => {
     const matchSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchPlan = filterPlan === 'all' || t.plan === filterPlan;
@@ -401,7 +400,6 @@ function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTena
           </div>
         )}
 
-        {/* Métricas */}
         <div className="grid grid-cols-4 gap-6 mb-8">
           <div className="bg-zinc-900 rounded-xl p-6">
             <div className="flex items-center gap-3 mb-2">
@@ -443,7 +441,6 @@ function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTena
           </div>
         </div>
 
-        {/* Lista de Clientes */}
         <div className="bg-zinc-900 rounded-xl p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold">Gerenciar Clientes</h2>
@@ -456,7 +453,6 @@ function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTena
             </button>
           </div>
 
-          {/* Filtros */}
           <div className="flex gap-4 mb-6">
             <div className="flex-1 relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
@@ -577,7 +573,6 @@ function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTena
         </div>
       </div>
 
-      {/* Modal Criar Cliente */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
           <div className="bg-zinc-900 rounded-xl p-6 w-full max-w-md">
@@ -674,7 +669,6 @@ function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTena
         </div>
       )}
 
-      {/* Modal Editar Cliente */}
       {showEditModal && editingTenant && (
         <EditTenantModal
           tenant={editingTenant}
@@ -689,7 +683,6 @@ function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTena
   );
 }
 
-// Modal de Edição
 function EditTenantModal({ tenant, onClose, onSave }) {
   const [formData, setFormData] = useState({
     name: tenant.name,
@@ -811,6 +804,7 @@ function EditTenantModal({ tenant, onClose, onSave }) {
     </div>
   );
 }
+
 // ============================================================================
 // DASHBOARD DO CLIENTE
 // ============================================================================
@@ -865,11 +859,12 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
 
       <div className="border-b border-zinc-800 bg-zinc-900/30">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex gap-1">
+          <div className="flex gap-1 overflow-x-auto">
             {[
               { id: 'kanban', label: 'Kanban', icon: LayoutGrid },
               { id: 'leads', label: 'Leads', icon: Users },
               { id: 'groups', label: 'Grupos', icon: MessageSquare },
+              { id: 'whatsapp', label: 'WhatsApp', icon: Smartphone },
               { id: 'chat', label: 'Chat', icon: Send },
               { id: 'analytics', label: 'Analytics', icon: BarChart3 },
               { id: 'knowledge', label: 'Base de Conhecimento', icon: Brain },
@@ -879,7 +874,7 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
+                className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'text-amber-500 border-b-2 border-amber-500'
                     : 'text-zinc-400 hover:text-white'
@@ -924,6 +919,13 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
             tenant={tenant}
             onRefresh={onRefresh}
             onAdd={() => setShowGroupModal(true)}
+          />
+        )}
+
+        {activeTab === 'whatsapp' && (
+          <WhatsAppView 
+            tenant={tenant}
+            onRefresh={onRefresh}
           />
         )}
 
@@ -1005,7 +1007,283 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
 }
 
 // ============================================================================
-// KANBAN VIEW
+// WHATSAPP VIEW
+// ============================================================================
+
+function WhatsAppView({ tenant, onRefresh }) {
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState(null);
+  const [qrCode, setQrCode] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    checkStatus();
+    const interval = setInterval(checkStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const checkStatus = async () => {
+    try {
+      const data = await api.getWhatsAppStatus(tenant.id);
+      setStatus(data);
+      if (data.connected) {
+        setQrCode(null);
+      }
+    } catch (err) {
+      console.error('Erro ao verificar status:', err);
+    }
+  };
+
+  const handleConnect = async () => {
+    setLoading(true);
+    try {
+      const data = await api.connectWhatsApp(tenant.id);
+      setQrCode(data.qrCode);
+      alert('QR Code gerado! Escaneie com seu WhatsApp.');
+    } catch (err) {
+      alert('Erro ao conectar: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!confirm('Desconectar WhatsApp?')) return;
+    
+    setLoading(true);
+    try {
+      await api.disconnectWhatsApp(tenant.id);
+      setStatus(null);
+      setQrCode(null);
+      alert('WhatsApp desconectado!');
+    } catch (err) {
+      alert('Erro ao desconectar: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSyncGroups = async () => {
+    setSyncing(true);
+    try {
+      const data = await api.syncWhatsAppGroups();
+      alert(`${data.imported} grupos importados com sucesso!`);
+      onRefresh();
+    } catch (err) {
+      alert('Erro ao sincronizar grupos: ' + err.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-6">Conexão WhatsApp</h2>
+
+      <div className="grid grid-cols-2 gap-6">
+        <div className="bg-zinc-900 rounded-xl p-6">
+          <h3 className="text-lg font-medium mb-4">Status da Conexão</h3>
+          
+          {status?.connected ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-green-400 font-medium">Conectado</span>
+              </div>
+              
+              {status.instance?.phone_number && (
+                <div className="text-sm text-zinc-400">
+                  Número: {status.instance.phone_number}
+                </div>
+              )}
+              
+              {status.instance?.connected_at && (
+                <div className="text-sm text-zinc-400">
+                  Conectado desde: {new Date(status.instance.connected_at).toLocaleString('pt-BR')}
+                </div>
+              )}
+
+              <div className="pt-4 space-y-3">
+                <button
+                  onClick={handleSyncGroups}
+                  disabled={syncing}
+                  className="w-full px-4 py-2 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {syncing ? 'Sincronizando...' : 'Sincronizar Grupos'}
+                </button>
+                
+                <button
+                  onClick={handleDisconnect}
+                  disabled={loading}
+                  className="w-full px-4 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Desconectar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 bg-zinc-600 rounded-full"></div>
+                <span className="text-zinc-400 font-medium">Desconectado</span>
+              </div>
+              
+              <button
+                onClick={handleConnect}
+                disabled={loading}
+                className="w-full px-4 py-2 bg-green-500/20 text-green-400 hover:bg-green-500/30 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {loading ? 'Gerando QR Code...' : 'Conectar WhatsApp'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-zinc-900 rounded-xl p-6">
+          <h3 className="text-lg font-medium mb-4">QR Code</h3>
+          
+          {qrCode ? (
+            <div className="space-y-4">
+              <div className="bg-white p-4 rounded-lg">
+                <img 
+                  src={qrCode} 
+                  alt="QR Code WhatsApp"
+                  className="w-full h-auto"
+                />
+              </div>
+              <div className="text-sm text-zinc-400 text-center">
+                Escaneie o QR Code com seu WhatsApp
+              </div>
+              <div className="text-xs text-zinc-500 text-center">
+                WhatsApp → Configurações → Aparelhos conectados → Conectar aparelho
+              </div>
+            </div>
+          ) : status?.connected ? (
+            <div className="flex items-center justify-center h-64 text-zinc-500">
+              WhatsApp conectado com sucesso! ✅
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-64 text-zinc-500">
+              Clique em "Conectar WhatsApp" para gerar o QR Code
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-6 bg-zinc-900 rounded-xl p-6">
+        <h3 className="text-lg font-medium mb-4">Como conectar:</h3>
+        <ol className="list-decimal list-inside space-y-2 text-sm text-zinc-400">
+          <li>Clique no botão "Conectar WhatsApp"</li>
+          <li>Aguarde o QR Code aparecer</li>
+          <li>Abra o WhatsApp no seu celular</li>
+          <li>Vá em Configurações → Aparelhos conectados</li>
+          <li>Toque em "Conectar aparelho"</li>
+          <li>Escaneie o QR Code que apareceu aqui</li>
+          <li>Aguarde a conexão ser estabelecida</li>
+          <li>Pronto! Agora você pode receber e enviar mensagens pelo CRM</li>
+        </ol>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// CHAT VIEW (ATUALIZADO COM ENVIO REAL)
+// ============================================================================
+
+function ChatView({ leads, groups, selectedLead }) {
+  const [currentChat, setCurrentChat] = useState(selectedLead || leads[0] || null);
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const allChats = [...leads, ...groups];
+
+  const handleSend = async () => {
+    if (!message.trim() || !currentChat) return;
+    
+    setSending(true);
+    try {
+      await api.sendWhatsAppMessage(currentChat.id, message);
+      setMessage('');
+      alert('Mensagem enviada com sucesso!');
+    } catch (err) {
+      alert('Erro ao enviar mensagem: ' + err.message);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="flex gap-4 h-[calc(100vh-300px)]">
+      <div className="w-80 bg-zinc-900 rounded-xl overflow-hidden">
+        <div className="p-4 border-b border-zinc-800">
+          <h3 className="font-medium">Conversas</h3>
+        </div>
+        <div className="overflow-y-auto h-full">
+          {allChats.map(chat => (
+            <div
+              key={chat.id}
+              onClick={() => setCurrentChat(chat)}
+              className={`p-4 border-b border-zinc-800 cursor-pointer hover:bg-zinc-800 transition-colors ${
+                currentChat?.id === chat.id ? 'bg-zinc-800' : ''
+              }`}
+            >
+              <h4 className="font-medium text-sm mb-1">{chat.name}</h4>
+              <p className="text-xs text-zinc-400 truncate">
+                {chat.last_message || 'Sem mensagens'}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex-1 bg-zinc-900 rounded-xl flex flex-col">
+        {currentChat ? (
+          <>
+            <div className="p-4 border-b border-zinc-800">
+              <h3 className="font-medium">{currentChat.name}</h3>
+              <p className="text-sm text-zinc-400">{currentChat.phone}</p>
+            </div>
+
+            <div className="flex-1 p-4 overflow-y-auto">
+              <div className="text-center text-zinc-500 text-sm py-8">
+                Histórico de mensagens será exibido aqui após receber mensagens via WhatsApp
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-zinc-800">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && !sending && handleSend()}
+                  placeholder="Digite sua mensagem..."
+                  className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2"
+                  disabled={sending}
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={sending || !message.trim()}
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {sending ? '...' : <Send className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center justify-center h-full text-zinc-500">
+            Selecione uma conversa
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// RESTO DOS COMPONENTES (KANBAN, LEADS, GROUPS, ETC)
 // ============================================================================
 
 function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
@@ -1085,10 +1363,6 @@ function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
     </div>
   );
 }
-
-// ============================================================================
-// LEADS VIEW
-// ============================================================================
 
 function LeadsView({ leads, tenant, onRefresh, onAdd }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -1180,10 +1454,6 @@ function LeadsView({ leads, tenant, onRefresh, onAdd }) {
   );
 }
 
-// ============================================================================
-// GROUPS VIEW
-// ============================================================================
-
 function GroupsView({ groups, tenant, onRefresh, onAdd }) {
   const handleDelete = async (groupId) => {
     if (!confirm('Deletar este grupo?')) return;
@@ -1251,92 +1521,6 @@ function GroupsView({ groups, tenant, onRefresh, onAdd }) {
     </div>
   );
 }
-
-// ============================================================================
-// CHAT VIEW
-// ============================================================================
-
-function ChatView({ leads, groups, selectedLead }) {
-  const [currentChat, setCurrentChat] = useState(selectedLead || leads[0] || null);
-  const [message, setMessage] = useState('');
-
-  const allChats = [...leads, ...groups];
-
-  const handleSend = () => {
-    if (!message.trim()) return;
-    setMessage('');
-  };
-
-  return (
-    <div className="flex gap-4 h-[calc(100vh-300px)]">
-      <div className="w-80 bg-zinc-900 rounded-xl overflow-hidden">
-        <div className="p-4 border-b border-zinc-800">
-          <h3 className="font-medium">Conversas</h3>
-        </div>
-        <div className="overflow-y-auto h-full">
-          {allChats.map(chat => (
-            <div
-              key={chat.id}
-              onClick={() => setCurrentChat(chat)}
-              className={`p-4 border-b border-zinc-800 cursor-pointer hover:bg-zinc-800 transition-colors ${
-                currentChat?.id === chat.id ? 'bg-zinc-800' : ''
-              }`}
-            >
-              <h4 className="font-medium text-sm mb-1">{chat.name}</h4>
-              <p className="text-xs text-zinc-400 truncate">
-                {chat.last_message || 'Sem mensagens'}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex-1 bg-zinc-900 rounded-xl flex flex-col">
-        {currentChat ? (
-          <>
-            <div className="p-4 border-b border-zinc-800">
-              <h3 className="font-medium">{currentChat.name}</h3>
-              <p className="text-sm text-zinc-400">{currentChat.phone}</p>
-            </div>
-
-            <div className="flex-1 p-4 overflow-y-auto">
-              <div className="text-center text-zinc-500 text-sm py-8">
-                Chat em desenvolvimento. Funcionalidade completa após integração com Evolution API.
-              </div>
-            </div>
-
-            <div className="p-4 border-t border-zinc-800">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                  placeholder="Digite sua mensagem..."
-                  className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2"
-                />
-                <button
-                  onClick={handleSend}
-                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black rounded-lg transition-colors"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex items-center justify-center h-full text-zinc-500">
-            Selecione uma conversa
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// ANALYTICS VIEW
-// ============================================================================
 
 function AnalyticsView({ leads, groups }) {
   const totalLeads = leads.length;
@@ -1423,10 +1607,6 @@ function AnalyticsView({ leads, groups }) {
   );
 }
 
-// ============================================================================
-// KNOWLEDGE VIEW
-// ============================================================================
-
 function KnowledgeView({ knowledge, tenant, onRefresh, onAdd }) {
   const categories = ['Produtos/Serviços', 'Preços', 'Agendamento', 'FAQ'];
 
@@ -1493,10 +1673,6 @@ function KnowledgeView({ knowledge, tenant, onRefresh, onAdd }) {
     </div>
   );
 }
-
-// ============================================================================
-// TEAM VIEW
-// ============================================================================
 
 function TeamView({ users, tenant, currentUser, onRefresh }) {
   const [showUserModal, setShowUserModal] = useState(false);
@@ -1601,10 +1777,6 @@ function TeamView({ users, tenant, currentUser, onRefresh }) {
   );
 }
 
-// ============================================================================
-// SETTINGS VIEW
-// ============================================================================
-
 function SettingsView({ tenant, onRefresh }) {
   const [aiPrompt, setAiPrompt] = useState(tenant.ai_prompt || '');
   const [saving, setSaving] = useState(false);
@@ -1613,6 +1785,9 @@ function SettingsView({ tenant, onRefresh }) {
     setSaving(true);
     try {
       await api.updateTenant(tenant.id, {
+        name: tenant.name,
+        plan: tenant.plan,
+        monthlyValue: tenant.monthly_value,
         aiPrompt,
         customFields: JSON.parse(tenant.custom_fields || '[]')
       });
