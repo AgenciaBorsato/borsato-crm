@@ -143,7 +143,30 @@ class ApiService {
       method: 'DELETE'
     });
   }
+// Usuários
+  async getUsers() {
+    return await this.request('/api/users');
+  }
 
+  async createUser(userData) {
+    return await this.request('/api/users', {
+      method: 'POST',
+      body: JSON.stringify(userData)
+    });
+  }
+
+  async updateUser(id, data) {
+    return await this.request(`/api/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteUser(id) {
+    return await this.request(`/api/users/${id}`, {
+      method: 'DELETE'
+    });
+  }
   // Health check
   async healthCheck() {
     return await this.request('/api/health');
