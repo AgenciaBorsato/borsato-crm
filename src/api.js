@@ -155,10 +155,16 @@ class ApiService {
     });
   }
 
-  async updateUser(id, data) {
-    return await this.request(`/api/users/${id}`, {
+async updateTenant(id, data) {
+    return await this.request(`/api/tenants/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data)
+    });
+  }
+
+  async deleteTenant(id) {
+    return await this.request(`/api/tenants/${id}`, {
+      method: 'DELETE'
     });
   }
 
