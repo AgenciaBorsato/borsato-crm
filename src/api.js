@@ -40,6 +40,7 @@ class ApiService {
     }
   }
 
+  // Autenticação
   async login(email, password) {
     const data = await this.request('/api/auth/login', {
       method: 'POST',
@@ -57,6 +58,7 @@ class ApiService {
     this.clearToken();
   }
 
+  // Tenants
   async getTenants() {
     return await this.request('/api/tenants');
   }
@@ -79,6 +81,70 @@ class ApiService {
     });
   }
 
+  // Leads
+  async createLead(leadData) {
+    return await this.request('/api/leads', {
+      method: 'POST',
+      body: JSON.stringify(leadData)
+    });
+  }
+
+  async updateLead(id, data) {
+    return await this.request(`/api/leads/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteLead(id) {
+    return await this.request(`/api/leads/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Grupos
+  async createGroup(groupData) {
+    return await this.request('/api/groups', {
+      method: 'POST',
+      body: JSON.stringify(groupData)
+    });
+  }
+
+  async updateGroup(id, data) {
+    return await this.request(`/api/groups/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteGroup(id) {
+    return await this.request(`/api/groups/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Base de Conhecimento
+  async createKnowledge(knowledgeData) {
+    return await this.request('/api/knowledge', {
+      method: 'POST',
+      body: JSON.stringify(knowledgeData)
+    });
+  }
+
+  async updateKnowledge(id, data) {
+    return await this.request(`/api/knowledge/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteKnowledge(id) {
+    return await this.request(`/api/knowledge/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Health check
   async healthCheck() {
     return await this.request('/api/health');
   }
