@@ -289,7 +289,7 @@ function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTena
     });
   };
 
-  const totalRevenue = tenants.reduce((sum, t) => sum + (t.monthly_value || t.monthlyValue || 0), 0);
+  const totalRevenue = tenants.reduce((sum, t) => sum + (parseFloat(t.monthly_value || t.monthlyValue) || 0), 0);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -376,7 +376,7 @@ function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTena
                     <h3 className="font-medium mb-1">{tenant.name}</h3>
                     <div className="flex items-center gap-4 text-sm text-zinc-400">
                       <span>{tenant.plan}</span>
-                      <span>R$ {(tenant.monthly_value || tenant.monthlyValue).toFixed(2)}/mês</span>
+                      <span>R$ {parseFloat(tenant.monthly_value || tenant.monthlyValue || 0).toFixed(2)}/mês</span>
                       <span>{tenant.active !== false ? '✅ Ativo' : '❌ Inativo'}</span>
                     </div>
                   </div>
