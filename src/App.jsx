@@ -23,7 +23,6 @@ export default function BorsatoCRM() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Verificar se já tem token salvo ao carregar
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('userData');
@@ -486,7 +485,7 @@ function SuperAdminPanel({ user, tenants, onLogout, onCreateTenant, onAccessTena
 }
 
 // ============================================================================
-// DASHBOARD DO CLIENTE (VERSÃO COMPLETA)
+// DASHBOARD DO CLIENTE
 // ============================================================================
 
 function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh, loading, error }) {
@@ -499,10 +498,10 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
   const leads = tenant.leads || [];
   const groups = tenant.groups || [];
   const knowledge = tenant.knowledgeBase || [];
+  const users = tenant.users || [];
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Header */}
       <div className="border-b border-zinc-800 bg-zinc-900/50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -537,7 +536,6 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="border-b border-zinc-800 bg-zinc-900/30">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex gap-1">
@@ -548,6 +546,7 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
               { id: 'chat', label: 'Chat', icon: Send },
               { id: 'analytics', label: 'Analytics', icon: BarChart3 },
               { id: 'knowledge', label: 'Base de Conhecimento', icon: Brain },
+              { id: 'team', label: 'Equipe', icon: UserPlus },
               { id: 'settings', label: 'Configurações', icon: Settings }
             ].map(tab => (
               <button
@@ -567,7 +566,6 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
         </div>
       </div>
 
-      {/* Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {error && (
           <div className="mb-6 bg-red-500/10 border border-red-500/50 rounded-lg p-4 text-red-400">
@@ -626,6 +624,15 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
           />
         )}
 
+        {activeTab === 'team' && (
+          <TeamView 
+            users={users}
+            tenant={tenant}
+            currentUser={user}
+            onRefresh={onRefresh}
+          />
+        )}
+
         {activeTab === 'settings' && (
           <SettingsView 
             tenant={tenant}
@@ -634,7 +641,6 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
         )}
       </div>
 
-      {/* Modais */}
       {showLeadModal && (
         <LeadModal
           tenant={tenant}
@@ -931,13 +937,11 @@ function ChatView({ leads, groups, selectedLead }) {
 
   const handleSend = () => {
     if (!message.trim()) return;
-    // Aqui futuramente vai salvar no banco
     setMessage('');
   };
 
   return (
     <div className="flex gap-4 h-[calc(100vh-300px)]">
-      {/* Lista de conversas */}
       <div className="w-80 bg-zinc-900 rounded-xl overflow-hidden">
         <div className="p-4 border-b border-zinc-800">
           <h3 className="font-medium">Conversas</h3>
@@ -960,7 +964,6 @@ function ChatView({ leads, groups, selectedLead }) {
         </div>
       </div>
 
-      {/* Chat atual */}
       <div className="flex-1 bg-zinc-900 rounded-xl flex flex-col">
         {currentChat ? (
           <>
@@ -1160,6 +1163,113 @@ function KnowledgeView({ knowledge, tenant, onRefresh, onAdd }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// TEAM VIEW
+// ============================================================================
+
+function TeamView({ users, tenant, currentUser, onRefresh }) {
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+
+  const handleDelete = async (userId) => {
+    if (!confirm('Deletar este usuário?')) return;
+
+    try {
+      await api.deleteUser(userId);
+      onRefresh();
+    } catch (err) {
+      alert('Erro ao deletar usuário');
+    }
+  };
+
+  const handleEdit = (user) => {
+    setEditingUser(user);
+    setShowUserModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowUserModal(false);
+    setEditingUser(null);
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold">Equipe</h2>
+        <button
+          onClick={() => setShowUserModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Novo Usuário
+        </button>
+      </div>
+
+      <div className="bg-zinc-900 rounded-xl overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-zinc-800">
+            <tr>
+              <th className="text-left px-6 py-3 text-sm font-medium text-zinc-400">Nome</th>
+              <th className="text-left px-6 py-3 text-sm font-medium text-zinc-400">Email</th>
+              <th className="text-left px-6 py-3 text-sm font-medium text-zinc-400">Função</th>
+              <th className="text-right px-6 py-3 text-sm font-medium text-zinc-400">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((user, idx) => (
+              <tr key={user.id} className={idx % 2 === 0 ? 'bg-zinc-900' : 'bg-zinc-900/50'}>
+                <td className="px-6 py-4">{user.name}</td>
+                <td className="px-6 py-4 text-zinc-400">{user.email}</td>
+                <td className="px-6 py-4">
+                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                    user.role === 'super_admin' ? 'bg-purple-500/20 text-purple-400' :
+                    user.role === 'client_admin' ? 'bg-amber-500/20 text-amber-400' :
+                    'bg-blue-500/20 text-blue-400'
+                  }`}>
+                    {user.role === 'super_admin' ? 'Super Admin' :
+                     user.role === 'client_admin' ? 'Admin' :
+                     'Usuário'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => handleEdit(user)}
+                      className="text-amber-400 hover:text-amber-300"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    {user.id !== currentUser.id && (
+                      <button
+                        onClick={() => handleDelete(user.id)}
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {showUserModal && (
+        <UserModal
+          tenant={tenant}
+          user={editingUser}
+          onClose={handleCloseModal}
+          onSuccess={() => {
+            handleCloseModal();
+            onRefresh();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1495,6 +1605,119 @@ function KnowledgeModal({ tenant, knowledge, onClose, onSuccess }) {
             />
             <label className="text-sm">Ativo</label>
           </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg transition-colors"
+            >
+              Salvar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function UserModal({ tenant, user, onClose, onSuccess }) {
+  const [formData, setFormData] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    password: '',
+    confirmPassword: ''
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!user && formData.password !== formData.confirmPassword) {
+      alert('Senhas não coincidem!');
+      return;
+    }
+
+    try {
+      if (user) {
+        await api.updateUser(user.id, {
+          name: formData.name,
+          email: formData.email,
+          ...(formData.password && { password: formData.password })
+        });
+      } else {
+        await api.createUser({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          role: 'client_user',
+          tenantId: tenant.id
+        });
+      }
+      onSuccess();
+    } catch (err) {
+      alert('Erro: ' + err.message);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+      <div className="bg-zinc-900 rounded-xl p-6 w-full max-w-md">
+        <h2 className="text-xl font-bold mb-6">{user ? 'Editar' : 'Novo'} Usuário</h2>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Nome</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Email</label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              {user ? 'Nova Senha (deixe em branco para manter)' : 'Senha'}
+            </label>
+            <input
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2"
+              required={!user}
+            />
+          </div>
+
+          {!user && (
+            <div>
+              <label className="block text-sm font-medium mb-2">Confirmar Senha</label>
+              <input
+                type="password"
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2"
+                required
+              />
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <button
