@@ -1056,22 +1056,22 @@ function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
         tenantId: tenant.id,
         name: newColumn.name,
         color: newColumn.color,
-        position: columns.length // Adiciona no final da fila
+        position: columns.length
       });
       setNewColumn({ name: '', color: 'blue' });
       setShowColumnModal(false);
-      loadColumns();
+      await loadColumns();
     } catch (err) {
       alert('Erro ao criar coluna: ' + err.message);
     }
   };
 
   const handleDeleteColumn = async (columnId) => {
-    if (!window.confirm('Excluir esta coluna? Os leads que estao nela ficarao sem estagio definido e voltarao para a lista geral.')) return;
+    if (!window.confirm('Excluir esta coluna? Os leads que estao nela ficarao sem estagio definido.')) return;
     try {
       await api.deleteKanbanColumn(columnId);
-      loadColumns();
-      onRefresh();
+      await loadColumns();
+      await onRefresh();
     } catch (err) {
       alert('Erro ao excluir coluna');
     }
@@ -1083,15 +1083,16 @@ function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
   const handleDrop = async (stageId) => {
     if (!draggedLead) return;
     
-    // Se o lead ja esta nesta coluna, nao faz nada
     if (draggedLead.stage === stageId) {
       setDraggedLead(null);
       return;
     }
     
     try {
+      // Atualiza o lead com o ID da nova coluna (estágio)
       await api.updateLead(draggedLead.id, { ...draggedLead, stage: stageId });
-      onRefresh();
+      // Força a atualização dos leads na tela imediatamente
+      await onRefresh(); 
     } catch (err) { 
       alert('Erro ao atualizar lead'); 
     }
@@ -1118,7 +1119,7 @@ function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
         <div className="bg-zinc-900 rounded-xl p-12 text-center border border-dashed border-zinc-700">
           <LayoutGrid className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
           <h3 className="text-lg font-medium mb-2">O seu funil esta vazio</h3>
-          <p className="text-zinc-400 mb-6">Crie as etapas do seu processo comercial (ex: Contato Frio, Em Negociacao, Fechado).</p>
+          <p className="text-zinc-400 mb-6">Crie as etapas do seu processo comercial.</p>
           <button 
             onClick={() => setShowColumnModal(true)} 
             className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg transition-colors"
@@ -1129,7 +1130,6 @@ function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: '60vh' }}>
           {columns.map(column => {
-            // Logica de compatibilidade: se o nome da coluna for "Novo", os leads antigos entram aqui automaticamente
             const stageLeads = leads.filter(l => 
               l.stage === column.id || 
               (l.stage === column.name.toLowerCase())
@@ -1153,7 +1153,6 @@ function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
                   <button 
                     onClick={() => handleDeleteColumn(column.id)} 
                     className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 transition-opacity"
-                    title="Excluir coluna"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -1170,11 +1169,6 @@ function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
                     >
                       <h4 className="font-medium text-sm mb-1">{lead.name}</h4>
                       <p className="text-xs text-zinc-400">{lead.phone}</p>
-                      {lead.last_message && (
-                        <p className="text-xs text-zinc-500 mt-2 truncate border-t border-zinc-700/50 pt-2">
-                          {lead.last_message}
-                        </p>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -1184,11 +1178,10 @@ function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
         </div>
       )}
 
-      {/* Modal de Nova Coluna */}
       {showColumnModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
           <div className="bg-zinc-900 rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-6">Nova Etapa do Funil</h2>
+            <h2 className="text-xl font-bold mb-6">Nova Etapa</h2>
             <form onSubmit={handleCreateColumn} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Nome da Etapa</label>
@@ -1196,31 +1189,27 @@ function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
                   type="text" 
                   value={newColumn.name} 
                   onChange={(e) => setNewColumn({ ...newColumn, name: e.target.value })} 
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-amber-500" 
-                  placeholder="Ex: Em Negociacao"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2" 
                   required 
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Cor de Identificacao</label>
+                <label className="block text-sm font-medium mb-2">Cor</label>
                 <div className="flex gap-3">
                   {colorOptions.map(color => (
                     <button
                       key={color.id}
                       type="button"
                       onClick={() => setNewColumn({ ...newColumn, color: color.id })}
-                      className={`w-8 h-8 rounded-full border-2 transition-all ${
-                        newColumn.color === color.id ? 'border-white scale-110' : 'border-transparent opacity-70 hover:opacity-100'
-                      }`}
+                      className={`w-8 h-8 rounded-full border-2 ${newColumn.color === color.id ? 'border-white' : 'border-transparent'}`}
                       style={{ backgroundColor: color.hex }}
-                      title={color.label}
                     />
                   ))}
                 </div>
               </div>
               <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setShowColumnModal(false)} className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors">Cancelar</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg transition-colors">Criar Coluna</button>
+                <button type="button" onClick={() => setShowColumnModal(false)} className="flex-1 px-4 py-2 bg-zinc-800 rounded-lg">Cancelar</button>
+                <button type="submit" className="flex-1 px-4 py-2 bg-amber-500 text-black font-medium rounded-lg">Criar</button>
               </div>
             </form>
           </div>
@@ -1229,7 +1218,6 @@ function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
     </div>
   );
 }
-
 // ============================================================================
 // LEADS VIEW
 // ============================================================================
