@@ -1,140 +1,303 @@
 import React, { useState } from 'react';
-import { DollarSign, Users, MessageCircle, TrendingUp, Plus, Search } from 'lucide-react';
-import MetricCard from '../components/cards/MetricCard';
-import CreateCrmModal from '../components/modals/CreateCrmModal';
+import { X, Building2, User, Shield, Settings2, FileText, CreditCard } from 'lucide-react';
+import api from '../../api';
 
-export default function SuperAdminPanel({
-  user,
-  tenants,
-  onLogout,
-  onRefresh,
-}) {
-  const [showCreateCrm, setShowCreateCrm] = useState(false);
-  const [search, setSearch] = useState('');
+const MODULE_OPTIONS = [
+  { id: 'kanban', label: 'Kanban' },
+  { id: 'chat', label: 'Conversas' },
+  { id: 'leads', label: 'Leads' },
+  { id: 'whatsapp', label: 'WhatsApp' },
+  { id: 'analytics', label: 'Analytics' },
+  { id: 'knowledge', label: 'Conhecimento' },
+  { id: 'team', label: 'Equipe' },
+  { id: 'settings', label: 'Configurações' },
+];
 
-  const rev = tenants.reduce((a, t) => a + (parseFloat(t.monthly_value) || 0), 0);
-  const leads = tenants.reduce((a, t) => a + (t.leadCount || 0), 0);
+export default function CreateCrmModal({ onClose, onSuccess }) {
+  const [saving, setSaving] = useState(false);
 
-  const filtered = tenants.filter((t) =>
-    t.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const [form, setForm] = useState({
+    companyName: '',
+    contactName: '',
+    contactEmail: '',
+    contactPhone: '',
+    document: '',
+    niche: '',
+    city: '',
+    state: '',
+    plan: 'Pro',
+    monthlyValue: 497,
+    dueDay: '10',
+    status: 'active',
+    trialDays: '',
+    commercialNotes: '',
+    adminName: '',
+    adminEmail: '',
+    adminPassword: '',
+    accessEnabled: true,
+    maxUsers: 3,
+    pipelineModel: 'padrao',
+    aiPrompt: '',
+    enabledModules: ['kanban', 'chat', 'leads', 'whatsapp', 'analytics'],
+    internalNotes: '',
+  });
+
+  const toggleModule = (moduleId) => {
+    setForm((prev) => ({
+      ...prev,
+      enabledModules: prev.enabledModules.includes(moduleId)
+        ? prev.enabledModules.filter((m) => m !== moduleId)
+        : [...prev.enabledModules, moduleId],
+    }));
+  };
+
+  const updateField = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+
+    try {
+      const payload = {
+        name: form.companyName,
+        plan: form.plan,
+        monthlyValue: Number(form.monthlyValue || 0),
+        adminName: form.adminName || form.contactName,
+        adminEmail: form.adminEmail || form.contactEmail,
+        adminPassword: form.adminPassword,
+        aiPrompt: form.aiPrompt,
+      };
+
+      await api.createTenant(payload);
+
+      if (onSuccess) onSuccess();
+      if (onClose) onClose();
+    } catch (error) {
+      alert(error.message || 'Erro ao criar CRM');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5]">
-      <div className="bg-[#075e54] text-white px-6 py-3 flex justify-between items-center shadow">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center font-bold text-sm">
-            BR
-          </div>
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-6 overflow-y-auto">
+      <div className="w-full max-w-6xl bg-white rounded-2xl shadow-2xl border border-gray-200">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
           <div>
-            <h1 className="font-bold text-sm">Painel Mestre</h1>
-            <p className="text-[10px] text-white/60">{user?.name}</p>
+            <h2 className="text-xl font-bold text-gray-900">Criar novo CRM</h2>
+            <p className="text-sm text-gray-500">Cadastro comercial + criação da conta do cliente</p>
           </div>
+
+          <button
+            onClick={onClose}
+            className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center"
+          >
+            <X className="w-5 h-5 text-gray-600" />
+          </button>
         </div>
 
-        <button
-          onClick={onLogout}
-          className="px-3 py-1.5 bg-white/10 rounded-lg text-xs hover:bg-white/20 transition"
-        >
-          Sair
-        </button>
-      </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-8">
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-[#075e54]" />
+              <h3 className="font-bold text-gray-900">Identificação do cliente</h3>
+            </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <MetricCard
-            title="MRR"
-            value={`R$ ${rev.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-            icon={<DollarSign />}
-            color="green"
-          />
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <Field label="Nome da empresa" required>
+                <input value={form.companyName} onChange={(e) => updateField('companyName', e.target.value)} className={inputClass} required />
+              </Field>
 
-          <MetricCard
-            title="Clientes"
-            value={tenants.length}
-            icon={<Users />}
-            color="blue"
-          />
+              <Field label="Nome do responsável" required>
+                <input value={form.contactName} onChange={(e) => updateField('contactName', e.target.value)} className={inputClass} required />
+              </Field>
 
-          <MetricCard
-            title="Conversas"
-            value={leads}
-            icon={<MessageCircle />}
-            color="yellow"
-          />
+              <Field label="E-mail principal" required>
+                <input type="email" value={form.contactEmail} onChange={(e) => updateField('contactEmail', e.target.value)} className={inputClass} required />
+              </Field>
 
-          <MetricCard
-            title="Ticket"
-            value={`R$ ${tenants.length > 0 ? (rev / tenants.length).toFixed(2) : '0.00'}`}
-            icon={<TrendingUp />}
-            color="purple"
-          />
-        </div>
+              <Field label="Telefone do responsável">
+                <input value={form.contactPhone} onChange={(e) => updateField('contactPhone', e.target.value)} className={inputClass} />
+              </Field>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="font-bold text-lg">Clientes</h2>
+              <Field label="CPF/CNPJ">
+                <input value={form.document} onChange={(e) => updateField('document', e.target.value)} className={inputClass} />
+              </Field>
 
-            <button
-              onClick={() => setShowCreateCrm(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg hover:scale-105 transition"
-            >
-              <Plus className="w-3 h-3" />
-              Novo CRM
+              <Field label="Nicho">
+                <input value={form.niche} onChange={(e) => updateField('niche', e.target.value)} className={inputClass} />
+              </Field>
+
+              <Field label="Cidade">
+                <input value={form.city} onChange={(e) => updateField('city', e.target.value)} className={inputClass} />
+              </Field>
+
+              <Field label="Estado">
+                <input value={form.state} onChange={(e) => updateField('state', e.target.value)} className={inputClass} />
+              </Field>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-[#075e54]" />
+              <h3 className="font-bold text-gray-900">Dados comerciais do contrato</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+              <Field label="Plano" required>
+                <select value={form.plan} onChange={(e) => updateField('plan', e.target.value)} className={inputClass} required>
+                  <option value="Basic">Basic</option>
+                  <option value="Pro">Pro</option>
+                  <option value="Enterprise">Enterprise</option>
+                </select>
+              </Field>
+
+              <Field label="Valor mensal" required>
+                <input type="number" value={form.monthlyValue} onChange={(e) => updateField('monthlyValue', e.target.value)} className={inputClass} required />
+              </Field>
+
+              <Field label="Dia do vencimento">
+                <input value={form.dueDay} onChange={(e) => updateField('dueDay', e.target.value)} className={inputClass} />
+              </Field>
+
+              <Field label="Status do cliente">
+                <select value={form.status} onChange={(e) => updateField('status', e.target.value)} className={inputClass}>
+                  <option value="active">Ativo</option>
+                  <option value="trial">Teste</option>
+                  <option value="paused">Pausado</option>
+                  <option value="cancelled">Cancelado</option>
+                </select>
+              </Field>
+
+              <Field label="Dias de teste">
+                <input value={form.trialDays} onChange={(e) => updateField('trialDays', e.target.value)} className={inputClass} />
+              </Field>
+            </div>
+
+            <Field label="Observação comercial">
+              <textarea value={form.commercialNotes} onChange={(e) => updateField('commercialNotes', e.target.value)} className={textareaClass} rows={3} />
+            </Field>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-[#075e54]" />
+              <h3 className="font-bold text-gray-900">Administrador inicial do CRM</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <Field label="Nome do admin" required>
+                <input value={form.adminName} onChange={(e) => updateField('adminName', e.target.value)} className={inputClass} required />
+              </Field>
+
+              <Field label="E-mail do admin" required>
+                <input type="email" value={form.adminEmail} onChange={(e) => updateField('adminEmail', e.target.value)} className={inputClass} required />
+              </Field>
+
+              <Field label="Senha inicial" required>
+                <input type="password" value={form.adminPassword} onChange={(e) => updateField('adminPassword', e.target.value)} className={inputClass} required />
+              </Field>
+
+              <Field label="Acesso liberado?">
+                <select value={String(form.accessEnabled)} onChange={(e) => updateField('accessEnabled', e.target.value === 'true')} className={inputClass}>
+                  <option value="true">Sim</option>
+                  <option value="false">Não</option>
+                </select>
+              </Field>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Settings2 className="w-4 h-4 text-[#075e54]" />
+              <h3 className="font-bold text-gray-900">Estrutura inicial do CRM</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <Field label="Máximo de usuários">
+                <input type="number" value={form.maxUsers} onChange={(e) => updateField('maxUsers', e.target.value)} className={inputClass} />
+              </Field>
+
+              <Field label="Modelo de funil">
+                <select value={form.pipelineModel} onChange={(e) => updateField('pipelineModel', e.target.value)} className={inputClass}>
+                  <option value="padrao">Padrão</option>
+                  <option value="clinica">Clínica</option>
+                  <option value="comercial">Comercial</option>
+                  <option value="personalizado">Personalizado</option>
+                </select>
+              </Field>
+
+              <Field label="Prompt inicial da IA">
+                <input value={form.aiPrompt} onChange={(e) => updateField('aiPrompt', e.target.value)} className={inputClass} />
+              </Field>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Módulos liberados</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {MODULE_OPTIONS.map((module) => {
+                  const active = form.enabledModules.includes(module.id);
+                  return (
+                    <button
+                      key={module.id}
+                      type="button"
+                      onClick={() => toggleModule(module.id)}
+                      className={`px-3 py-2 rounded-xl border text-sm font-medium transition ${
+                        active
+                          ? 'bg-[#25d366]/10 border-[#25d366] text-[#075e54]'
+                          : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                      }`}
+                    >
+                      {module.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[#075e54]" />
+              <h3 className="font-bold text-gray-900">Observações internas</h3>
+            </div>
+
+            <Field label="Anotações internas da Agência Borsato">
+              <textarea value={form.internalNotes} onChange={(e) => updateField('internalNotes', e.target.value)} className={textareaClass} rows={4} />
+            </Field>
+          </section>
+
+          <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
+            <button type="button" onClick={onClose} className="px-5 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200">
+              Cancelar
+            </button>
+
+            <button type="submit" disabled={saving} className="px-5 py-2.5 rounded-xl bg-[#25d366] text-white font-semibold hover:bg-[#1fb85a] disabled:opacity-60">
+              {saving ? 'Criando...' : 'Criar CRM'}
             </button>
           </div>
-
-          <div className="mb-4 relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar..."
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-4 py-2 text-sm"
-            />
-          </div>
-
-          <div className="space-y-2">
-            {filtered.map((t) => (
-              <div
-                key={t.id}
-                className={`bg-gray-50 border border-gray-100 rounded-lg p-4 flex justify-between items-center ${
-                  t.active === false ? 'opacity-50' : ''
-                }`}
-              >
-                <div>
-                  <p className="font-bold">
-                    {t.name}{' '}
-                    <span className="text-[9px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded ml-1">
-                      {t.plan || 'Pro'}
-                    </span>
-                  </p>
-
-                  <div className="flex gap-4 text-xs text-gray-400 mt-1">
-                    <span>R$ {parseFloat(t.monthly_value || 0).toFixed(2)}</span>
-                    <span>{t.leadCount || 0} leads</span>
-                    <span>{t.userCount || 0} usuários</span>
-                  </div>
-                </div>
-
-                <div className="text-xs text-gray-400">
-                  {t.active === false ? 'Inativo' : 'Ativo'}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        </form>
       </div>
-
-      {showCreateCrm && (
-        <CreateCrmModal
-          onClose={() => setShowCreateCrm(false)}
-          onSuccess={() => {
-            setShowCreateCrm(false);
-            if (onRefresh) onRefresh();
-          }}
-        />
-      )}
     </div>
   );
 }
+
+function Field({ label, required, children }) {
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+const inputClass =
+  'w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#25d366]';
+
+const textareaClass =
+  'w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#25d366] resize-none';
