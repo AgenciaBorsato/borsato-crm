@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 // ============================================================================
-// APP PRINCIPAL
+// APP
 // ============================================================================
 export default function BorsatoCRM() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -103,10 +103,7 @@ function SuperAdminPanel({ user, tenants, onLogout, onAccessTenant, onRefresh })
           ))}
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="font-bold text-lg">Clientes</h2>
-            <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Novo</button>
-          </div>
+          <div className="flex justify-between items-center mb-4"><h2 className="font-bold text-lg">Clientes</h2><button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Novo</button></div>
           <div className="mb-4 relative"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-4 py-2 text-sm" /></div>
           <div className="space-y-2">
             {filtered.map(t => (
@@ -130,29 +127,23 @@ function SuperAdminPanel({ user, tenants, onLogout, onAccessTenant, onRefresh })
 
 function TenantModal({ tenant, onClose, onRefresh }) {
   const [f, setF] = useState(tenant ? { name: tenant.name, adminEmail: tenant.email, plan: tenant.plan || 'Pro', monthlyValue: parseFloat(tenant.monthly_value) || 497, aiPrompt: tenant.ai_prompt || '', active: tenant.active !== false } : { name: '', adminName: '', adminEmail: '', adminPassword: '', plan: 'Pro', monthlyValue: 497 });
-  const save = async (e) => {
-    e.preventDefault();
-    try { if (tenant) { await api.updateTenant(tenant.id, { ...f, customFields: JSON.parse(tenant.custom_fields || '[]') }); } else { await api.createTenant(f); } onRefresh(); onClose(); } catch (err) { alert('Erro: ' + err.message); }
-  };
+  const save = async (e) => { e.preventDefault(); try { if (tenant) { await api.updateTenant(tenant.id, { ...f, customFields: JSON.parse(tenant.custom_fields || '[]') }); } else { await api.createTenant(f); } onRefresh(); onClose(); } catch (err) { alert('Erro: ' + err.message); } };
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-        <h2 className="font-bold text-lg mb-4">{tenant ? 'Editar' : 'Novo'} Cliente</h2>
-        <form onSubmit={save} className="space-y-3">
-          <input type="text" placeholder="Empresa" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
-          {!tenant && <><input type="text" placeholder="Nome admin" value={f.adminName} onChange={e => setF({ ...f, adminName: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required /><input type="password" placeholder="Senha" value={f.adminPassword} onChange={e => setF({ ...f, adminPassword: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required /></>}
-          <input type="email" placeholder="E-mail" value={f.adminEmail} onChange={e => setF({ ...f, adminEmail: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
-          <div className="grid grid-cols-2 gap-3"><select value={f.plan} onChange={e => setF({ ...f, plan: e.target.value })} className="bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"><option>Basic</option><option>Pro</option><option>Enterprise</option></select><input type="number" value={f.monthlyValue} onChange={e => setF({ ...f, monthlyValue: parseFloat(e.target.value) })} className="bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /></div>
-          {tenant && <><textarea value={f.aiPrompt} onChange={e => setF({ ...f, aiPrompt: e.target.value })} rows={2} placeholder="Prompt IA" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.active} onChange={e => setF({ ...f, active: e.target.checked })} /> Ativo</label></>}
-          <div className="flex gap-2 pt-1"><button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button><button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Salvar</button></div>
-        </form>
-      </div>
-    </div>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl"><h2 className="font-bold text-lg mb-4">{tenant ? 'Editar' : 'Novo'} Cliente</h2>
+      <form onSubmit={save} className="space-y-3">
+        <input type="text" placeholder="Empresa" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
+        {!tenant && <><input type="text" placeholder="Nome admin" value={f.adminName} onChange={e => setF({ ...f, adminName: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required /><input type="password" placeholder="Senha" value={f.adminPassword} onChange={e => setF({ ...f, adminPassword: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required /></>}
+        <input type="email" placeholder="E-mail" value={f.adminEmail} onChange={e => setF({ ...f, adminEmail: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
+        <div className="grid grid-cols-2 gap-3"><select value={f.plan} onChange={e => setF({ ...f, plan: e.target.value })} className="bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"><option>Basic</option><option>Pro</option><option>Enterprise</option></select><input type="number" value={f.monthlyValue} onChange={e => setF({ ...f, monthlyValue: parseFloat(e.target.value) })} className="bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /></div>
+        {tenant && <><textarea value={f.aiPrompt} onChange={e => setF({ ...f, aiPrompt: e.target.value })} rows={2} placeholder="Prompt IA" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.active} onChange={e => setF({ ...f, active: e.target.checked })} /> Ativo</label></>}
+        <div className="flex gap-2 pt-1"><button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button><button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Salvar</button></div>
+      </form>
+    </div></div>
   );
 }
 
 // ============================================================================
-// CLIENT DASHBOARD (COM PERMISSOES)
+// CLIENT DASHBOARD
 // ============================================================================
 function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh }) {
   const [activeTab, setActiveTab] = useState('kanban');
@@ -173,7 +164,6 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
     { id: 'settings', label: 'Config', icon: Settings }
   ];
 
-  // Filtrar tabs por permissao do usuario
   const userPerms = (() => { try { return JSON.parse(user.permissions || '[]'); } catch (e) { return []; } })();
   const isAdmin = user.role === 'super_admin' || user.role === 'client_admin';
   const tabs = isAdmin ? allTabs : allTabs.filter(t => userPerms.includes(t.id));
@@ -236,7 +226,7 @@ function KanbanView({ leads, columns, tenant, onRefresh }) {
 }
 
 // ============================================================================
-// CHAT (COM GRUPOS, QUALIFICACAO, EDIT LEAD)
+// CHAT
 // ============================================================================
 function ChatView({ tenant, columns, onRefresh }) {
   const [chats, setChats] = useState([]);
@@ -247,8 +237,10 @@ function ChatView({ tenant, columns, onRefresh }) {
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
   const [showEdit, setShowEdit] = useState(false);
-  const [filter, setFilter] = useState('all'); // all, individual, group
+  const [filter, setFilter] = useState('all');
+  const [file, setFile] = useState(null);
   const endRef = useRef(null);
+  const fileRef = useRef(null);
 
   useEffect(() => { load(); const i = setInterval(load, 4000); return () => clearInterval(i); }, [tenant.id]);
   useEffect(() => { if (cur) { loadMsgs(cur.id); loadLead(cur); const i = setInterval(() => loadMsgs(cur.id), 3000); return () => clearInterval(i); } }, [cur?.id]);
@@ -256,7 +248,12 @@ function ChatView({ tenant, columns, onRefresh }) {
 
   const load = async () => { try { setChats(await api.getChats(tenant.id)); } catch (e) { } };
   const loadMsgs = async (id) => { try { setMsgs(await api.getChatMessages(id, 100, 0)); } catch (e) { } };
-  const loadLead = async (c) => { if (c.is_group) { setLead(null); return; } try { setLead(await api.getLeadByPhone(c.contact_phone || c.remote_jid?.split('@')[0], tenant.id)); } catch (e) { setLead(null); } };
+  const loadLead = async (c) => {
+    if (Number(c.is_group) === 1 || c.is_group === true) { setLead(null); return; }
+    const phone = c.contact_phone || c.remote_jid?.split('@')[0];
+    if (!phone) { setLead(null); return; }
+    try { setLead(await api.getLeadByPhone(phone, tenant.id)); } catch (e) { setLead(null); }
+  };
 
   const send = async () => {
     if (!msg.trim() || !cur) return;
@@ -266,69 +263,135 @@ function ChatView({ tenant, columns, onRefresh }) {
     finally { setSending(false); }
   };
 
+  const handleFile = (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    if (f.size > 2 * 1024 * 1024) { alert('Maximo 2MB'); return; }
+    setFile(f);
+  };
+
+  const sendFile = async () => {
+    if (!file || !cur) return;
+    const phone = cur.contact_phone || cur.remote_jid?.split('@')[0];
+    setSending(true);
+    try {
+      const label = file.type.startsWith('image') ? 'Imagem' : file.type.startsWith('video') ? 'Video' : 'Arquivo';
+      await api.sendWhatsAppMessage(phone, `[${label}: ${file.name}]`, tenant.id, cur.id);
+      setFile(null); if (fileRef.current) fileRef.current.value = ''; await loadMsgs(cur.id); await load();
+    } catch (e) { alert('Erro: ' + e.message); }
+    finally { setSending(false); }
+  };
+
+  const deleteChat = async (chatId) => {
+    if (!confirm('Apagar esta conversa? As mensagens serao excluidas.')) return;
+    try { await api.deleteChat(chatId); if (cur?.id === chatId) { setCur(null); setLead(null); setMsgs([]); } await load(); } catch (e) { alert('Erro: ' + e.message); }
+  };
+
+  const isGroup = (c) => Number(c.is_group) === 1 || c.is_group === true;
+
   const fmt = (ts) => { if (!ts) return ''; const d = new Date(String(ts).replace('Z', '')); const n = new Date(); if (d.toDateString() === n.toDateString()) return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); };
 
   const filtered = chats.filter(c => {
-    if (filter === 'individual' && c.is_group) return false;
-    if (filter === 'group' && !c.is_group) return false;
+    if (filter === 'individual' && isGroup(c)) return false;
+    if (filter === 'group' && !isGroup(c)) return false;
     if (!search) return true;
     return (c.contact_name || c.contact_phone || '').toLowerCase().includes(search.toLowerCase());
   });
 
+  const getStatusIcon = (status) => {
+    if (status === 'read') return <CheckCheck className="w-3 h-3 text-blue-500" />;
+    if (status === 'delivered') return <CheckCheck className="w-3 h-3 text-gray-400" />;
+    if (status === 'sent') return <Check className="w-3 h-3 text-gray-400" />;
+    return <Clock className="w-3 h-3 text-gray-300" />;
+  };
+
   return (
     <div className="flex h-[calc(100vh-120px)] bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      {/* Sidebar */}
       <div className="w-80 border-r border-gray-200 flex flex-col bg-white">
         <div className="p-3 border-b border-gray-100 space-y-2">
           <div className="relative"><Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-xs" /></div>
           <div className="flex gap-1">
-            {[{id:'all',l:'Todos'},{id:'individual',l:'Contatos'},{id:'group',l:'Grupos'}].map(f => (
+            {[{ id: 'all', l: 'Todos' }, { id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }].map(f => (
               <button key={f.id} onClick={() => setFilter(f.id)} className={`flex-1 py-1 text-[9px] font-bold rounded ${filter === f.id ? 'bg-[#25d366] text-white' : 'bg-gray-100 text-gray-500'}`}>{f.l}</button>
             ))}
           </div>
         </div>
         <div className="flex-1 overflow-y-auto">
           {filtered.map(c => (
-            <div key={c.id} onClick={() => setCur(c)} className={`flex items-center gap-2.5 px-3 py-3 cursor-pointer hover:bg-gray-50 border-b border-gray-50 ${cur?.id === c.id ? 'bg-[#f0f2f5]' : ''}`}>
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${c.is_group ? 'bg-[#128c7e]/10' : 'bg-[#dfe5e7]'}`}>
-                {c.is_group ? <Users2 className="w-4 h-4 text-[#128c7e]" /> : <span className="text-[10px] font-bold text-[#075e54]">{(c.contact_name || c.contact_phone || '?').substring(0, 2).toUpperCase()}</span>}
+            <div key={c.id} className={`flex items-center gap-2.5 px-3 py-3 cursor-pointer hover:bg-gray-50 border-b border-gray-50 ${cur?.id === c.id ? 'bg-[#f0f2f5]' : ''}`}>
+              <div onClick={() => setCur(c)} className="flex items-center gap-2.5 flex-1 min-w-0">
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${isGroup(c) ? 'bg-[#128c7e]/10' : 'bg-[#dfe5e7]'}`}>
+                  {isGroup(c) ? <Users2 className="w-4 h-4 text-[#128c7e]" /> : <span className="text-[10px] font-bold text-[#075e54]">{(c.contact_name || c.contact_phone || '?').substring(0, 2).toUpperCase()}</span>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between"><p className="font-bold text-xs truncate">{c.contact_name || c.contact_phone}{isGroup(c) && <span className="ml-1 text-[8px] bg-gray-100 text-gray-400 px-1 rounded">GRUPO</span>}</p><span className="text-[9px] text-gray-400">{fmt(c.last_message_time)}</span></div>
+                  <div className="flex justify-between mt-0.5"><p className="text-[10px] text-gray-400 truncate">{c.last_message}</p>{Number(c.unread_count) > 0 && <span className="ml-1 bg-[#25d366] text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{Number(c.unread_count) > 9 ? '9+' : c.unread_count}</span>}</div>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between"><p className="font-bold text-xs truncate">{c.contact_name || c.contact_phone}{c.is_group && <span className="ml-1 text-[8px] bg-gray-100 text-gray-400 px-1 rounded">GRUPO</span>}</p><span className="text-[9px] text-gray-400">{fmt(c.last_message_time)}</span></div>
-                <div className="flex justify-between mt-0.5"><p className="text-[10px] text-gray-400 truncate">{c.last_message}</p>{c.unread_count > 0 && <span className="ml-1 bg-[#25d366] text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{c.unread_count > 9 ? '9+' : c.unread_count}</span>}</div>
-              </div>
+              {!isGroup(c) && <button onClick={(e) => { e.stopPropagation(); deleteChat(c.id); }} className="p-1 text-gray-300 hover:text-red-400 flex-shrink-0"><Trash2 className="w-3 h-3" /></button>}
             </div>
           ))}
         </div>
       </div>
 
+      {/* Chat */}
       <div className="flex-1 flex flex-col">
         {cur ? (<>
           <div className="bg-[#f0f2f5] px-4 py-2.5 border-b border-gray-200 flex justify-between items-center">
             <div className="flex items-center gap-2.5">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${cur.is_group ? 'bg-[#128c7e]/10' : 'bg-[#dfe5e7]'}`}>{cur.is_group ? <Users2 className="w-4 h-4 text-[#128c7e]" /> : <span className="text-[10px] font-bold text-[#075e54]">{(cur.contact_name || '?').substring(0, 2).toUpperCase()}</span>}</div>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isGroup(cur) ? 'bg-[#128c7e]/10' : 'bg-[#dfe5e7]'}`}>{isGroup(cur) ? <Users2 className="w-4 h-4 text-[#128c7e]" /> : <span className="text-[10px] font-bold text-[#075e54]">{(cur.contact_name || '?').substring(0, 2).toUpperCase()}</span>}</div>
               <div><p className="font-bold text-sm">{cur.contact_name || cur.contact_phone}</p><p className="text-[10px] text-gray-400 font-mono">{cur.contact_phone}</p></div>
-              {lead && <button onClick={() => setShowEdit(true)} className="ml-2 p-1 bg-blue-50 text-blue-500 rounded hover:bg-blue-100"><Edit2 className="w-3 h-3" /></button>}
+              {lead && <button onClick={() => setShowEdit(true)} className="ml-2 p-1 bg-blue-50 text-blue-500 rounded hover:bg-blue-100" title="Editar lead"><Edit2 className="w-3 h-3" /></button>}
             </div>
             {lead && columns.length > 0 && (
               <div className="flex gap-1">{columns.map(col => (
                 <button key={col.id} onClick={async () => { await api.updateLead(lead.id, { stage: col.id }); setLead({ ...lead, stage: col.id }); onRefresh(); }}
-                  className={`px-2 py-0.5 rounded text-[9px] font-bold ${lead.stage === col.id ? 'bg-[#25d366] text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}>{col.name}</button>
+                  className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all ${lead.stage === col.id ? 'bg-[#25d366] text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}>{col.name}</button>
               ))}</div>
             )}
           </div>
+
+          {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1" style={{ backgroundColor: '#eae6df' }}>
-            {msgs.map(m => (
-              <div key={m.id} className={`flex ${m.is_from_me ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[65%] rounded-lg px-2.5 py-1.5 shadow-sm ${m.is_from_me ? 'bg-[#d9fdd3]' : 'bg-white'}`}>
-                  {m.sender_name && <p className={`text-[10px] font-bold mb-0.5 ${m.is_from_me ? 'text-[#075e54]' : 'text-[#6b7280]'}`}>{m.sender_name}</p>}
-                  <p className="text-[13px] text-gray-800 whitespace-pre-wrap break-words">{m.content}</p>
-                  <div className="flex items-center justify-end gap-0.5 mt-0.5"><span className="text-[9px] text-gray-500">{fmt(m.timestamp)}</span>{m.is_from_me && (m.status === 'read' ? <CheckCheck className="w-3 h-3 text-blue-500" /> : <Check className="w-3 h-3 text-gray-400" />)}</div>
+            {msgs.map(m => {
+              const fromMe = Number(m.is_from_me) === 1 || m.is_from_me === true;
+              return (
+                <div key={m.id} className={`flex ${fromMe ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[65%] rounded-lg px-2.5 py-1.5 shadow-sm ${fromMe ? 'bg-[#d9fdd3]' : 'bg-white'}`}>
+                    {m.sender_name && <p className={`text-[10px] font-bold mb-0.5 ${fromMe ? 'text-[#075e54]' : 'text-[#6b7280]'}`}>{m.sender_name}</p>}
+                    {m.message_type === 'image' && <div className="mb-1 py-1"><div className="bg-gray-100 rounded-lg p-3 flex items-center gap-2"><Image className="w-4 h-4 text-gray-400" /><span className="text-xs text-gray-500">Imagem</span></div></div>}
+                    {m.message_type === 'audio' && <div className="mb-1 py-1"><div className="bg-gray-100 rounded-lg p-3 flex items-center gap-2"><Mic className="w-4 h-4 text-gray-400" /><span className="text-xs text-gray-500">Audio</span></div></div>}
+                    {m.message_type === 'video' && <div className="mb-1 py-1"><div className="bg-gray-100 rounded-lg p-3 flex items-center gap-2"><FileIcon className="w-4 h-4 text-gray-400" /><span className="text-xs text-gray-500">Video</span></div></div>}
+                    {m.message_type === 'document' && <div className="mb-1 py-1"><div className="bg-gray-100 rounded-lg p-3 flex items-center gap-2"><FileText className="w-4 h-4 text-gray-400" /><span className="text-xs text-gray-500">Documento</span></div></div>}
+                    {m.message_type === 'location' && <div className="mb-1 py-1"><div className="bg-gray-100 rounded-lg p-3 flex items-center gap-2"><MapPin className="w-4 h-4 text-gray-400" /><span className="text-xs text-gray-500">Localizacao</span></div></div>}
+                    {m.message_type === 'sticker' && <div className="mb-1 py-1"><div className="bg-gray-100 rounded-lg p-2 text-center"><span className="text-2xl">🎨</span><p className="text-[9px] text-gray-400">Sticker</p></div></div>}
+                    {m.content && m.content !== '[Imagem]' && m.content !== '[Audio]' && m.content !== '[Video]' && m.content !== '[Documento]' && m.content !== '[Sticker]' && m.content !== '[Localizacao]' && m.content !== '[Contato]' && m.content !== '[Mensagem]' && m.content !== '[Reacao]' && (
+                      <p className="text-[13px] text-gray-800 whitespace-pre-wrap break-words">{m.content}</p>
+                    )}
+                    <div className="flex items-center justify-end gap-0.5 mt-0.5">
+                      <span className="text-[9px] text-gray-500">{fmt(m.timestamp)}</span>
+                      {fromMe && getStatusIcon(m.status)}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div ref={endRef} />
           </div>
+
+          {/* File preview */}
+          {file && (
+            <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-2"><Paperclip className="w-4 h-4 text-gray-400" /><span className="text-xs text-gray-600 truncate max-w-[200px]">{file.name}</span><span className="text-[10px] text-gray-400">{(file.size / 1024).toFixed(0)}KB</span></div>
+              <div className="flex gap-2"><button onClick={() => { setFile(null); if (fileRef.current) fileRef.current.value = ''; }} className="text-xs text-red-500 font-bold">Cancelar</button><button onClick={sendFile} disabled={sending} className="px-3 py-1 bg-[#25d366] text-white text-xs font-bold rounded-lg disabled:opacity-50">Enviar</button></div>
+            </div>
+          )}
+
+          {/* Input */}
           <div className="bg-[#f0f2f5] px-3 py-2.5 flex items-center gap-2 border-t border-gray-200">
+            <input type="file" ref={fileRef} onChange={handleFile} className="hidden" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx" />
+            <button onClick={() => fileRef.current?.click()} className="p-2 hover:bg-gray-200 rounded-full transition-all" title="Anexar arquivo"><Paperclip className="w-4 h-4 text-gray-500" /></button>
             <input type="text" value={msg} onChange={e => setMsg(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !sending) { e.preventDefault(); send(); } }} disabled={sending} placeholder="Mensagem..." className="flex-1 bg-white border border-gray-200 rounded-full px-4 py-2 text-sm outline-none focus:border-[#25d366]" />
             <button onClick={send} disabled={sending || !msg.trim()} className="p-2 bg-[#25d366] text-white rounded-full hover:bg-[#128c7e] disabled:opacity-40"><Send className="w-4 h-4" /></button>
           </div>
@@ -343,13 +406,12 @@ function ChatView({ tenant, columns, onRefresh }) {
 }
 
 // ============================================================================
-// EDIT LEAD MODAL (CAMPOS CUSTOMIZAVEIS)
+// EDIT LEAD MODAL
 // ============================================================================
 function EditLeadModal({ lead, columns, onClose, onSave }) {
   const [f, setF] = useState({ name: lead.name || '', phone: lead.phone || '', email: lead.email || '', stage: lead.stage || '', notes: lead.notes || '' });
   const [custom, setCustom] = useState(() => { try { return JSON.parse(lead.custom_data || '{}'); } catch (e) { return {}; } });
   const [newField, setNewField] = useState('');
-
   const addField = () => { if (newField.trim()) { setCustom({ ...custom, [newField.trim()]: '' }); setNewField(''); } };
 
   return (
@@ -362,7 +424,6 @@ function EditLeadModal({ lead, columns, onClose, onSave }) {
           <div><label className="text-[10px] font-bold text-gray-400 uppercase">E-mail</label><input type="email" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /></div>
           {columns.length > 0 && <div><label className="text-[10px] font-bold text-gray-400 uppercase">Etapa</label><select value={f.stage} onChange={e => setF({ ...f, stage: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">{columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>}
           <div><label className="text-[10px] font-bold text-gray-400 uppercase">Observacoes</label><textarea value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} rows={2} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /></div>
-
           <div className="border-t border-gray-100 pt-3">
             <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Campos Personalizados</p>
             {Object.entries(custom).map(([key, val]) => (
@@ -374,10 +435,9 @@ function EditLeadModal({ lead, columns, onClose, onSave }) {
             ))}
             <div className="flex gap-2">
               <input type="text" value={newField} onChange={e => setNewField(e.target.value)} placeholder="Nome do campo..." className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs" onKeyDown={e => e.key === 'Enter' && addField()} />
-              <button onClick={addField} className="px-3 py-1 bg-gray-100 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-200"><Plus className="w-3 h-3" /></button>
+              <button onClick={addField} className="px-3 py-1 bg-gray-100 rounded-lg text-xs font-bold text-gray-600"><Plus className="w-3 h-3" /></button>
             </div>
           </div>
-
           <div className="flex gap-2 pt-2">
             <button onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button>
             <button onClick={() => onSave({ ...f, customData: custom })} className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Salvar</button>
@@ -389,7 +449,7 @@ function EditLeadModal({ lead, columns, onClose, onSave }) {
 }
 
 // ============================================================================
-// LEADS (COM EDIT E CAMPOS CUSTOM)
+// LEADS
 // ============================================================================
 function LeadsView({ leads, columns, tenant, onRefresh }) {
   const [search, setSearch] = useState('');
@@ -433,25 +493,22 @@ function LeadsView({ leads, columns, tenant, onRefresh }) {
 function LeadCreateModal({ tenant, columns, onClose, onSuccess }) {
   const [f, setF] = useState({ name: '', phone: '', email: '', stage: columns[0]?.id || 'novo' });
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-        <h2 className="font-bold mb-4">Novo Lead</h2>
-        <form onSubmit={async e => { e.preventDefault(); await api.createLead({ ...f, tenantId: tenant.id }); onSuccess(); }} className="space-y-3">
-          <input type="text" placeholder="Nome" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
-          <input type="text" placeholder="Telefone" value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
-          <input type="email" placeholder="E-mail" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" />
-          {columns.length > 0 && <select value={f.stage} onChange={e => setF({ ...f, stage: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">{columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>}
-          <div className="flex gap-2"><button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button><button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Criar</button></div>
-        </form>
-      </div>
-    </div>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl"><h2 className="font-bold mb-4">Novo Lead</h2>
+      <form onSubmit={async e => { e.preventDefault(); await api.createLead({ ...f, tenantId: tenant.id }); onSuccess(); }} className="space-y-3">
+        <input type="text" placeholder="Nome" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
+        <input type="text" placeholder="Telefone" value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
+        <input type="email" placeholder="E-mail" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" />
+        {columns.length > 0 && <select value={f.stage} onChange={e => setF({ ...f, stage: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">{columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>}
+        <div className="flex gap-2"><button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button><button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Criar</button></div>
+      </form>
+    </div></div>
   );
 }
 
 // ============================================================================
-// WHATSAPP / ANALYTICS / KNOWLEDGE / SETTINGS (MANTIDOS)
+// WHATSAPP / ANALYTICS / KNOWLEDGE / SETTINGS
 // ============================================================================
-function WhatsAppView({ tenant, onRefresh }) {
+function WhatsAppView({ tenant }) {
   const [status, setStatus] = useState(null); const [token, setToken] = useState(''); const [loading, setLoading] = useState(false);
   const name = `tenant_${tenant.id}`;
   useEffect(() => { check(); const i = setInterval(check, 5000); return () => clearInterval(i); }, []);
@@ -459,7 +516,7 @@ function WhatsAppView({ tenant, onRefresh }) {
   return (
     <div className="max-w-xl"><h2 className="font-bold text-lg mb-4">WhatsApp</h2><div className="grid grid-cols-2 gap-4">
       <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><h3 className="font-bold text-sm mb-3">Status</h3>{status?.connected ? (<div className="space-y-3"><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-[#25d366] rounded-full animate-pulse" /><span className="text-[#25d366] font-bold text-sm">Conectado</span></div><button onClick={async () => { await api.disconnectWhatsApp(tenant.id); check(); }} className="w-full py-2 bg-red-50 text-red-500 rounded-lg text-xs font-bold">Desconectar</button></div>) : (<div className="space-y-3"><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-gray-300 rounded-full" /><span className="text-gray-400 text-sm">Desconectado</span></div><input type="text" value={token} onChange={e => setToken(e.target.value)} placeholder="Token..." className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-xs font-mono" /><button onClick={async () => { setLoading(true); try { await api.connectWhatsApp(tenant.id, token); setToken(''); check(); } catch (e) { alert('Erro'); } finally { setLoading(false); } }} disabled={loading || !token.trim()} className="w-full py-2 bg-[#25d366] text-white rounded-lg text-xs font-bold disabled:opacity-50">{loading ? 'Salvando...' : 'Salvar'}</button><button onClick={check} className="w-full py-2 bg-gray-50 text-[#075e54] rounded-lg text-xs font-bold border border-gray-200">Verificar</button></div>)}</div>
-      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><h3 className="font-bold text-sm mb-3">Instancia</h3><div className="bg-gray-50 rounded-lg p-2.5 flex justify-between items-center mb-2"><code className="text-[#075e54] text-xs font-bold">{name}</code><button onClick={() => { navigator.clipboard.writeText(name); }} className="text-[10px] text-gray-400">Copiar</button></div></div>
+      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><h3 className="font-bold text-sm mb-3">Instancia</h3><div className="bg-gray-50 rounded-lg p-2.5 flex justify-between items-center mb-2"><code className="text-[#075e54] text-xs font-bold">{name}</code><button onClick={() => navigator.clipboard.writeText(name)} className="text-[10px] text-gray-400">Copiar</button></div></div>
     </div></div>
   );
 }
@@ -476,7 +533,7 @@ function AnalyticsView({ leads, columns }) {
         ))}
       </div>
       {columns.length > 0 && <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mb-6"><h3 className="font-bold text-sm mb-4">Distribuicao por Etapa</h3><div className="space-y-3">{columns.map(col => { const c = leads.filter(l => l.stage === col.id).length; const p = total > 0 ? (c / total) * 100 : 0; return (<div key={col.id}><div className="flex justify-between mb-1"><span className="text-xs font-bold text-gray-600">{col.name}</span><span className="text-[10px] text-gray-400">{c} ({p.toFixed(0)}%)</span></div><div className="h-3 bg-gray-100 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${Math.max(p, 2)}%`, backgroundColor: cm[col.color] || '#71717a' }} /></div></div>); })}</div></div>}
-      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><h3 className="font-bold text-sm mb-3">Resumo Geral</h3><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><div className="flex justify-between"><span className="text-xs text-gray-500">Total leads</span><span className="font-bold text-sm">{total}</span></div><div className="flex justify-between"><span className="text-xs text-gray-500">Etapas ativas</span><span className="font-bold text-sm">{columns.length}</span></div></div><div className="space-y-2"><div className="flex justify-between"><span className="text-xs text-gray-500">Via WhatsApp</span><span className="font-bold text-sm text-green-600">{bySrc.whatsapp}</span></div><div className="flex justify-between"><span className="text-xs text-gray-500">Cadastro manual</span><span className="font-bold text-sm text-amber-600">{bySrc.manual}</span></div></div></div></div>
+      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><h3 className="font-bold text-sm mb-3">Resumo</h3><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><div className="flex justify-between"><span className="text-xs text-gray-500">Total</span><span className="font-bold text-sm">{total}</span></div><div className="flex justify-between"><span className="text-xs text-gray-500">Etapas</span><span className="font-bold text-sm">{columns.length}</span></div></div><div className="space-y-2"><div className="flex justify-between"><span className="text-xs text-gray-500">WhatsApp</span><span className="font-bold text-sm text-green-600">{bySrc.whatsapp}</span></div><div className="flex justify-between"><span className="text-xs text-gray-500">Manual</span><span className="font-bold text-sm text-amber-600">{bySrc.manual}</span></div></div></div></div>
     </div>
   );
 }
@@ -498,7 +555,7 @@ function KnowledgeForm({ tenant, onClose, onSuccess }) {
 }
 
 // ============================================================================
-// EQUIPE (COM PERMISSOES)
+// EQUIPE
 // ============================================================================
 function TeamView({ users, tenant, currentUser, onRefresh }) {
   const [show, setShow] = useState(false);
@@ -511,7 +568,7 @@ function TeamView({ users, tenant, currentUser, onRefresh }) {
             <tr key={u.id} className="hover:bg-gray-50/50">
               <td className="p-3 font-bold text-xs">{u.name}</td><td className="p-3 text-xs text-gray-400">{u.email}</td>
               <td className="p-3"><span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${u.role === 'super_admin' ? 'bg-purple-50 text-purple-500' : u.role === 'client_admin' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-500'}`}>{u.role === 'super_admin' ? 'Mestre' : u.role === 'client_admin' ? 'Admin' : 'Usuario'}</span></td>
-              <td className="p-3">{u.role === 'client_user' && <span className="text-[9px] text-gray-400">{perms.length > 0 ? perms.join(', ') : 'Sem permissoes'}</span>}</td>
+              <td className="p-3">{u.role === 'client_user' && <span className="text-[9px] text-gray-400">{perms.length > 0 ? perms.join(', ') : 'Nenhuma'}</span>}</td>
               <td className="p-3 text-right flex gap-1 justify-end">
                 {u.role === 'client_user' && <button onClick={() => setEditing(u)} className="text-blue-400 hover:text-blue-600"><Edit2 className="w-3.5 h-3.5" /></button>}
                 {u.id !== currentUser.id && <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteUser(u.id); onRefresh(); } }} className="text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>}
@@ -528,52 +585,26 @@ function UserModal({ user, tenant, onClose, onSuccess }) {
   const allTabs = ['kanban', 'chat', 'leads', 'whatsapp', 'analytics', 'knowledge', 'team', 'settings'];
   const [f, setF] = useState({ name: user?.name || '', email: user?.email || '', password: '', role: user?.role || 'client_user', permissions: (() => { try { return JSON.parse(user?.permissions || '[]'); } catch (e) { return []; } })() });
   const togglePerm = (p) => { setF({ ...f, permissions: f.permissions.includes(p) ? f.permissions.filter(x => x !== p) : [...f.permissions, p] }); };
-  const save = async (e) => {
-    e.preventDefault();
-    try {
-      if (user) { await api.updateUser(user.id, { name: f.name, email: f.email, role: f.role, permissions: f.permissions, ...(f.password ? { password: f.password } : {}) }); }
-      else { await api.createUser({ ...f, tenantId: tenant.id }); }
-      onSuccess();
-    } catch (err) { alert('Erro: ' + err.message); }
-  };
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-        <h2 className="font-bold mb-4">{user ? 'Editar' : 'Novo'} Usuario</h2>
-        <form onSubmit={save} className="space-y-3">
-          <input type="text" placeholder="Nome" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
-          <input type="email" placeholder="E-mail" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
-          <input type="password" placeholder={user ? 'Nova senha (vazio = manter)' : 'Senha'} value={f.password} onChange={e => setF({ ...f, password: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required={!user} />
-          <select value={f.role} onChange={e => setF({ ...f, role: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"><option value="client_user">Usuario</option><option value="client_admin">Admin</option></select>
-          {f.role === 'client_user' && (
-            <div className="border border-gray-200 rounded-xl p-3">
-              <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Permissoes (abas visiveis)</p>
-              <div className="grid grid-cols-2 gap-1.5">
-                {allTabs.map(tab => (
-                  <label key={tab} className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs cursor-pointer ${f.permissions.includes(tab) ? 'bg-[#25d366]/10 text-[#075e54] font-bold' : 'bg-gray-50 text-gray-400'}`}>
-                    <input type="checkbox" checked={f.permissions.includes(tab)} onChange={() => togglePerm(tab)} className="w-3 h-3" />
-                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="flex gap-2 pt-1"><button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button><button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Salvar</button></div>
-        </form>
-      </div>
-    </div>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl"><h2 className="font-bold mb-4">{user ? 'Editar' : 'Novo'} Usuario</h2>
+      <form onSubmit={async e => { e.preventDefault(); try { if (user) { await api.updateUser(user.id, { name: f.name, email: f.email, role: f.role, permissions: f.permissions, ...(f.password ? { password: f.password } : {}) }); } else { await api.createUser({ ...f, tenantId: tenant.id }); } onSuccess(); } catch (err) { alert('Erro: ' + err.message); } }} className="space-y-3">
+        <input type="text" placeholder="Nome" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
+        <input type="email" placeholder="E-mail" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
+        <input type="password" placeholder={user ? 'Nova senha (vazio = manter)' : 'Senha'} value={f.password} onChange={e => setF({ ...f, password: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required={!user} />
+        <select value={f.role} onChange={e => setF({ ...f, role: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"><option value="client_user">Usuario</option><option value="client_admin">Admin</option></select>
+        {f.role === 'client_user' && (<div className="border border-gray-200 rounded-xl p-3"><p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Permissoes</p><div className="grid grid-cols-2 gap-1.5">{allTabs.map(tab => (<label key={tab} className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs cursor-pointer ${f.permissions.includes(tab) ? 'bg-[#25d366]/10 text-[#075e54] font-bold' : 'bg-gray-50 text-gray-400'}`}><input type="checkbox" checked={f.permissions.includes(tab)} onChange={() => togglePerm(tab)} className="w-3 h-3" />{tab}</label>))}</div></div>)}
+        <div className="flex gap-2 pt-1"><button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button><button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Salvar</button></div>
+      </form>
+    </div></div>
   );
 }
 
-// ============================================================================
-// CONFIGURACOES
-// ============================================================================
 function SettingsView({ tenant, onRefresh }) {
   const [prompt, setPrompt] = useState(tenant.ai_prompt || '');
   const [saving, setSaving] = useState(false);
   return (
     <div className="max-w-xl"><h2 className="font-bold text-lg mb-4">Configuracoes</h2>
-      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><h3 className="font-bold text-sm mb-1">Prompt da IA</h3><p className="text-[10px] text-gray-400 mb-3">Define o comportamento da IA nas respostas.</p><textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={6} placeholder="Ex: Voce e assistente..." className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm mb-3" /><button onClick={async () => { setSaving(true); try { await api.updateTenant(tenant.id, { name: tenant.name, plan: tenant.plan, monthlyValue: tenant.monthly_value, aiPrompt: prompt, customFields: JSON.parse(tenant.custom_fields || '[]'), active: tenant.active }); alert('Salvo!'); onRefresh(); } catch (e) { alert('Erro'); } finally { setSaving(false); } }} disabled={saving} className="px-5 py-2 bg-[#25d366] text-white font-bold rounded-xl text-sm disabled:opacity-50">{saving ? 'Salvando...' : 'Salvar'}</button></div>
+      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><h3 className="font-bold text-sm mb-1">Prompt da IA</h3><p className="text-[10px] text-gray-400 mb-3">Define o comportamento da IA.</p><textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={6} placeholder="Ex: Voce e assistente..." className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm mb-3" /><button onClick={async () => { setSaving(true); try { await api.updateTenant(tenant.id, { name: tenant.name, plan: tenant.plan, monthlyValue: tenant.monthly_value, aiPrompt: prompt, customFields: JSON.parse(tenant.custom_fields || '[]'), active: tenant.active }); alert('Salvo!'); onRefresh(); } catch (e) { alert('Erro'); } finally { setSaving(false); } }} disabled={saving} className="px-5 py-2 bg-[#25d366] text-white font-bold rounded-xl text-sm disabled:opacity-50">{saving ? 'Salvando...' : 'Salvar'}</button></div>
     </div>
   );
 }
