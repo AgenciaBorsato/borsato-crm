@@ -101,6 +101,33 @@ class ApiService {
     });
   }
 
+  // --- INÍCIO DAS FUNÇÕES DO KANBAN CUSTOMIZÁVEL ---
+  async getKanbanColumns(tenantId) {
+    return await this.request(`/api/kanban-columns?tenantId=${tenantId}`);
+  }
+
+  async createKanbanColumn(columnData) {
+    return await this.request('/api/kanban-columns', {
+      method: 'POST',
+      body: JSON.stringify(columnData)
+    });
+  }
+
+  async updateKanbanColumn(id, data) {
+    return await this.request(`/api/kanban-columns/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteKanbanColumn(id) {
+    return await this.request(`/api/kanban-columns/${id}`, {
+      method: 'DELETE'
+    });
+  }
+  // --- FIM DAS FUNÇÕES DO KANBAN CUSTOMIZÁVEL ---
+  }
+
   async getLeadByPhone(phone, tenantId) {
     return await this.request(`/api/leads/by-phone/${phone}?tenantId=${tenantId}`);
   }
