@@ -1,252 +1,161 @@
-const API_URL = 'https://borsato-crm-api.vercel.app';
-
 class ApiService {
   constructor() {
-    this.token = localStorage.getItem('token');
-  }
-
-  setToken(token) {
-    this.token = token;
-    localStorage.setItem('token', token);
-  }
-
-  clearToken() {
-    this.token = null;
-    localStorage.removeItem('token');
+    this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   }
 
   async request(endpoint, options = {}) {
+    const token = localStorage.getItem('token');
     const headers = {
       'Content-Type': 'application/json',
-      ...(this.token && { 'Authorization': `Bearer ${this.token}` }),
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...options.headers
     };
 
-    try {
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        ...options,
-        headers
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erro na requisicao');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('API Error:', error);
-      throw error;
-    }
+    const response = await fetch(`${this.baseUrl}${endpoint}`, { ...options, headers });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Erro na requisição');
+    return data;
   }
 
+  // AUTH
   async login(email, password) {
     const data = await this.request('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password })
     });
-    if (data.token) this.setToken(data.token);
+    if (data.token) localStorage.setItem('token', data.token);
     return data;
   }
 
   logout() {
-    this.clearToken();
+    localStorage.removeItem('token');
   }
 
-  async getTenants() {
-    return await this.request('/api/tenants');
-  }
-
-  async getTenant(id) {
-    return await this.request(`/api/tenants/${id}`);
-  }
-
-  async createTenant(tenantData) {
+  // TENANTS
+  async getTenants() { return await this.request('/api/tenants'); }
+  async getTenant(id) { return await this.request(`/api/tenants/${id}`); }
+  async createTenant(data) {
     return await this.request('/api/tenants', {
       method: 'POST',
-      body: JSON.stringify(tenantData)
+      body: JSON.stringify(data)
     });
   }
-
   async updateTenant(id, data) {
     return await this.request(`/api/tenants/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data)
     });
   }
-
   async deleteTenant(id) {
-    return await this.request(`/api/tenants/${id}`, {
-      method: 'DELETE'
-    });
+    return await this.request(`/api/tenants/${id}`, { method: 'DELETE' });
   }
 
-  async createLead(leadData) {
+  // LEADS
+  async getLeads(tenantId) { return await this.request(`/api/leads?tenantId=${tenantId}`); }
+  async createLead(data) {
     return await this.request('/api/leads', {
       method: 'POST',
-      body: JSON.stringify(leadData)
+      body: JSON.stringify(data)
     });
   }
-
   async updateLead(id, data) {
     return await this.request(`/api/leads/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data)
     });
   }
-
-  async deleteLead(id) {
+  async updateLeadStage(id, stage) {
     return await this.request(`/api/leads/${id}`, {
-      method: 'DELETE'
-    });
-  }
-
-  // --- INÍCIO DAS FUNÇÕES DO KANBAN CUSTOMIZÁVEL ---
-  async getKanbanColumns(tenantId) {
-    return await this.request(`/api/kanban-columns?tenantId=${tenantId}`);
-  }
-
-  async createKanbanColumn(columnData) {
-    return await this.request('/api/kanban-columns', {
-      method: 'POST',
-      body: JSON.stringify(columnData)
-    });
-  }
-
-  async updateKanbanColumn(id, data) {
-    return await this.request(`/api/kanban-columns/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    });
-  }
-
-  async deleteKanbanColumn(id) {
-    return await this.request(`/api/kanban-columns/${id}`, {
-      method: 'DELETE'
-    });
-  }
-  // --- FIM DAS FUNÇÕES DO KANBAN CUSTOMIZÁVEL ---
-  }
-
-  async getLeadByPhone(phone, tenantId) {
-    return await this.request(`/api/leads/by-phone/${phone}?tenantId=${tenantId}`);
-  }
-
-  async updateLeadStage(leadId, stage) {
-    return await this.request(`/api/leads/${leadId}`, {
       method: 'PUT',
       body: JSON.stringify({ stage })
     });
   }
+  async deleteLead(id) {
+    return await this.request(`/api/leads/${id}`, { method: 'DELETE' });
+  }
+  async getLeadByPhone(phone, tenantId) {
+    return await this.request(`/api/leads/by-phone/${phone}?tenantId=${tenantId}`);
+  }
 
-  async createGroup(groupData) {
+  // KANBAN COLUMNS (ADICIONADO)
+  async getKanbanColumns(tenantId) {
+    return await this.request(`/api/kanban-columns?tenantId=${tenantId}`);
+  }
+  async createKanbanColumn(data) {
+    return await this.request('/api/kanban-columns', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+  async deleteKanbanColumn(id) {
+    return await this.request(`/api/kanban-columns/${id}`, { method: 'DELETE' });
+  }
+
+  // GROUPS
+  async getGroups(tenantId) { return await this.request(`/api/groups?tenantId=${tenantId}`); }
+  async createGroup(data) {
     return await this.request('/api/groups', {
       method: 'POST',
-      body: JSON.stringify(groupData)
-    });
-  }
-
-  async updateGroup(id, data) {
-    return await this.request(`/api/groups/${id}`, {
-      method: 'PUT',
       body: JSON.stringify(data)
     });
   }
-
   async deleteGroup(id) {
-    return await this.request(`/api/groups/${id}`, {
-      method: 'DELETE'
-    });
+    return await this.request(`/api/groups/${id}`, { method: 'DELETE' });
   }
 
-  async createKnowledge(knowledgeData) {
-    return await this.request('/api/knowledge', {
-      method: 'POST',
-      body: JSON.stringify(knowledgeData)
-    });
+  // WHATSAPP
+  async getWhatsAppStatus(tenantId) {
+    return await this.request(`/api/whatsapp/status?tenantId=${tenantId}`);
   }
-
-  async updateKnowledge(id, data) {
-    return await this.request(`/api/knowledge/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    });
-  }
-
-  async deleteKnowledge(id) {
-    return await this.request(`/api/knowledge/${id}`, {
-      method: 'DELETE'
-    });
-  }
-
-  async getUsers() {
-    return await this.request('/api/users');
-  }
-
-  async createUser(userData) {
-    return await this.request('/api/users', {
-      method: 'POST',
-      body: JSON.stringify(userData)
-    });
-  }
-
-  async updateUser(id, data) {
-    return await this.request(`/api/users/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    });
-  }
-
-  async deleteUser(id) {
-    return await this.request(`/api/users/${id}`, {
-      method: 'DELETE'
-    });
-  }
-
   async connectWhatsApp(tenantId, instanceToken) {
     return await this.request('/api/whatsapp/connect', {
       method: 'POST',
       body: JSON.stringify({ tenantId, instanceToken })
     });
   }
-
-  async getWhatsAppStatus(tenantId) {
-    return await this.request(`/api/whatsapp/status?tenantId=${tenantId}`);
-  }
-
   async disconnectWhatsApp(tenantId) {
     return await this.request('/api/whatsapp/disconnect', {
       method: 'POST',
       body: JSON.stringify({ tenantId })
     });
   }
-
-  async syncWhatsAppGroups() {
-    return await this.request('/api/whatsapp/sync-groups', {
-      method: 'POST'
-    });
-  }
-
-  async getChats(tenantId) {
-    return await this.request(`/api/chats?tenantId=${tenantId}`);
-  }
-
-  async getChatMessages(chatId, limit, offset) {
-    const params = new URLSearchParams();
-    if (limit) params.append('limit', limit);
-    if (offset) params.append('offset', offset);
-    return await this.request(`/api/chats/${chatId}/messages?${params.toString()}`);
-  }
-
   async sendWhatsAppMessage(number, message, tenantId, chatId) {
     return await this.request('/api/whatsapp/send', {
       method: 'POST',
       body: JSON.stringify({ number, message, tenantId, chatId })
     });
   }
+  async syncWhatsAppGroups() {
+    return await this.request('/api/whatsapp/sync-groups', { method: 'POST' });
+  }
 
-  async healthCheck() {
-    return await this.request('/api/health');
+  // CHATS & MESSAGES
+  async getChats(tenantId) { return await this.request(`/api/chats?tenantId=${tenantId}`); }
+  async getChatMessages(chatId, limit = 50, offset = 0) {
+    return await this.request(`/api/chats/${chatId}/messages?limit=${limit}&offset=${offset}`);
+  }
+
+  // KNOWLEDGE BASE
+  async createKnowledge(data) {
+    return await this.request('/api/knowledge', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+  async deleteKnowledge(id) {
+    return await this.request(`/api/knowledge/${id}`, { method: 'DELETE' });
+  }
+
+  // USERS
+  async getUsers(tenantId) { return await this.request(`/api/users?tenantId=${tenantId}`); }
+  async createUser(data) {
+    return await this.request('/api/users', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+  async deleteUser(id) {
+    return await this.request(`/api/users/${id}`, { method: 'DELETE' });
   }
 }
 
