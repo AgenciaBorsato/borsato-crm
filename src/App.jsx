@@ -827,7 +827,7 @@ function ChatView({ tenant }) {
  const formatTime = (timestamp) => {
     if (!timestamp) return '';
     const raw = String(timestamp);
-    const date = new Date(raw.endsWith('Z') || raw.includes('+') ? raw : raw + 'Z');
+   const date = new Date(raw.replace('Z', ''));
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
     
