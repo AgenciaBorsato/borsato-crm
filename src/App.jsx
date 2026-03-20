@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from './api';
+import MetricCard from './components/cards/MetricCard';
+import { DollarSign, Users, MessageCircle, TrendingUp } from 'lucide-react';
 import {
   MessageSquare, LayoutGrid, Users, Settings, Plus, Search, Send,
   X, Check, Trash2, TrendingUp, DollarSign,
