@@ -135,7 +135,6 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
   const [columns, setColumns] = useState([]);
   const [loadingCols, setLoadingCols] = useState(true);
 
-  // Carrega as colunas que você criou
   const loadColumns = async () => {
     try {
       const data = await api.getKanbanColumns(tenant.id);
@@ -155,7 +154,6 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Header */}
       <div className="border-b border-zinc-800 bg-zinc-900/50 p-4 flex justify-between items-center">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center font-bold text-black">
@@ -169,7 +167,6 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
         </div>
       </div>
 
-      {/* Navegação por Abas */}
       <div className="border-b border-zinc-800 bg-zinc-900/30 px-6 flex gap-4 overflow-x-auto">
         {[
           { id: 'kanban', label: 'Kanban', icon: LayoutGrid },
@@ -195,7 +192,56 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
 }
 
 // ============================================================================
-// CHAT VIEW (Sincronizado com as Suas Colunas)
+// TELA DE LOGIN (FIX: COR DA FONTE E LAYOUT)
+// ============================================================================
+
+function LoginScreen({ onLogin, loading, error }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  return (
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-zinc-900 p-10 rounded-3xl border border-zinc-800 shadow-2xl">
+        <div className="text-center mb-10">
+          <div className="w-20 h-20 bg-amber-500 rounded-2xl mx-auto flex items-center justify-center text-3xl font-black text-black mb-6 shadow-xl">BR</div>
+          <h1 className="text-2xl font-black tracking-tight text-white">BORSATO CRM</h1>
+          <p className="text-zinc-500 text-sm mt-1 uppercase tracking-widest font-bold">Gestão Inteligente de Clientes</p>
+        </div>
+        <form onSubmit={e => { e.preventDefault(); onLogin({email, password}); }} className="space-y-5">
+          <div>
+            <label className="text-xs text-zinc-500 font-bold uppercase mb-2 block">E-mail de acesso</label>
+            <input 
+              type="email" 
+              placeholder="seu@email.com" 
+              value={email} 
+              onChange={e => setEmail(e.target.value)} 
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-sm text-white focus:outline-none focus:border-amber-500 transition-all" 
+              required 
+            />
+          </div>
+          <div>
+            <label className="text-xs text-zinc-500 font-bold uppercase mb-2 block">Senha secreta</label>
+            <input 
+              type="password" 
+              placeholder="********" 
+              value={password} 
+              onChange={e => setPassword(e.target.value)} 
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-sm text-white focus:outline-none focus:border-amber-500 transition-all" 
+              required 
+            />
+          </div>
+          <button type="submit" disabled={loading} className="w-full py-4 bg-amber-500 text-black font-black rounded-xl hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/10">
+            {loading ? 'AUTENTICANDO...' : 'ACESSAR AGORA'}
+          </button>
+          {error && <p className="text-red-500 text-xs text-center font-bold bg-red-500/10 p-3 rounded-lg">{error}</p>}
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// CHAT VIEW (Sincronizado e Genérico)
 // ============================================================================
 
 function ChatView({ tenant, columns, onRefresh }) {
@@ -250,7 +296,7 @@ function ChatView({ tenant, columns, onRefresh }) {
       await api.updateLead(currentLead.id, { ...currentLead, stage: stageId });
       await loadLeadForChat(currentChat);
       await onRefresh();
-    } catch (err) { alert('Erro ao qualificar lead'); }
+    } catch (err) { alert('Erro ao atualizar estágio'); }
   };
 
   const colorClasses = {
@@ -261,7 +307,6 @@ function ChatView({ tenant, columns, onRefresh }) {
 
   return (
     <div className="flex h-[70vh] bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800">
-      {/* Lista de Chats */}
       <div className="w-80 border-r border-zinc-800 overflow-y-auto">
         {chats.map(chat => (
           <div key={chat.id} onClick={() => setCurrentChat(chat)} 
@@ -272,14 +317,11 @@ function ChatView({ tenant, columns, onRefresh }) {
         ))}
       </div>
 
-      {/* Janela de Mensagens */}
       <div className="flex-1 flex flex-col">
         {currentChat ? (
           <>
             <div className="p-4 border-b border-zinc-800 flex flex-col md:flex-row gap-4 justify-between items-center bg-zinc-900/50">
               <p className="font-bold">{currentChat.contact_name || currentChat.contact_phone}</p>
-              
-              {/* BOTOES DINAMICOS: Aqui aparecem exatamente as colunas que voce criou */}
               <div className="flex flex-wrap gap-2 justify-center">
                 {columns.map(col => {
                   const isActive = currentLead?.stage === col.id || currentLead?.stage === col.name.toLowerCase();
@@ -311,7 +353,7 @@ function ChatView({ tenant, columns, onRefresh }) {
             <div className="p-4 bg-zinc-900 border-t border-zinc-800 flex gap-2">
               <input type="text" value={message} onChange={e => setMessage(e.target.value)} 
                 onKeyDown={e => e.key === 'Enter' && handleSend()}
-                placeholder="Digite sua resposta..." className="flex-1 bg-zinc-800 border-none rounded-lg px-4 text-sm" />
+                placeholder="Digite sua resposta..." className="flex-1 bg-zinc-800 border-none rounded-lg px-4 text-sm text-white" />
               <button onClick={handleSend} disabled={sending} className="p-3 bg-amber-500 rounded-lg text-black hover:bg-amber-600 transition-colors">
                 <Send className="w-5 h-5" />
               </button>
@@ -321,7 +363,7 @@ function ChatView({ tenant, columns, onRefresh }) {
           <div className="flex-1 flex items-center justify-center text-zinc-600">
             <div className="text-center">
               <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-20" />
-              <p>Selecione um contato para começar</p>
+              <p>Selecione uma conversa para começar</p>
             </div>
           </div>
         )}
@@ -331,7 +373,7 @@ function ChatView({ tenant, columns, onRefresh }) {
 }
 
 // ============================================================================
-// KANBAN VIEW (Fiel às Suas Colunas)
+// KANBAN VIEW
 // ============================================================================
 
 function KanbanView({ leads, columns, tenant, onRefresh }) {
@@ -364,14 +406,14 @@ function KanbanView({ leads, columns, tenant, onRefresh }) {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold">Pipeline de Vendas</h2>
         <button onClick={() => setShowColumnModal(true)} className="flex items-center gap-2 px-4 py-2 bg-zinc-800 rounded-lg hover:bg-zinc-700 text-sm font-medium">
-          <Plus className="w-4 h-4" /> Adicionar Coluna
+          <Plus className="w-4 h-4" /> Nova Etapa
         </button>
       </div>
 
       {columns.length === 0 ? (
         <div className="p-20 text-center border-2 border-dashed border-zinc-800 rounded-2xl bg-zinc-900/20">
           <LayoutGrid className="w-12 h-12 mx-auto text-zinc-800 mb-4" />
-          <p className="text-zinc-500 mb-6">Crie as etapas do seu processo comercial (ex: Triagem, Agendado, Compareceu).</p>
+          <p className="text-zinc-500 mb-6">Crie as etapas do seu funil de vendas (ex: Prospecção, Negociação, Fechado).</p>
           <button onClick={() => setShowColumnModal(true)} className="px-8 py-3 bg-amber-500 text-black font-bold rounded-xl shadow-lg hover:bg-amber-600 transition-all">Criar Primeira Coluna</button>
         </div>
       ) : (
@@ -394,7 +436,7 @@ function KanbanView({ leads, columns, tenant, onRefresh }) {
                 <div className="space-y-3">
                   {stageLeads.map(lead => (
                     <div key={lead.id} draggable onDragStart={() => setDraggedLead(lead)}
-                      className="bg-zinc-800 p-3 rounded-lg cursor-move border border-zinc-700/50 hover:border-amber-500/40 hover:bg-zinc-750 transition-all shadow-sm">
+                      className="bg-zinc-800 p-3 rounded-lg cursor-move border border-zinc-700/50 hover:border-amber-500/40 transition-all shadow-sm">
                       <p className="font-bold text-xs mb-1">{lead.name}</p>
                       <p className="text-[10px] text-zinc-500">{lead.phone}</p>
                     </div>
@@ -406,19 +448,18 @@ function KanbanView({ leads, columns, tenant, onRefresh }) {
         </div>
       )}
 
-      {/* Modal Criar Coluna */}
       {showColumnModal && (
         <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="bg-zinc-900 p-8 rounded-2xl w-full max-w-md border border-zinc-800 shadow-2xl">
-            <h2 className="text-xl font-bold mb-6">Nova Etapa do Funil</h2>
+            <h2 className="text-xl font-bold mb-6 text-white">Nova Etapa do Funil</h2>
             <form onSubmit={handleCreateColumn} className="space-y-5">
               <div>
                 <label className="text-xs text-zinc-500 font-bold uppercase mb-2 block">Nome da Coluna</label>
-                <input type="text" placeholder="Ex: Paciente Agendado" value={newColumn.name} 
-                  onChange={e => setNewColumn({...newColumn, name: e.target.value})} className="w-full bg-zinc-800 border-zinc-700 rounded-xl text-sm p-3 focus:ring-amber-500" required />
+                <input type="text" placeholder="Ex: Proposta Enviada" value={newColumn.name} 
+                  onChange={e => setNewColumn({...newColumn, name: e.target.value})} className="w-full bg-zinc-800 border-zinc-700 rounded-xl text-sm p-3 text-white focus:ring-amber-500" required />
               </div>
               <div>
-                <label className="text-xs text-zinc-500 font-bold uppercase mb-2 block">Cor de Identificação</label>
+                <label className="text-xs text-zinc-500 font-bold uppercase mb-2 block">Cor</label>
                 <div className="flex justify-between p-2 bg-zinc-800 rounded-xl">
                   {['blue', 'yellow', 'purple', 'green', 'red', 'zinc'].map(c => (
                     <button key={c} type="button" onClick={() => setNewColumn({...newColumn, color: c})}
@@ -427,8 +468,8 @@ function KanbanView({ leads, columns, tenant, onRefresh }) {
                 </div>
               </div>
               <div className="flex gap-3 pt-6">
-                <button type="button" onClick={() => setShowColumnModal(false)} className="flex-1 py-3 bg-zinc-800 rounded-xl font-bold text-sm">Cancelar</button>
-                <button type="submit" className="flex-1 py-3 bg-amber-500 text-black font-bold rounded-xl text-sm hover:bg-amber-600 transition-colors">Criar Agora</button>
+                <button type="button" onClick={() => setShowColumnModal(false)} className="flex-1 py-3 bg-zinc-800 rounded-xl font-bold text-sm text-white">Cancelar</button>
+                <button type="submit" className="flex-1 py-3 bg-amber-500 text-black font-bold rounded-xl text-sm hover:bg-amber-600 transition-colors">Criar Etapa</button>
               </div>
             </form>
           </div>
@@ -439,7 +480,7 @@ function KanbanView({ leads, columns, tenant, onRefresh }) {
 }
 
 // ============================================================================
-// OUTROS COMPONENTES (LEADS, WHATSAPP, LOGIN)
+// LEADS VIEW
 // ============================================================================
 
 function LeadsView({ leads, columns, onRefresh }) {
@@ -452,22 +493,22 @@ function LeadsView({ leads, columns, onRefresh }) {
       <table className="w-full text-left">
         <thead className="bg-zinc-800/80 text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
           <tr>
-            <th className="p-4">Nome do Paciente</th>
+            <th className="p-4">Nome</th>
             <th className="p-4">Contato</th>
-            <th className="p-4">Estágio Atual</th>
+            <th className="p-4">Estágio</th>
             <th className="p-4 text-right">Ações</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-800/50">
           {leads.map(lead => (
             <tr key={lead.id} className="hover:bg-zinc-800/20 transition-colors">
-              <td className="p-4 font-bold text-sm">{lead.name}</td>
+              <td className="p-4 font-bold text-sm text-white">{lead.name}</td>
               <td className="p-4 text-xs text-zinc-400 font-mono">{lead.phone}</td>
               <td className="p-4">
-                <span className="px-3 py-1 bg-zinc-800 rounded-full text-[10px] font-bold text-zinc-500 border border-zinc-700">{getStageName(lead.stage)}</span>
+                <span className="px-3 py-1 bg-zinc-800 rounded-full text-[10px] font-bold text-zinc-400 border border-zinc-700">{getStageName(lead.stage)}</span>
               </td>
               <td className="p-4 text-right">
-                <button onClick={async () => { if(confirm('Deletar paciente?')) { await api.deleteLead(lead.id); onRefresh(); } }} className="p-2 text-zinc-600 hover:text-red-500 transition-colors">
+                <button onClick={async () => { if(confirm('Deletar lead?')) { await api.deleteLead(lead.id); onRefresh(); } }} className="p-2 text-zinc-600 hover:text-red-500 transition-colors">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </td>
@@ -479,6 +520,10 @@ function LeadsView({ leads, columns, onRefresh }) {
   );
 }
 
+// ============================================================================
+// WHATSAPP E SUPER ADMIN
+// ============================================================================
+
 function WhatsAppView({ tenant, onRefresh }) {
   const [status, setStatus] = useState(null);
   const [token, setToken] = useState('');
@@ -489,46 +534,22 @@ function WhatsAppView({ tenant, onRefresh }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div className="bg-zinc-900 p-8 rounded-2xl border border-zinc-800 shadow-xl">
-        <h3 className="text-xl font-bold mb-6">Conexão WhatsApp (Evolution)</h3>
+        <h3 className="text-xl font-bold mb-6 text-white">Conexão WhatsApp (Evolution)</h3>
         {status?.connected ? (
-          <div className="flex flex-col items-center py-6">
+          <div className="flex flex-col items-center py-6 text-center">
             <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mb-4">
               <CheckCircle2 className="w-10 h-10 text-green-500" />
             </div>
-            <p className="text-green-500 font-bold">Sistema Conectado</p>
-            <p className="text-xs text-zinc-500 mt-2">Sua IA está respondendo em tempo real.</p>
+            <p className="text-green-500 font-bold">WhatsApp Conectado</p>
+            <p className="text-xs text-zinc-500 mt-2">Pronto para receber mensagens e qualificar leads.</p>
           </div>
         ) : (
           <div className="space-y-5">
-            <p className="text-zinc-400 text-sm">Insira o token da sua instância no Evolution Manager para vincular a IA:</p>
-            <input type="text" value={token} onChange={e => setToken(e.target.value)} placeholder="Cole aqui o Instance Token" className="w-full bg-black border-zinc-800 rounded-xl p-3 text-sm font-mono" />
-            <button onClick={handleConnect} className="w-full py-4 bg-amber-500 text-black font-bold rounded-xl hover:bg-amber-600 transition-all">Ativar Conexão</button>
+            <p className="text-zinc-400 text-sm">Insira o token da sua instância no Evolution Manager:</p>
+            <input type="text" value={token} onChange={e => setToken(e.target.value)} placeholder="Instance Token" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm text-white font-mono" />
+            <button onClick={handleConnect} className="w-full py-4 bg-amber-500 text-black font-bold rounded-xl hover:bg-amber-600 transition-all">Ativar Agora</button>
           </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-function LoginScreen({ onLogin, loading, error }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-zinc-900 p-10 rounded-3xl border border-zinc-800 shadow-2xl">
-        <div className="text-center mb-10">
-          <div className="w-20 h-20 bg-amber-500 rounded-2xl mx-auto flex items-center justify-center text-3xl font-black text-black mb-6 shadow-xl">BR</div>
-          <h1 className="text-2xl font-black tracking-tight">BORSATO CRM</h1>
-          <p className="text-zinc-500 text-sm mt-1 uppercase tracking-widest font-bold">Marketing Médico Inteligente</p>
-        </div>
-        <form onSubmit={e => { e.preventDefault(); onLogin({email, password}); }} className="space-y-5">
-          <input type="email" placeholder="Seu e-mail" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-black border-zinc-800 rounded-xl p-4 text-sm focus:ring-amber-500" required />
-          <input type="password" placeholder="Sua senha" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-black border-zinc-800 rounded-xl p-4 text-sm focus:ring-amber-500" required />
-          <button type="submit" disabled={loading} className="w-full py-4 bg-amber-500 text-black font-black rounded-xl hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/10">
-            {loading ? 'AUTENTICANDO...' : 'ACESSAR AGORA'}
-          </button>
-          {error && <p className="text-red-500 text-xs text-center font-bold bg-red-500/10 p-3 rounded-lg">{error}</p>}
-        </form>
       </div>
     </div>
   );
@@ -538,18 +559,15 @@ function SuperAdminPanel({ user, tenants, onLogout, onAccessTenant }) {
   return (
     <div className="min-h-screen bg-black text-white p-8">
       <div className="flex justify-between items-center mb-10">
-        <div>
-          <h1 className="text-3xl font-black tracking-tighter">CONTROLE MESTRE</h1>
-          <p className="text-zinc-500 font-bold uppercase text-[10px] tracking-widest">Painel de Gerenciamento Borsato</p>
-        </div>
-        <button onClick={onLogout} className="px-6 py-2 bg-zinc-900 border border-zinc-800 rounded-full font-bold text-xs hover:bg-zinc-800 transition-colors">SAIR</button>
+        <h1 className="text-3xl font-black tracking-tighter">PAINEL ADMINISTRATIVO</h1>
+        <button onClick={onLogout} className="px-6 py-2 bg-zinc-900 border border-zinc-800 rounded-full font-bold text-xs hover:bg-zinc-800">SAIR</button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {tenants.map(t => (
           <div key={t.id} className="bg-zinc-900/50 p-8 rounded-3xl border border-zinc-800 hover:border-amber-500/50 transition-all group">
             <h3 className="text-2xl font-black mb-1 group-hover:text-amber-500 transition-colors">{t.name}</h3>
             <p className="text-zinc-500 text-sm font-mono mb-8">{t.email}</p>
-            <button onClick={() => onAccessTenant(t.id)} className="w-full py-4 bg-white/5 text-white font-black rounded-2xl hover:bg-amber-500 hover:text-black transition-all uppercase text-xs tracking-widest">Entrar no CRM</button>
+            <button onClick={() => onAccessTenant(t.id)} className="w-full py-4 bg-white/5 text-white font-black rounded-2xl hover:bg-amber-500 hover:text-black transition-all uppercase text-xs tracking-widest">Acessar CRM</button>
           </div>
         ))}
       </div>
