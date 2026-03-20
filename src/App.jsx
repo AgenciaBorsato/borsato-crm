@@ -289,9 +289,9 @@ function ChatView({tenant,columns,onRefresh}){
     setSending(true);
     try {
       const payload = { number: ph, message: msg, chatId: cur.id, tenantId: tenant.id };
-      if (api.sendWhatsAppMessage) { 
-          await api.sendWhatsAppMessage(payload); 
-      } else {
+if (api.sendWhatsAppMessage) { 
+  await api.sendWhatsAppMessage(ph, msg, tenant.id, cur.id);
+} else {
           await fetch((import.meta.env.VITE_API_URL || '') + '/api/whatsapp/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
