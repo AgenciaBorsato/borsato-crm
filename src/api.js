@@ -41,6 +41,7 @@ class ApiService {
   async connectWhatsApp(tid, token) { return await this.request('/api/whatsapp/connect', { method: 'POST', body: JSON.stringify({ tenantId: tid, instanceToken: token }) }); }
   async disconnectWhatsApp(tid) { return await this.request('/api/whatsapp/disconnect', { method: 'POST', body: JSON.stringify({ tenantId: tid }) }); }
   async sendWhatsAppMessage(number, message, tid, chatId) { return await this.request('/api/whatsapp/send', { method: 'POST', body: JSON.stringify({ number, message, tenantId: tid, chatId }) }); }
+  async sendWhatsAppMedia(data) { return await this.request('/api/whatsapp/send-media', { method: 'POST', body: JSON.stringify(data) }); }
   async syncWhatsAppGroups() { return await this.request('/api/whatsapp/sync-groups', { method: 'POST' }); }
 async deleteChat(id) { return await this.request(`/api/chats/${id}`, { method: 'DELETE' }); }
   async fetchMedia(tenantId, messageKey) { return await this.request('/api/whatsapp/media', { method: 'POST', body: JSON.stringify({ tenantId, messageKey }) }); }
