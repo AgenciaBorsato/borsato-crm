@@ -273,8 +273,19 @@ function KanbanView({leads,columns,tenant,onRefresh}){
 function ChatView({tenant,columns,onRefresh}){
   const [chats,setChats]=useState([]);const [cur,setCur]=useState(null);const [lead,setLead]=useState(null);const [msgs,setMsgs]=useState([]);const [msg,setMsg]=useState('');const [sending,setSending]=useState(false);const [search,setSearch]=useState('');const [showEdit,setShowEdit]=useState(false);const [filter,setFilter]=useState('all');const [file,setFile]=useState(null);const endRef=useRef(null);const fileRef=useRef(null);
 
-  useEffect(()=>{load();const i=setInterval(load,4000);return()=>clearInterval(i);},[tenant.id]);
-  useEffect(()=>{if(cur){loadMsgs(cur.id);loadLead(cur);const i=setInterval(()=>loadMsgs(cur.id),3000);return()=>clearInterval(i);}},[cur?.id]);
+ useEffect(() => {
+  load();
+  const i = setInterval(load, 1500);
+  return () => clearInterval(i);
+}, [tenant.id]);
+useEffect(() => {
+  if (cur) {
+    loadMsgs(cur.id);
+    loadLead(cur);
+    const i = setInterval(() => loadMsgs(cur.id), 1500);
+    return () => clearInterval(i);
+  }
+}, [cur?.id]);
   useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'});},[msgs]);
 
   const load=async()=>{try{setChats(await api.getChats(tenant.id));}catch(e){}};
