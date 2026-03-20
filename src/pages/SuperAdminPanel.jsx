@@ -287,4 +287,4 @@ function TenantModal({ tenant, onClose, onRefresh }) {
     </div>
   );
 }
-
+export default SuperAdminPanel;
