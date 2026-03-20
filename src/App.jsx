@@ -733,31 +733,39 @@ function WhatsAppView({ tenant, onRefresh }) {
 function ChatView({ tenant }) {
   const [chats, setChats] = useState([]);
   const [currentChat, setCurrentChat] = useState(null);
+  const [currentLead, setCurrentLead] = useState(null);
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [updatingStage, setUpdatingStage] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // Carregar lista de chats
+  const stages = [
+    { id: 'novo', label: 'Novo', color: 'bg-blue-500/20 text-blue-400' },
+    { id: 'qualificado', label: 'Qualificado', color: 'bg-yellow-500/20 text-yellow-400' },
+    { id: 'negociacao', label: 'Negociacao', color: 'bg-purple-500/20 text-purple-400' },
+    { id: 'ganho', label: 'Ganho', color: 'bg-green-500/20 text-green-400' },
+    { id: 'perdido', label: 'Perdido', color: 'bg-red-500/20 text-red-400' }
+  ];
+
   useEffect(() => {
     loadChats();
     const interval = setInterval(loadChats, 5000);
     return () => clearInterval(interval);
   }, [tenant.id]);
 
-  // Carregar mensagens quando selecionar um chat
   useEffect(() => {
     if (currentChat) {
       loadMessages(currentChat.id);
+      loadLeadForChat(currentChat);
       const interval = setInterval(() => loadMessages(currentChat.id), 3000);
       return () => clearInterval(interval);
     }
   }, [currentChat?.id]);
 
-  // Scroll para ultima mensagem
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -767,55 +775,59 @@ function ChatView({ tenant }) {
       const data = await api.getChats(tenant.id);
       setChats(data);
       setLoadingChats(false);
-    } catch (err) {
-      console.error('Erro ao carregar chats:', err);
-      setLoadingChats(false);
-    }
+    } catch (err) { setLoadingChats(false); }
   };
 
   const loadMessages = async (chatId) => {
     try {
       const data = await api.getChatMessages(chatId, 100, 0);
       setMessages(data);
-    } catch (err) {
-      console.error('Erro ao carregar mensagens:', err);
-    }
+    } catch (err) { console.error('Erro ao carregar mensagens:', err); }
+  };
+
+  const loadLeadForChat = async (chat) => {
+    const phone = chat.contact_phone || chat.remote_jid?.split('@')[0];
+    if (!phone) { setCurrentLead(null); return; }
+    try {
+      const lead = await api.getLeadByPhone(phone, tenant.id);
+      setCurrentLead(lead);
+    } catch (err) { setCurrentLead(null); }
   };
 
   const handleSelectChat = async (chat) => {
     setCurrentChat(chat);
+    setCurrentLead(null);
     setLoadingMessages(true);
     try {
       const data = await api.getChatMessages(chat.id, 100, 0);
       setMessages(data);
-    } catch (err) {
-      console.error('Erro ao carregar mensagens:', err);
-    } finally {
-      setLoadingMessages(false);
-    }
+      loadLeadForChat(chat);
+    } catch (err) { console.error(err); }
+    finally { setLoadingMessages(false); }
+  };
+
+  const handleChangeStage = async (newStage) => {
+    if (!currentLead) return;
+    setUpdatingStage(true);
+    try {
+      await api.updateLeadStage(currentLead.id, newStage);
+      setCurrentLead({ ...currentLead, stage: newStage });
+    } catch (err) { alert('Erro ao atualizar estagio: ' + err.message); }
+    finally { setUpdatingStage(false); }
   };
 
   const handleSend = async () => {
     if (!message.trim() || !currentChat) return;
-
     const phone = currentChat.contact_phone || currentChat.remote_jid?.split('@')[0];
-    if (!phone) {
-      alert('Numero de telefone nao encontrado');
-      return;
-    }
-
+    if (!phone) { alert('Numero nao encontrado'); return; }
     setSending(true);
     try {
       await api.sendWhatsAppMessage(phone, message, tenant.id, currentChat.id);
       setMessage('');
-      // Recarregar mensagens imediatamente
       await loadMessages(currentChat.id);
       await loadChats();
-    } catch (err) {
-      alert('Erro ao enviar: ' + err.message);
-    } finally {
-      setSending(false);
-    }
+    } catch (err) { alert('Erro ao enviar: ' + err.message); }
+    finally { setSending(false); }
   };
 
   const filteredChats = chats.filter(chat => {
@@ -824,16 +836,13 @@ function ChatView({ tenant }) {
     return name.includes(searchTerm.toLowerCase());
   });
 
- const formatTime = (timestamp) => {
+  const formatTime = (timestamp) => {
     if (!timestamp) return '';
     const raw = String(timestamp);
-   const date = new Date(raw.replace('Z', ''));
+    const date = new Date(raw.replace('Z', ''));
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
-    
-    if (isToday) {
-      return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    }
+    if (isToday) return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   };
 
@@ -859,63 +868,36 @@ function ChatView({ tenant }) {
 
   return (
     <div className="flex gap-0 h-[calc(100vh-220px)] bg-zinc-900 rounded-xl overflow-hidden">
-      {/* Lista de conversas */}
       <div className="w-96 border-r border-zinc-800 flex flex-col">
         <div className="p-4 border-b border-zinc-800">
           <h3 className="font-bold text-lg mb-3">Conversas</h3>
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar conversa..."
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg pl-10 pr-4 py-2 text-sm"
-            />
+            <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Buscar conversa..." className="w-full bg-zinc-800 border border-zinc-700 rounded-lg pl-10 pr-4 py-2 text-sm" />
           </div>
         </div>
-
         <div className="flex-1 overflow-y-auto">
           {loadingChats ? (
             <div className="text-center py-8 text-zinc-500 text-sm">Carregando conversas...</div>
           ) : filteredChats.length === 0 ? (
             <div className="text-center py-8 text-zinc-500 text-sm px-4">
-              {chats.length === 0 
-                ? 'Nenhuma conversa ainda. As mensagens recebidas pelo WhatsApp aparecerao aqui automaticamente.'
-                : 'Nenhuma conversa encontrada'
-              }
+              {chats.length === 0 ? 'Nenhuma conversa ainda. As mensagens recebidas pelo WhatsApp aparecerao aqui automaticamente.' : 'Nenhuma conversa encontrada'}
             </div>
           ) : (
             filteredChats.map(chat => (
-              <div
-                key={chat.id}
-                onClick={() => handleSelectChat(chat)}
-                className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-zinc-800 transition-colors border-b border-zinc-800/50 ${
-                  currentChat?.id === chat.id ? 'bg-zinc-800' : ''
-                }`}
-              >
+              <div key={chat.id} onClick={() => handleSelectChat(chat)} className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-zinc-800 transition-colors border-b border-zinc-800/50 ${currentChat?.id === chat.id ? 'bg-zinc-800' : ''}`}>
                 <div className="w-10 h-10 bg-zinc-700 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm font-medium">
-                    {(chat.contact_name || chat.contact_phone || '?').substring(0, 2).toUpperCase()}
-                  </span>
+                  <span className="text-sm font-medium">{(chat.contact_name || chat.contact_phone || '?').substring(0, 2).toUpperCase()}</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-sm truncate">
-                      {chat.contact_name || chat.contact_phone || 'Desconhecido'}
-                    </h4>
-                    <span className="text-xs text-zinc-500 flex-shrink-0 ml-2">
-                      {formatTime(chat.last_message_time)}
-                    </span>
+                    <h4 className="font-medium text-sm truncate">{chat.contact_name || chat.contact_phone || 'Desconhecido'}</h4>
+                    <span className="text-xs text-zinc-500 flex-shrink-0 ml-2">{formatTime(chat.last_message_time)}</span>
                   </div>
                   <div className="flex items-center justify-between mt-1">
-                    <p className="text-xs text-zinc-400 truncate flex-1">
-                      {chat.last_message || 'Sem mensagens'}
-                    </p>
+                    <p className="text-xs text-zinc-400 truncate flex-1">{chat.last_message || 'Sem mensagens'}</p>
                     {chat.unread_count > 0 && (
-                      <span className="ml-2 bg-amber-500 text-black text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                        {chat.unread_count > 9 ? '9+' : chat.unread_count}
-                      </span>
+                      <span className="ml-2 bg-amber-500 text-black text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">{chat.unread_count > 9 ? '9+' : chat.unread_count}</span>
                     )}
                   </div>
                 </div>
@@ -925,24 +907,44 @@ function ChatView({ tenant }) {
         </div>
       </div>
 
-      {/* Area de mensagens */}
       <div className="flex-1 flex flex-col">
         {currentChat ? (
           <>
-            {/* Header do chat */}
-            <div className="p-4 border-b border-zinc-800 flex items-center gap-3">
-              <div className="w-10 h-10 bg-zinc-700 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium">
-                  {(currentChat.contact_name || currentChat.contact_phone || '?').substring(0, 2).toUpperCase()}
-                </span>
-              </div>
-              <div>
-                <h3 className="font-medium">{currentChat.contact_name || currentChat.contact_phone || 'Desconhecido'}</h3>
-                <p className="text-xs text-zinc-400">{currentChat.contact_phone}</p>
+            <div className="p-4 border-b border-zinc-800">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-zinc-700 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-medium">{(currentChat.contact_name || currentChat.contact_phone || '?').substring(0, 2).toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <h3 className="font-medium">{currentChat.contact_name || currentChat.contact_phone || 'Desconhecido'}</h3>
+                    <p className="text-xs text-zinc-400">{currentChat.contact_phone}</p>
+                  </div>
+                </div>
+                {currentLead && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-500">Estagio:</span>
+                    <div className="flex gap-1">
+                      {stages.map(stage => (
+                        <button
+                          key={stage.id}
+                          onClick={() => handleChangeStage(stage.id)}
+                          disabled={updatingStage}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                            currentLead.stage === stage.id
+                              ? stage.color + ' ring-1 ring-current'
+                              : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300'
+                          }`}
+                        >
+                          {stage.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Mensagens */}
             <div className="flex-1 p-4 overflow-y-auto bg-zinc-950/50" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.02\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }}>
               {loadingMessages ? (
                 <div className="text-center py-8 text-zinc-500 text-sm">Carregando mensagens...</div>
@@ -953,21 +955,17 @@ function ChatView({ tenant }) {
                   {messages.map((msg) => (
                     <div key={msg.id} className={`flex ${msg.is_from_me ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[70%] rounded-lg px-3 py-2 ${
-                        msg.is_from_me
-                          ? 'bg-amber-500/20 border border-amber-500/30'
-                          : 'bg-zinc-800 border border-zinc-700'
+                        msg.is_from_me ? 'bg-amber-500/20 border border-amber-500/30' : 'bg-zinc-800 border border-zinc-700'
                       }`}>
-                        {!msg.is_from_me && msg.sender_name && (
-                          <p className="text-xs font-medium text-amber-400 mb-1">{msg.sender_name}</p>
+                        {msg.sender_name && (
+                          <p className={`text-xs font-bold mb-1 ${msg.is_from_me ? 'text-amber-400' : 'text-blue-400'}`}>{msg.sender_name}</p>
                         )}
                         <p className="text-sm whitespace-pre-wrap break-words">
                           {getMessageTypeIcon(msg.message_type)}
                           {msg.content}
                         </p>
                         <div className="flex items-center justify-end gap-1 mt-1">
-                          <span className="text-[10px] text-zinc-500">
-                            {formatTime(msg.timestamp)}
-                          </span>
+                          <span className="text-[10px] text-zinc-500">{formatTime(msg.timestamp)}</span>
                           {msg.is_from_me && getStatusIcon(msg.status)}
                         </div>
                       </div>
@@ -978,7 +976,6 @@ function ChatView({ tenant }) {
               )}
             </div>
 
-            {/* Input de mensagem */}
             <div className="p-4 border-t border-zinc-800">
               <div className="flex gap-2">
                 <input
@@ -990,11 +987,7 @@ function ChatView({ tenant }) {
                   className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 focus:outline-none focus:border-amber-500"
                   disabled={sending}
                 />
-                <button
-                  onClick={handleSend}
-                  disabled={sending || !message.trim()}
-                  className="px-4 py-3 bg-amber-500 hover:bg-amber-600 text-black rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                <button onClick={handleSend} disabled={sending || !message.trim()} className="px-4 py-3 bg-amber-500 hover:bg-amber-600 text-black rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {sending ? <Clock className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                 </button>
               </div>
@@ -1013,7 +1006,6 @@ function ChatView({ tenant }) {
     </div>
   );
 }
-
 // ============================================================================
 // KANBAN VIEW
 // ============================================================================
