@@ -1,14 +1,34 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from './api';
-import MetricCard from './components/cards/MetricCard';
-import { DollarSign, Users, MessageCircle, TrendingUp } from 'lucide-react';
 import SuperAdminPanel from './pages/SuperAdminPanel';
 import {
-  MessageSquare, LayoutGrid, Users, Settings, Plus, Search, Send,
-  X, Check, Trash2, TrendingUp, DollarSign,
-  BarChart3, Brain, Edit2, Building2, Eye, UserPlus,
-  ArrowLeft, Smartphone, Image, Mic, FileText, MapPin, CheckCheck,
-  Paperclip, Users2, Download, Play, Pause
+  MessageSquare,
+  LayoutGrid,
+  Users,
+  Settings,
+  Plus,
+  Search,
+  Send,
+  X,
+  Check,
+  Trash2,
+  TrendingUp,
+  BarChart3,
+  Brain,
+  Edit2,
+  UserPlus,
+  ArrowLeft,
+  Smartphone,
+  Image,
+  Mic,
+  FileText,
+  MapPin,
+  CheckCheck,
+  Paperclip,
+  Users2,
+  Download,
+  Play,
+  Pause
 } from 'lucide-react';
 
 // ============================================================================
@@ -258,7 +278,7 @@ export default function BorsatoCRM() {
     try {
       setTenants(await api.getTenants());
     } catch (e) {
-      setError('Erro');
+      setError('Erro ao carregar clientes');
     } finally {
       setLoading(false);
     }
@@ -269,7 +289,7 @@ export default function BorsatoCRM() {
     try {
       setCurrentTenant(await api.getTenant(id));
     } catch (e) {
-      setError('Erro');
+      setError('Erro ao carregar tenant');
     } finally {
       setLoading(false);
     }
@@ -278,6 +298,7 @@ export default function BorsatoCRM() {
   const handleLogin = async (c) => {
     setLoading(true);
     setError(null);
+
     try {
       const { user } = await api.login(c.email, c.password);
       setCurrentUser(user);
@@ -303,11 +324,17 @@ export default function BorsatoCRM() {
     setCurrentUser(null);
     setCurrentView('login');
     setCurrentTenant(null);
+    setTenants([]);
   };
 
   const refreshData = useCallback(async () => {
-    if (currentView === 'superAdmin') await loadTenants();
-    if (currentTenant) await loadTenantData(currentTenant.id);
+    if (currentView === 'superAdmin') {
+      await loadTenants();
+    }
+
+    if (currentTenant) {
+      await loadTenantData(currentTenant.id);
+    }
   }, [currentView, currentTenant]);
 
   if (currentView === 'login') {
@@ -317,17 +344,10 @@ export default function BorsatoCRM() {
   if (currentView === 'superAdmin') {
     return (
       <SuperAdminPanel
-  user={user}
-  tenants={tenants}
-  leads={leads}
-  rev={rev}
-  search={search}
-  setSearch={setSearch}
-  filtered={filtered}
-  setShowCreate={setShowCreate}
-  onLogout={handleLogout}
-/>
-        }}
+        user={currentUser}
+        tenants={tenants}
+        onLogout={handleLogout}
+        onRefresh={refreshData}
       />
     );
   }
