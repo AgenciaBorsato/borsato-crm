@@ -317,13 +317,16 @@ export default function BorsatoCRM() {
   if (currentView === 'superAdmin') {
     return (
       <SuperAdminPanel
-        user={currentUser}
-        tenants={tenants}
-        onLogout={handleLogout}
-        onRefresh={refreshData}
-        onAccessTenant={(id) => {
-          loadTenantData(id);
-          setCurrentView('clientDashboard');
+  user={user}
+  tenants={tenants}
+  leads={leads}
+  rev={rev}
+  search={search}
+  setSearch={setSearch}
+  filtered={filtered}
+  setShowCreate={setShowCreate}
+  onLogout={handleLogout}
+/>
         }}
       />
     );
