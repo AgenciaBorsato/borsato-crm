@@ -442,31 +442,34 @@ function SuperAdminPanel({ user, tenants, onLogout, onAccessTenant, onRefresh })
 
       <div className="max-w-7xl mx-auto px-6 py-6">
         <div className="grid grid-cols-4 gap-4 mb-6">
-          {[
-            {
-              l: 'Receita',
-              v: `R$ ${rev.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-              i: DollarSign,
-              c: 'text-green-600'
-            },
-            { l: 'Clientes', v: tenants.length, i: Building2, c: 'text-[#075e54]' },
-            { l: 'Leads', v: leads, i: Users, c: 'text-blue-600' },
-            {
-              l: 'Ticket',
-              v: `R$ ${tenants.length > 0 ? (rev / tenants.length).toFixed(2) : '0.00'}`,
-              i: TrendingUp,
-              c: 'text-purple-600'
-            }
-          ].map((m, i) => (
-            <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-2 mb-1">
-                <m.i className={`w-4 h-4 ${m.c}`} />
-                <span className="text-[10px] text-gray-400 font-bold uppercase">{m.l}</span>
-              </div>
-              <p className="text-2xl font-bold">{m.v}</p>
-            </div>
-          ))}
-        </div>
+  <MetricCard
+    title="MRR"
+    value={`R$ ${rev.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+    icon={<DollarSign />}
+    color="green"
+  />
+
+  <MetricCard
+    title="Clientes"
+    value={tenants.length}
+    icon={<Users />}
+    color="blue"
+  />
+
+  <MetricCard
+    title="Leads"
+    value={leads}
+    icon={<MessageCircle />}
+    color="yellow"
+  />
+
+  <MetricCard
+    title="Ticket"
+    value={`R$ ${tenants.length > 0 ? (rev / tenants.length).toFixed(2) : '0.00'}`}
+    icon={<TrendingUp />}
+    color="purple"
+  />
+</div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <div className="flex justify-between items-center mb-4">
