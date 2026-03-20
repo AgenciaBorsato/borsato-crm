@@ -1,22 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DollarSign, Users, MessageCircle, TrendingUp, Plus, Search } from 'lucide-react';
 import MetricCard from '../components/cards/MetricCard';
+import CreateCrmModal from '../components/modals/CreateCrmModal';
 
 export default function SuperAdminPanel({
   user,
-  tenants,
-  leads,
-  rev,
-  search,
-  setSearch,
-  filtered,
-  setShowCreate,
-  onLogout
+  tenants = [],
+  onLogout,
+  onRefresh,
 }) {
+  const [showCreateCrm, setShowCreateCrm] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const rev = tenants.reduce((a, t) => a + (parseFloat(t.monthly_value) || 0), 0);
+  const leads = tenants.reduce((a, t) => a + (t.leadCount || 0), 0);
+
+  const filtered = tenants.filter((t) =>
+    (t.name || '').toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="min-h-screen bg-[#f0f2f5]">
-      
-      {/* HEADER */}
       <div className="bg-[#075e54] text-white px-6 py-3 flex justify-between items-center shadow">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center font-bold text-sm">
@@ -36,12 +40,8 @@ export default function SuperAdminPanel({
         </button>
       </div>
 
-      {/* CONTEÚDO */}
       <div className="max-w-7xl mx-auto px-6 py-6">
-
-        {/* CARDS NOVOS */}
         <div className="grid grid-cols-4 gap-4 mb-6">
-
           <MetricCard
             title="MRR"
             value={`R$ ${rev.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
@@ -57,7 +57,7 @@ export default function SuperAdminPanel({
           />
 
           <MetricCard
-            title="Conversas"
+            title="Leads"
             value={leads}
             icon={<MessageCircle />}
             color="yellow"
@@ -69,28 +69,23 @@ export default function SuperAdminPanel({
             icon={<TrendingUp />}
             color="purple"
           />
-
         </div>
 
-        {/* BLOCO CLIENTES */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-lg">Clientes</h2>
 
             <button
-              onClick={() => setShowCreate(true)}
+              onClick={() => setShowCreateCrm(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg hover:scale-105 transition"
             >
               <Plus className="w-3 h-3" />
-              Novo
+              Novo CRM
             </button>
           </div>
 
-          {/* BUSCA */}
           <div className="mb-4 relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -99,7 +94,6 @@ export default function SuperAdminPanel({
             />
           </div>
 
-          {/* LISTA */}
           <div className="space-y-2">
             {filtered.map((t) => (
               <div
@@ -119,6 +113,7 @@ export default function SuperAdminPanel({
                   <div className="flex gap-4 text-xs text-gray-400 mt-1">
                     <span>R$ {parseFloat(t.monthly_value || 0).toFixed(2)}</span>
                     <span>{t.leadCount || 0} leads</span>
+                    <span>{t.userCount || 0} usuários</span>
                   </div>
                 </div>
 
@@ -128,9 +123,18 @@ export default function SuperAdminPanel({
               </div>
             ))}
           </div>
-
         </div>
       </div>
+
+      {showCreateCrm && (
+        <CreateCrmModal
+          onClose={() => setShowCreateCrm(false)}
+          onSuccess={() => {
+            setShowCreateCrm(false);
+            if (onRefresh) onRefresh();
+          }}
+        />
+      )}
     </div>
   );
 }
