@@ -30,7 +30,7 @@ class ApiService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Erro na requisição');
+        throw new Error(error.error || 'Erro na requisicao');
       }
 
       return await response.json();
@@ -40,7 +40,7 @@ class ApiService {
     }
   }
 
-  // Autenticação
+  // Autenticacao
   async login(email, password) {
     const data = await this.request('/api/auth/login', {
       method: 'POST',
@@ -150,7 +150,7 @@ class ApiService {
     });
   }
 
-  // Usuários
+  // Usuarios
   async getUsers() {
     return await this.request('/api/users');
   }
@@ -194,16 +194,29 @@ class ApiService {
     });
   }
 
-  async sendWhatsAppMessage(leadId, message) {
-    return await this.request('/api/whatsapp/send', {
-      method: 'POST',
-      body: JSON.stringify({ leadId, message })
-    });
-  }
-
   async syncWhatsAppGroups() {
     return await this.request('/api/whatsapp/sync-groups', {
       method: 'POST'
+    });
+  }
+
+  // Chats
+  async getChats(tenantId) {
+    return await this.request(`/api/chats?tenantId=${tenantId}`);
+  }
+
+  async getChatMessages(chatId, limit, offset) {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit);
+    if (offset) params.append('offset', offset);
+    return await this.request(`/api/chats/${chatId}/messages?${params.toString()}`);
+  }
+
+  // Enviar mensagem WhatsApp
+  async sendWhatsAppMessage(number, message, tenantId, chatId) {
+    return await this.request('/api/whatsapp/send', {
+      method: 'POST',
+      body: JSON.stringify({ number, message, tenantId, chatId })
     });
   }
 
