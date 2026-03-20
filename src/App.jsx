@@ -1006,53 +1006,226 @@ function ChatView({ tenant }) {
     </div>
   );
 }
+
 // ============================================================================
-// KANBAN VIEW
+// KANBAN VIEW (ATUALIZADO PARA COLUNAS DINÂMICAS)
 // ============================================================================
 
 function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
   const [draggedLead, setDraggedLead] = useState(null);
+  const [columns, setColumns] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showColumnModal, setShowColumnModal] = useState(false);
+  const [newColumn, setNewColumn] = useState({ name: '', color: 'blue' });
 
-  const stages = [
-    { id: 'novo', label: 'Novo', color: 'blue' },
-    { id: 'qualificado', label: 'Qualificado', color: 'yellow' },
-    { id: 'negociacao', label: 'Negociacao', color: 'purple' },
-    { id: 'ganho', label: 'Ganho', color: 'green' },
-    { id: 'perdido', label: 'Perdido', color: 'red' }
+  // Mapeamento de cores seguro para o Tailwind
+  const colorClasses = {
+    blue: 'bg-blue-500', yellow: 'bg-yellow-500', purple: 'bg-purple-500',
+    green: 'bg-green-500', red: 'bg-red-500', zinc: 'bg-zinc-500'
+  };
+
+  const colorOptions = [
+    { id: 'blue', label: 'Azul', hex: '#3b82f6' },
+    { id: 'yellow', label: 'Amarelo', hex: '#eab308' },
+    { id: 'purple', label: 'Roxo', hex: '#a855f7' },
+    { id: 'green', label: 'Verde', hex: '#22c55e' },
+    { id: 'red', label: 'Vermelho', hex: '#ef4444' },
+    { id: 'zinc', label: 'Cinza', hex: '#71717a' }
   ];
+
+  useEffect(() => {
+    loadColumns();
+  }, [tenant.id]);
+
+  const loadColumns = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getKanbanColumns(tenant.id);
+      setColumns(data);
+    } catch (err) {
+      console.error('Erro ao carregar colunas:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateColumn = async (e) => {
+    e.preventDefault();
+    try {
+      await api.createKanbanColumn({
+        tenantId: tenant.id,
+        name: newColumn.name,
+        color: newColumn.color,
+        position: columns.length // Adiciona no final da fila
+      });
+      setNewColumn({ name: '', color: 'blue' });
+      setShowColumnModal(false);
+      loadColumns();
+    } catch (err) {
+      alert('Erro ao criar coluna: ' + err.message);
+    }
+  };
+
+  const handleDeleteColumn = async (columnId) => {
+    if (!window.confirm('Excluir esta coluna? Os leads que estao nela ficarao sem estagio definido e voltarao para a lista geral.')) return;
+    try {
+      await api.deleteKanbanColumn(columnId);
+      loadColumns();
+      onRefresh();
+    } catch (err) {
+      alert('Erro ao excluir coluna');
+    }
+  };
 
   const handleDragStart = (lead) => setDraggedLead(lead);
   const handleDragOver = (e) => e.preventDefault();
+  
   const handleDrop = async (stageId) => {
     if (!draggedLead) return;
+    
+    // Se o lead ja esta nesta coluna, nao faz nada
+    if (draggedLead.stage === stageId) {
+      setDraggedLead(null);
+      return;
+    }
+    
     try {
       await api.updateLead(draggedLead.id, { ...draggedLead, stage: stageId });
       onRefresh();
-    } catch (err) { alert('Erro ao atualizar lead'); }
+    } catch (err) { 
+      alert('Erro ao atualizar lead'); 
+    }
     setDraggedLead(null);
   };
 
+  if (loading) {
+    return <div className="text-center py-12 text-zinc-400">Carregando o funil...</div>;
+  }
+
   return (
-    <div className="grid grid-cols-5 gap-4">
-      {stages.map(stage => {
-        const stageLeads = leads.filter(l => l.stage === stage.id);
-        return (
-          <div key={stage.id} className="bg-zinc-900 rounded-xl p-4" onDragOver={handleDragOver} onDrop={() => handleDrop(stage.id)}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-medium">{stage.label}</h3>
-              <span className={`px-2 py-1 rounded text-xs font-medium bg-${stage.color}-500/20 text-${stage.color}-400`}>{stageLeads.length}</span>
-            </div>
-            <div className="space-y-3">
-              {stageLeads.map(lead => (
-                <div key={lead.id} draggable onDragStart={() => handleDragStart(lead)} onClick={() => onSelectLead(lead)} className="bg-zinc-800 rounded-lg p-3 cursor-move hover:bg-zinc-700 transition-colors">
-                  <h4 className="font-medium text-sm mb-1">{lead.name}</h4>
-                  <p className="text-xs text-zinc-400">{lead.phone}</p>
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold">Funil de Vendas</h2>
+        <button 
+          onClick={() => setShowColumnModal(true)} 
+          className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-lg transition-colors"
+        >
+          <Plus className="w-4 h-4" /> Nova Coluna
+        </button>
+      </div>
+
+      {columns.length === 0 ? (
+        <div className="bg-zinc-900 rounded-xl p-12 text-center border border-dashed border-zinc-700">
+          <LayoutGrid className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2">O seu funil esta vazio</h3>
+          <p className="text-zinc-400 mb-6">Crie as etapas do seu processo comercial (ex: Contato Frio, Em Negociacao, Fechado).</p>
+          <button 
+            onClick={() => setShowColumnModal(true)} 
+            className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg transition-colors"
+          >
+            Criar Primeira Coluna
+          </button>
+        </div>
+      ) : (
+        <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: '60vh' }}>
+          {columns.map(column => {
+            // Logica de compatibilidade: se o nome da coluna for "Novo", os leads antigos entram aqui automaticamente
+            const stageLeads = leads.filter(l => 
+              l.stage === column.id || 
+              (l.stage === column.name.toLowerCase())
+            );
+            
+            return (
+              <div 
+                key={column.id} 
+                className="bg-zinc-900 rounded-xl p-4 flex-shrink-0 w-80 flex flex-col" 
+                onDragOver={handleDragOver} 
+                onDrop={() => handleDrop(column.id)}
+              >
+                <div className="flex items-center justify-between mb-4 group">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full ${colorClasses[column.color] || 'bg-blue-500'}`}></div>
+                    <h3 className="font-medium">{column.name}</h3>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-800 text-zinc-400">
+                      {stageLeads.length}
+                    </span>
+                  </div>
+                  <button 
+                    onClick={() => handleDeleteColumn(column.id)} 
+                    className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 transition-opacity"
+                    title="Excluir coluna"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-              ))}
-            </div>
+
+                <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+                  {stageLeads.map(lead => (
+                    <div 
+                      key={lead.id} 
+                      draggable 
+                      onDragStart={() => handleDragStart(lead)} 
+                      onClick={() => onSelectLead(lead)} 
+                      className="bg-zinc-800 rounded-lg p-3 cursor-move hover:ring-1 hover:ring-amber-500/50 transition-all shadow-sm"
+                    >
+                      <h4 className="font-medium text-sm mb-1">{lead.name}</h4>
+                      <p className="text-xs text-zinc-400">{lead.phone}</p>
+                      {lead.last_message && (
+                        <p className="text-xs text-zinc-500 mt-2 truncate border-t border-zinc-700/50 pt-2">
+                          {lead.last_message}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal de Nova Coluna */}
+      {showColumnModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-zinc-900 rounded-xl p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-6">Nova Etapa do Funil</h2>
+            <form onSubmit={handleCreateColumn} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Nome da Etapa</label>
+                <input 
+                  type="text" 
+                  value={newColumn.name} 
+                  onChange={(e) => setNewColumn({ ...newColumn, name: e.target.value })} 
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-amber-500" 
+                  placeholder="Ex: Em Negociacao"
+                  required 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Cor de Identificacao</label>
+                <div className="flex gap-3">
+                  {colorOptions.map(color => (
+                    <button
+                      key={color.id}
+                      type="button"
+                      onClick={() => setNewColumn({ ...newColumn, color: color.id })}
+                      className={`w-8 h-8 rounded-full border-2 transition-all ${
+                        newColumn.color === color.id ? 'border-white scale-110' : 'border-transparent opacity-70 hover:opacity-100'
+                      }`}
+                      style={{ backgroundColor: color.hex }}
+                      title={color.label}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setShowColumnModal(false)} className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors">Cancelar</button>
+                <button type="submit" className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg transition-colors">Criar Coluna</button>
+              </div>
+            </form>
           </div>
-        );
-      })}
+        </div>
+      )}
     </div>
   );
 }
@@ -1094,7 +1267,7 @@ function LeadsView({ leads, tenant, onRefresh, onAdd }) {
               <tr key={lead.id} className={idx % 2 === 0 ? 'bg-zinc-900' : 'bg-zinc-900/50'}>
                 <td className="px-6 py-4">{lead.name}</td>
                 <td className="px-6 py-4 text-zinc-400">{lead.phone}</td>
-                <td className="px-6 py-4"><span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${lead.stage === 'novo' ? 'bg-blue-500/20 text-blue-400' : lead.stage === 'qualificado' ? 'bg-yellow-500/20 text-yellow-400' : lead.stage === 'negociacao' ? 'bg-purple-500/20 text-purple-400' : lead.stage === 'ganho' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{lead.stage}</span></td>
+                <td className="px-6 py-4"><span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${lead.stage === 'novo' ? 'bg-blue-500/20 text-blue-400' : lead.stage === 'qualificado' ? 'bg-yellow-500/20 text-yellow-400' : lead.stage === 'negociacao' ? 'bg-purple-500/20 text-purple-400' : lead.stage === 'ganho' ? 'bg-green-500/20 text-green-400' : lead.stage === 'perdido' ? 'bg-red-500/20 text-red-400' : 'bg-zinc-500/20 text-zinc-400'}`}>{lead.stage}</span></td>
                 <td className="px-6 py-4 text-right"><button onClick={() => handleDelete(lead.id)} className="text-red-400 hover:text-red-300"><Trash2 className="w-4 h-4" /></button></td>
               </tr>
             ))}
