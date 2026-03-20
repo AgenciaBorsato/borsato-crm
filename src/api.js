@@ -43,6 +43,8 @@ class ApiService {
   async sendWhatsAppMessage(number, message, tid, chatId) { return await this.request('/api/whatsapp/send', { method: 'POST', body: JSON.stringify({ number, message, tenantId: tid, chatId }) }); }
   async syncWhatsAppGroups() { return await this.request('/api/whatsapp/sync-groups', { method: 'POST' }); }
 async deleteChat(id) { return await this.request(`/api/chats/${id}`, { method: 'DELETE' }); }
+  async fetchMedia(tenantId, messageKey) { return await this.request('/api/whatsapp/media', { method: 'POST', body: JSON.stringify({ tenantId, messageKey }) }); }
+  async fetchProfilePic(phone, tenantId) { return await this.request(`/api/whatsapp/profile-pic/${phone}?tenantId=${tenantId}`); }
   async getChats(tid) { return await this.request(`/api/chats?tenantId=${tid}`); }
   async getChatMessages(chatId, limit = 50, offset = 0) { return await this.request(`/api/chats/${chatId}/messages?limit=${limit}&offset=${offset}`); }
 
