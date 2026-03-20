@@ -40,17 +40,12 @@ class ApiService {
     }
   }
 
-  // Autenticacao
   async login(email, password) {
     const data = await this.request('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password })
     });
-    
-    if (data.token) {
-      this.setToken(data.token);
-    }
-    
+    if (data.token) this.setToken(data.token);
     return data;
   }
 
@@ -58,7 +53,6 @@ class ApiService {
     this.clearToken();
   }
 
-  // Tenants
   async getTenants() {
     return await this.request('/api/tenants');
   }
@@ -87,7 +81,6 @@ class ApiService {
     });
   }
 
-  // Leads
   async createLead(leadData) {
     return await this.request('/api/leads', {
       method: 'POST',
@@ -108,7 +101,17 @@ class ApiService {
     });
   }
 
-  // Grupos
+  async getLeadByPhone(phone, tenantId) {
+    return await this.request(`/api/leads/by-phone/${phone}?tenantId=${tenantId}`);
+  }
+
+  async updateLeadStage(leadId, stage) {
+    return await this.request(`/api/leads/${leadId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ stage })
+    });
+  }
+
   async createGroup(groupData) {
     return await this.request('/api/groups', {
       method: 'POST',
@@ -129,7 +132,6 @@ class ApiService {
     });
   }
 
-  // Base de Conhecimento
   async createKnowledge(knowledgeData) {
     return await this.request('/api/knowledge', {
       method: 'POST',
@@ -150,7 +152,6 @@ class ApiService {
     });
   }
 
-  // Usuarios
   async getUsers() {
     return await this.request('/api/users');
   }
@@ -175,7 +176,6 @@ class ApiService {
     });
   }
 
-  // WhatsApp
   async connectWhatsApp(tenantId, instanceToken) {
     return await this.request('/api/whatsapp/connect', {
       method: 'POST',
@@ -200,7 +200,6 @@ class ApiService {
     });
   }
 
-  // Chats
   async getChats(tenantId) {
     return await this.request(`/api/chats?tenantId=${tenantId}`);
   }
@@ -212,7 +211,6 @@ class ApiService {
     return await this.request(`/api/chats/${chatId}/messages?${params.toString()}`);
   }
 
-  // Enviar mensagem WhatsApp
   async sendWhatsAppMessage(number, message, tenantId, chatId) {
     return await this.request('/api/whatsapp/send', {
       method: 'POST',
@@ -220,7 +218,6 @@ class ApiService {
     });
   }
 
-  // Health check
   async healthCheck() {
     return await this.request('/api/health');
   }
