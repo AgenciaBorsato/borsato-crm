@@ -824,9 +824,10 @@ function ChatView({ tenant }) {
     return name.includes(searchTerm.toLowerCase());
   });
 
-  const formatTime = (timestamp) => {
+ const formatTime = (timestamp) => {
     if (!timestamp) return '';
-    const date = new Date(timestamp);
+    const raw = String(timestamp);
+    const date = new Date(raw.endsWith('Z') || raw.includes('+') ? raw : raw + 'Z');
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
     
