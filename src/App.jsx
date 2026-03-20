@@ -1008,7 +1008,7 @@ function ChatView({ tenant }) {
 }
 
 // ============================================================================
-// KANBAN VIEW (ATUALIZADO PARA COLUNAS DINÂMICAS)
+// KANBAN VIEW (DINAMICO)
 // ============================================================================
 
 function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
@@ -1018,7 +1018,6 @@ function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [newColumn, setNewColumn] = useState({ name: '', color: 'blue' });
 
-  // Mapeamento de cores seguro para o Tailwind
   const colorClasses = {
     blue: 'bg-blue-500', yellow: 'bg-yellow-500', purple: 'bg-purple-500',
     green: 'bg-green-500', red: 'bg-red-500', zinc: 'bg-zinc-500'
@@ -1067,7 +1066,7 @@ function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
   };
 
   const handleDeleteColumn = async (columnId) => {
-    if (!window.confirm('Excluir esta coluna? Os leads que estao nela ficarao sem estagio definido.')) return;
+    if (!window.confirm('Excluir esta coluna?')) return;
     try {
       await api.deleteKanbanColumn(columnId);
       await loadColumns();
@@ -1082,16 +1081,12 @@ function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
   
   const handleDrop = async (stageId) => {
     if (!draggedLead) return;
-    
     if (draggedLead.stage === stageId) {
       setDraggedLead(null);
       return;
     }
-    
     try {
-      // Atualiza o lead com o ID da nova coluna (estágio)
       await api.updateLead(draggedLead.id, { ...draggedLead, stage: stageId });
-      // Força a atualização dos leads na tela imediatamente
       await onRefresh(); 
     } catch (err) { 
       alert('Erro ao atualizar lead'); 
@@ -1099,18 +1094,13 @@ function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
     setDraggedLead(null);
   };
 
-  if (loading) {
-    return <div className="text-center py-12 text-zinc-400">Carregando o funil...</div>;
-  }
+  if (loading) return <div className="text-center py-12 text-zinc-400">Carregando funil...</div>;
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold">Funil de Vendas</h2>
-        <button 
-          onClick={() => setShowColumnModal(true)} 
-          className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-lg transition-colors"
-        >
+        <button onClick={() => setShowColumnModal(true)} className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-lg">
           <Plus className="w-4 h-4" /> Nova Coluna
         </button>
       </div>
@@ -1119,54 +1109,27 @@ function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
         <div className="bg-zinc-900 rounded-xl p-12 text-center border border-dashed border-zinc-700">
           <LayoutGrid className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
           <h3 className="text-lg font-medium mb-2">O seu funil esta vazio</h3>
-          <p className="text-zinc-400 mb-6">Crie as etapas do seu processo comercial.</p>
-          <button 
-            onClick={() => setShowColumnModal(true)} 
-            className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg transition-colors"
-          >
-            Criar Primeira Coluna
-          </button>
+          <button onClick={() => setShowColumnModal(true)} className="px-6 py-2 bg-amber-500 text-black font-medium rounded-lg">Criar Primeira Coluna</button>
         </div>
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: '60vh' }}>
           {columns.map(column => {
-            const stageLeads = leads.filter(l => 
-              l.stage === column.id || 
-              (l.stage === column.name.toLowerCase())
-            );
-            
+            const stageLeads = leads.filter(l => l.stage === column.id || (l.stage === column.name.toLowerCase()));
             return (
-              <div 
-                key={column.id} 
-                className="bg-zinc-900 rounded-xl p-4 flex-shrink-0 w-80 flex flex-col" 
-                onDragOver={handleDragOver} 
-                onDrop={() => handleDrop(column.id)}
-              >
+              <div key={column.id} className="bg-zinc-900 rounded-xl p-4 flex-shrink-0 w-80 flex flex-col" onDragOver={handleDragOver} onDrop={() => handleDrop(column.id)}>
                 <div className="flex items-center justify-between mb-4 group">
                   <div className="flex items-center gap-2">
                     <div className={`w-3 h-3 rounded-full ${colorClasses[column.color] || 'bg-blue-500'}`}></div>
                     <h3 className="font-medium">{column.name}</h3>
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-800 text-zinc-400">
-                      {stageLeads.length}
-                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-800 text-zinc-400">{stageLeads.length}</span>
                   </div>
-                  <button 
-                    onClick={() => handleDeleteColumn(column.id)} 
-                    className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 transition-opacity"
-                  >
+                  <button onClick={() => handleDeleteColumn(column.id)} className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-
                 <div className="flex-1 space-y-3 overflow-y-auto pr-1">
                   {stageLeads.map(lead => (
-                    <div 
-                      key={lead.id} 
-                      draggable 
-                      onDragStart={() => handleDragStart(lead)} 
-                      onClick={() => onSelectLead(lead)} 
-                      className="bg-zinc-800 rounded-lg p-3 cursor-move hover:ring-1 hover:ring-amber-500/50 transition-all shadow-sm"
-                    >
+                    <div key={lead.id} draggable onDragStart={() => handleDragStart(lead)} onClick={() => onSelectLead(lead)} className="bg-zinc-800 rounded-lg p-3 cursor-move hover:ring-1 hover:ring-amber-500/50">
                       <h4 className="font-medium text-sm mb-1">{lead.name}</h4>
                       <p className="text-xs text-zinc-400">{lead.phone}</p>
                     </div>
@@ -1183,27 +1146,12 @@ function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
           <div className="bg-zinc-900 rounded-xl p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-6">Nova Etapa</h2>
             <form onSubmit={handleCreateColumn} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Nome da Etapa</label>
-                <input 
-                  type="text" 
-                  value={newColumn.name} 
-                  onChange={(e) => setNewColumn({ ...newColumn, name: e.target.value })} 
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2" 
-                  required 
-                />
-              </div>
+              <div><label className="block text-sm font-medium mb-2">Nome</label><input type="text" value={newColumn.name} onChange={(e) => setNewColumn({ ...newColumn, name: e.target.value })} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2" required /></div>
               <div>
                 <label className="block text-sm font-medium mb-2">Cor</label>
                 <div className="flex gap-3">
                   {colorOptions.map(color => (
-                    <button
-                      key={color.id}
-                      type="button"
-                      onClick={() => setNewColumn({ ...newColumn, color: color.id })}
-                      className={`w-8 h-8 rounded-full border-2 ${newColumn.color === color.id ? 'border-white' : 'border-transparent'}`}
-                      style={{ backgroundColor: color.hex }}
-                    />
+                    <button key={color.id} type="button" onClick={() => setNewColumn({ ...newColumn, color: color.id })} className={`w-8 h-8 rounded-full border-2 ${newColumn.color === color.id ? 'border-white' : 'border-transparent'}`} style={{ backgroundColor: color.hex }} />
                   ))}
                 </div>
               </div>
@@ -1218,6 +1166,7 @@ function KanbanView({ leads, tenant, onRefresh, onSelectLead }) {
     </div>
   );
 }
+
 // ============================================================================
 // LEADS VIEW
 // ============================================================================
