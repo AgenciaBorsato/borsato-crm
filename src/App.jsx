@@ -227,7 +227,12 @@ function TenantModal({tenant,onClose,onRefresh}){
 // CLIENT DASHBOARD
 // ============================================================================
 function ClientDashboard({user,tenant,onLogout,onBackToSuperAdmin,onRefresh}){
-  const [activeTab,setActiveTab]=useState('kanban');
+  const [activeTab, setActiveTab] = useState(() => {
+    useEffect(() => {
+  localStorage.setItem(`activeTab_${tenant.id}`, activeTab);
+}, [activeTab, tenant.id]);
+  return localStorage.getItem(`activeTab_${tenant.id}`) || 'kanban';
+});
   const [columns,setColumns]=useState([]);
   useEffect(()=>{loadCols();},[tenant.id]);
   const loadCols=async()=>{try{setColumns(await api.getKanbanColumns(tenant.id));}catch(e){}};
