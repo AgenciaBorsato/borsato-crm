@@ -18,9 +18,10 @@ function MediaBubble({ msg, tenantId }) {
   const audioRef = useRef(null);
 
   const loadMedia = async () => {
-    if (!msg.media_url || loading || media) return;
+    if (!msg.media_url || msg.media_url === 'undefined' || loading || media) return;
     try {
-      const key = JSON.parse(msg.media_url);
+      let key;
+      try { key = JSON.parse(msg.media_url); } catch (e) { return; } // Proteção anti-crash
       setLoading(true);
       const data = await api.fetchMedia(tenantId, key);
       if (data.base64) {
@@ -267,7 +268,7 @@ function KanbanView({leads,columns,tenant,onRefresh}){
 }
 
 // ============================================================================
-// CHAT (COM MEDIA, PROFILE PIC, DELETE)
+// CHAT (COM MEDIA, PROFILE PIC, DELETE) E FIX DO DISPARO
 // ============================================================================
 function ChatView({tenant,columns,onRefresh}){
   const [chats,setChats]=useState([]);const [cur,setCur]=useState(null);const [lead,setLead]=useState(null);const [msgs,setMsgs]=useState([]);const [msg,setMsg]=useState('');const [sending,setSending]=useState(false);const [search,setSearch]=useState('');const [showEdit,setShowEdit]=useState(false);const [filter,setFilter]=useState('all');const [file,setFile]=useState(null);const endRef=useRef(null);const fileRef=useRef(null);
@@ -279,14 +280,44 @@ function ChatView({tenant,columns,onRefresh}){
   const load=async()=>{try{setChats(await api.getChats(tenant.id));}catch(e){}};
   const loadMsgs=async(id)=>{try{setMsgs(await api.getChatMessages(id,100,0));}catch(e){}};
   const loadLead=async(c)=>{if(isGrp(c)){setLead(null);return;}const ph=c.contact_phone||c.remote_jid?.split('@')[0];if(!ph){setLead(null);return;}try{setLead(await api.getLeadByPhone(ph,tenant.id));}catch(e){setLead(null);}};
+  const isGrp=(c)=>Number(c.is_group)===1||c.is_group===true;
 
-const send=async()=>{if(!msg.trim()||!cur)return;const ph=cur.remote_jid&&(isGrp(cur)||cur.remote_jid.includes('@lid'))?cur.remote_jid:cur.contact_phone||cur.remote_jid?.split('@')[0];
+  // FIX 2: Restauração da função de disparo de texto que estava cortada
+  const send = async () => {
+    if (!msg.trim() || !cur) return;
+    const ph = cur.remote_jid && (isGrp(cur) || cur.remote_jid.includes('@lid')) ? cur.remote_jid : cur.contact_phone || cur.remote_jid?.split('@')[0];
+    setSending(true);
+    try {
+      const payload = { number: ph, message: msg, chatId: cur.id, tenantId: tenant.id };
+      if (api.sendWhatsAppMessage) { 
+          await api.sendWhatsAppMessage(payload); 
+      } else {
+          await fetch((import.meta.env.VITE_API_URL || '') + '/api/whatsapp/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+            body: JSON.stringify(payload)
+          });
+      }
+      setMsg('');
+      await loadMsgs(cur.id);
+      await load();
+    } catch (e) {
+      console.error('Erro ao enviar', e);
+    } finally {
+      setSending(false);
+    }
+  };
 
-  const handleFile=(e)=>{const f=e.target.files[0];if(!f)return;if(f.size>2*1024*1024){alert('Max 2MB');return;}setFile(f);};
-const sendFile=async()=>{if(!file||!cur)return;const ph=cur.contact_phone||cur.remote_jid?.split('@')[0];setSending(true);try{const reader=new FileReader();reader.onload=async()=>{const base64=reader.result.split(',')[1];const mt=file.type.startsWith('image')?'image':file.type.startsWith('video')?'video':'document';await api.sendWhatsAppMedia({number:ph,base64,fileName:file.name,mediaType:mt,caption:'',tenantId:tenant.id,chatId:cur.id});setFile(null);if(fileRef.current)fileRef.current.value='';await loadMsgs(cur.id);await load();setSending(false);};reader.readAsDataURL(file);}catch(e){alert('Erro: '+e.message);setSending(false);}};
+  const handleFile = (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    if (f.size > 2 * 1024 * 1024) { alert('Max 2MB'); return; }
+    setFile(f);
+  };
+
+  const sendFile=async()=>{if(!file||!cur)return;const ph=cur.contact_phone||cur.remote_jid?.split('@')[0];setSending(true);try{const reader=new FileReader();reader.onload=async()=>{const base64=reader.result.split(',')[1];const mt=file.type.startsWith('image')?'image':file.type.startsWith('video')?'video':'document';await api.sendWhatsAppMedia({number:ph,base64,fileName:file.name,mediaType:mt,caption:'',tenantId:tenant.id,chatId:cur.id});setFile(null);if(fileRef.current)fileRef.current.value='';await loadMsgs(cur.id);await load();setSending(false);};reader.readAsDataURL(file);}catch(e){alert('Erro: '+e.message);setSending(false);}};
   const deleteChat=async(id)=>{if(!confirm('Apagar conversa?'))return;try{await api.deleteChat(id);if(cur?.id===id){setCur(null);setLead(null);setMsgs([]);}await load();}catch(e){alert('Erro');}};
 
-  const isGrp=(c)=>Number(c.is_group)===1||c.is_group===true;
   const fmt=(ts)=>{if(!ts)return'';const d=new Date(String(ts).replace('Z',''));const n=new Date();if(d.toDateString()===n.toDateString())return d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});};
   const filtered=chats.filter(c=>{if(filter==='individual'&&isGrp(c))return false;if(filter==='group'&&!isGrp(c))return false;if(!search)return true;return(c.contact_name||c.contact_phone||'').toLowerCase().includes(search.toLowerCase());});
   const getStatus=(s)=>{if(s==='read')return<CheckCheck className="w-3 h-3 text-blue-500"/>;if(s==='delivered')return<CheckCheck className="w-3 h-3 text-gray-400"/>;return<Check className="w-3 h-3 text-gray-400"/>;};
