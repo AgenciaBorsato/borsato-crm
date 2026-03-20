@@ -1,3 +1,7 @@
+import React, { useState } from 'react';
+import { DollarSign, Building2, Users, TrendingUp, Plus, Search, Edit2, Eye, Trash2 } from 'lucide-react';
+import MetricCard from '../components/cards/MetricCard';
+
 // ============================================================================
 // SUPER ADMIN
 // ============================================================================
