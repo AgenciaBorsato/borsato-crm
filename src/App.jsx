@@ -280,7 +280,8 @@ function ChatView({tenant,columns,onRefresh}){
   const loadMsgs=async(id)=>{try{setMsgs(await api.getChatMessages(id,100,0));}catch(e){}};
   const loadLead=async(c)=>{if(isGrp(c)){setLead(null);return;}const ph=c.contact_phone||c.remote_jid?.split('@')[0];if(!ph){setLead(null);return;}try{setLead(await api.getLeadByPhone(ph,tenant.id));}catch(e){setLead(null);}};
 
-const send=async()=>{if(!msg.trim()||!cur)return;const ph=isGrp(cur)?cur.remote_jid:cur.contact_phone||cur.remote_jid?.split('@')[0];
+const send=async()=>{if(!msg.trim()||!cur)return;const ph=cur.remote_jid&&(isGrp(cur)||cur.remote_jid.includes('@lid'))?cur.remote_jid:cur.contact_phone||cur.remote_jid?.split('@')[0];
+
   const handleFile=(e)=>{const f=e.target.files[0];if(!f)return;if(f.size>2*1024*1024){alert('Max 2MB');return;}setFile(f);};
 const sendFile=async()=>{if(!file||!cur)return;const ph=cur.contact_phone||cur.remote_jid?.split('@')[0];setSending(true);try{const reader=new FileReader();reader.onload=async()=>{const base64=reader.result.split(',')[1];const mt=file.type.startsWith('image')?'image':file.type.startsWith('video')?'video':'document';await api.sendWhatsAppMedia({number:ph,base64,fileName:file.name,mediaType:mt,caption:'',tenantId:tenant.id,chatId:cur.id});setFile(null);if(fileRef.current)fileRef.current.value='';await loadMsgs(cur.id);await load();setSending(false);};reader.readAsDataURL(file);}catch(e){alert('Erro: '+e.message);setSending(false);}};
   const deleteChat=async(id)=>{if(!confirm('Apagar conversa?'))return;try{await api.deleteChat(id);if(cur?.id===id){setCur(null);setLead(null);setMsgs([]);}await load();}catch(e){alert('Erro');}};
