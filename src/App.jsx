@@ -10,7 +10,6 @@ import {
 
 const POLL_INTERVAL = 4000;
 
-// Color map used by Kanban columns
 const CM = {
   blue:   { bg: 'bg-blue-500',   ring: 'ring-blue-300',   light: 'bg-blue-50',   text: 'text-blue-700'   },
   yellow: { bg: 'bg-amber-500',  ring: 'ring-amber-300',  light: 'bg-amber-50',  text: 'text-amber-700'  },
@@ -156,8 +155,19 @@ export default function BorsatoCRM() {
     }
   }, []);
 
-  const loadTenants = async () => { setLoading(true); try { setTenants(await api.getTenants()); } catch (e) { setError('Erro'); } finally { setLoading(false); } };
-  const loadTenantData = async (id) => { setLoading(true); try { setCurrentTenant(await api.getTenant(id)); } catch (e) { console.error(e); } finally { setLoading(false); } };
+  const loadTenants = async () => {
+    setLoading(true);
+    try { setTenants(await api.getTenants()); }
+    catch (e) { setError('Erro'); }
+    finally { setLoading(false); }
+  };
+
+  const loadTenantData = async (id) => {
+    setLoading(true);
+    try { setCurrentTenant(await api.getTenant(id)); }
+    catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
 
   const handleLogin = async (c) => {
     setLoading(true); setError(null);
@@ -171,18 +181,48 @@ export default function BorsatoCRM() {
     finally { setLoading(false); }
   };
 
-  const handleLogout = () => { api.logout(); localStorage.clear(); setCurrentUser(null); setCurrentView('login'); setCurrentTenant(null); setTenants([]); };
+  const handleLogout = () => {
+    api.logout(); localStorage.clear();
+    setCurrentUser(null); setCurrentView('login'); setCurrentTenant(null); setTenants([]);
+  };
+
+  // Super admin enters a specific tenant's CRM
+  const handleEnterTenant = useCallback(async (tid) => {
+    await loadTenantData(tid);
+    setCurrentView('clientDashboard');
+  }, []);
+
   const refreshData = useCallback(async () => {
     if (currentView === 'superAdmin') await loadTenants();
     if (currentTenant) await loadTenantData(currentTenant.id);
   }, [currentView, currentTenant]);
 
   if (currentView === 'login') return <LoginScreen onLogin={handleLogin} loading={loading} error={error} />;
-  if (currentView === 'superAdmin') return <SuperAdminPanel user={currentUser} tenants={tenants} onLogout={handleLogout} onRefresh={refreshData} />;
-  if (currentView === 'clientDashboard' && currentTenant) return (
-    <ClientDashboard user={currentUser} tenant={currentTenant} onLogout={handleLogout} onRefresh={refreshData}
-      onBackToSuperAdmin={currentUser?.role === 'super_admin' ? () => { setCurrentTenant(null); loadTenants(); setCurrentView('superAdmin'); } : null} />
+
+  if (currentView === 'superAdmin') return (
+    <SuperAdminPanel
+      user={currentUser}
+      tenants={tenants}
+      onLogout={handleLogout}
+      onRefresh={refreshData}
+      onEnterTenant={handleEnterTenant}
+    />
   );
+
+  if (currentView === 'clientDashboard' && currentTenant) return (
+    <ClientDashboard
+      user={currentUser}
+      tenant={currentTenant}
+      onLogout={handleLogout}
+      onRefresh={refreshData}
+      onBackToSuperAdmin={
+        currentUser?.role === 'super_admin'
+          ? () => { setCurrentTenant(null); loadTenants(); setCurrentView('superAdmin'); }
+          : null
+      }
+    />
+  );
+
   return <div className="h-screen bg-black flex items-center justify-center text-zinc-500">Carregando...</div>;
 }
 
@@ -211,12 +251,11 @@ function LoginScreen({ onLogin, loading, error }) {
 }
 
 // ============================================================================
-// CLIENT DASHBOARD — manages cross-tab navigation
+// CLIENT DASHBOARD
 // ============================================================================
 function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh }) {
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem(`activeTab_${tenant.id}`) || 'kanban');
   const [columns, setColumns] = useState([]);
-  // Cross-tab navigation: Kanban/Leads → Chat
   const [requestedPhone, setRequestedPhone] = useState(null);
 
   useEffect(() => { localStorage.setItem(`activeTab_${tenant.id}`, activeTab); }, [activeTab, tenant.id]);
@@ -225,7 +264,6 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
   const loadCols = async () => { try { setColumns(await api.getKanbanColumns(tenant.id)); } catch (e) {} };
   const refreshAll = useCallback(async () => { await onRefresh(); await loadCols(); }, [onRefresh, tenant.id]);
 
-  // Called when user clicks "Conversar" on a Kanban card or Leads row
   const openChatByPhone = useCallback((phone) => {
     setRequestedPhone(phone);
     setActiveTab('chat');
@@ -251,10 +289,17 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
       <div className="bg-[#075e54] text-white px-6 py-2.5 flex justify-between items-center shadow">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center font-bold text-xs">{tenant.name.substring(0, 2).toUpperCase()}</div>
-          <div><h1 className="font-bold text-sm">{tenant.name}</h1><p className="text-[10px] text-white/50">{user.name}</p></div>
+          <div>
+            <h1 className="font-bold text-sm">{tenant.name}</h1>
+            <p className="text-[10px] text-white/50">{user.name}</p>
+          </div>
         </div>
         <div className="flex gap-2">
-          {onBackToSuperAdmin && <button onClick={onBackToSuperAdmin} className="px-3 py-1 bg-white/10 rounded text-[10px] font-bold flex items-center gap-1"><ArrowLeft className="w-3 h-3" /> MESTRE</button>}
+          {onBackToSuperAdmin && (
+            <button onClick={onBackToSuperAdmin} className="px-3 py-1 bg-white/10 rounded text-[10px] font-bold flex items-center gap-1">
+              <ArrowLeft className="w-3 h-3" /> MESTRE
+            </button>
+          )}
           <button onClick={onLogout} className="px-3 py-1 bg-white/10 rounded text-[10px] font-bold">Sair</button>
         </div>
       </div>
@@ -283,7 +328,7 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
 }
 
 // ============================================================================
-// KANBAN — sophisticated cards with navigation to chat
+// KANBAN
 // ============================================================================
 function KanbanView({ leads, columns, tenant, onRefresh, onOpenChat }) {
   const [dragged, setDragged] = useState(null);
@@ -292,22 +337,15 @@ function KanbanView({ leads, columns, tenant, onRefresh, onOpenChat }) {
   const [newCol, setNewCol] = useState({ name: '', color: 'blue' });
   const [filter, setFilter] = useState('');
 
-  // For legacy leads with stage='novo', show them in the FIRST column as fallback
   const getLeadsForColumn = (col, colIdx) => {
-    const filtered = filter
-      ? leads.filter(l => (l.name || '').toLowerCase().includes(filter.toLowerCase()) || (l.phone || '').includes(filter))
-      : leads;
-    return filtered.filter(l =>
-      l.stage === col.id ||
-      (colIdx === 0 && (l.stage === 'novo' || l.stage === 'new' || !l.stage))
-    );
+    const f = filter ? leads.filter(l => (l.name || '').toLowerCase().includes(filter.toLowerCase()) || (l.phone || '').includes(filter)) : leads;
+    return f.filter(l => l.stage === col.id || (colIdx === 0 && (l.stage === 'novo' || l.stage === 'new' || !l.stage)));
   };
 
   const colColors = Object.keys(CM);
 
   return (
     <div>
-      {/* Header */}
       <div className="flex justify-between items-center mb-4 gap-3">
         <div className="flex items-center gap-3">
           <h2 className="font-bold text-lg">Pipeline</h2>
@@ -337,15 +375,8 @@ function KanbanView({ leads, columns, tenant, onRefresh, onOpenChat }) {
               <div key={col.id}
                 onDragOver={e => { e.preventDefault(); setDragOver(col.id); }}
                 onDragLeave={() => setDragOver(null)}
-                onDrop={async () => {
-                  if (dragged) { await api.updateLead(dragged.id, { stage: col.id }); setDragged(null); onRefresh(); }
-                  setDragOver(null);
-                }}
-                className={`w-72 flex-shrink-0 rounded-xl border transition-all ${
-                  isDragOver ? `border-2 ${c.ring.replace('ring','border')} shadow-lg` : 'border-gray-200'
-                } bg-white shadow-sm`}>
-
-                {/* Column header */}
+                onDrop={async () => { if (dragged) { await api.updateLead(dragged.id, { stage: col.id }); setDragged(null); onRefresh(); } setDragOver(null); }}
+                className={`w-72 flex-shrink-0 rounded-xl border transition-all ${isDragOver ? `border-2 ${c.ring.replace('ring','border')} shadow-lg` : 'border-gray-200'} bg-white shadow-sm`}>
                 <div className="px-3 pt-3 pb-2 border-b border-gray-100">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
@@ -358,23 +389,15 @@ function KanbanView({ leads, columns, tenant, onRefresh, onOpenChat }) {
                     </button>
                   </div>
                 </div>
-
-                {/* Cards */}
                 <div className="p-2 space-y-2 min-h-[100px]">
                   {colLeads.map(l => (
                     <KanbanCard key={l.id} lead={l} col={col} columns={columns}
-                      onDragStart={() => setDragged(l)}
-                      onDragEnd={() => setDragged(null)}
+                      onDragStart={() => setDragged(l)} onDragEnd={() => setDragged(null)}
                       onOpenChat={onOpenChat}
-                      onStageChange={async (newStage) => { await api.updateLead(l.id, { stage: newStage }); onRefresh(); }}
-                      onRefresh={onRefresh}
-                    />
+                      onStageChange={async (s) => { await api.updateLead(l.id, { stage: s }); onRefresh(); }}
+                      onRefresh={onRefresh} />
                   ))}
-                  {colLeads.length === 0 && (
-                    <div className="py-6 text-center">
-                      <p className="text-[10px] text-gray-300">Arraste leads aqui</p>
-                    </div>
-                  )}
+                  {colLeads.length === 0 && <div className="py-6 text-center"><p className="text-[10px] text-gray-300">Arraste leads aqui</p></div>}
                 </div>
               </div>
             );
@@ -382,7 +405,6 @@ function KanbanView({ leads, columns, tenant, onRefresh, onOpenChat }) {
         </div>
       )}
 
-      {/* Add column modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
@@ -390,10 +412,7 @@ function KanbanView({ leads, columns, tenant, onRefresh, onOpenChat }) {
             <form onSubmit={async e => { e.preventDefault(); await api.createKanbanColumn({ tenantId: tenant.id, name: newCol.name, color: newCol.color, position: columns.length }); setNewCol({ name: '', color: 'blue' }); setShowModal(false); onRefresh(); }} className="space-y-3">
               <input placeholder="Nome da etapa" value={newCol.name} onChange={e => setNewCol({ ...newCol, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
               <div className="flex gap-2 p-2 bg-gray-50 rounded-xl justify-center">
-                {colColors.map(c => (
-                  <button key={c} type="button" onClick={() => setNewCol({ ...newCol, color: c })}
-                    className={`w-7 h-7 rounded-full ${CM[c].bg} ${newCol.color === c ? 'ring-2 ring-gray-800 scale-110' : 'opacity-40'}`} />
-                ))}
+                {colColors.map(c => <button key={c} type="button" onClick={() => setNewCol({ ...newCol, color: c })} className={`w-7 h-7 rounded-full ${CM[c].bg} ${newCol.color === c ? 'ring-2 ring-gray-800 scale-110' : 'opacity-40'}`} />)}
               </div>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button>
@@ -407,7 +426,6 @@ function KanbanView({ leads, columns, tenant, onRefresh, onOpenChat }) {
   );
 }
 
-// Kanban card — rich information + quick actions
 function KanbanCard({ lead, col, columns, onDragStart, onDragEnd, onOpenChat, onStageChange, onRefresh }) {
   const [hover, setHover] = useState(false);
   const days = daysAgo(lead.updated_at);
@@ -426,67 +444,30 @@ function KanbanCard({ lead, col, columns, onDragStart, onDragEnd, onOpenChat, on
     : <span className="text-[9px] text-[#25d366] font-bold">Hoje</span>;
 
   return (
-    <div draggable
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      className={`bg-white border rounded-lg cursor-grab select-none transition-all ${
-        hover ? `border-gray-300 shadow-md -translate-y-0.5` : 'border-gray-100 shadow-sm'
-      }`}>
-
-      {/* Color accent bar */}
+    <div draggable onDragStart={onDragStart} onDragEnd={onDragEnd}
+      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      className={`bg-white border rounded-lg cursor-grab select-none transition-all ${hover ? 'border-gray-300 shadow-md -translate-y-0.5' : 'border-gray-100 shadow-sm'}`}>
       <div className={`h-0.5 rounded-t-lg ${c.bg} opacity-60`} />
-
       <div className="p-2.5">
-        {/* Top row: source + days */}
-        <div className="flex justify-between items-center mb-1.5">
-          {sourceLabel}
-          {daysBadge}
-        </div>
-
-        {/* Name */}
+        <div className="flex justify-between items-center mb-1.5">{sourceLabel}{daysBadge}</div>
         <p className="font-bold text-[13px] text-gray-800 leading-tight mb-0.5 truncate">{lead.name || '—'}</p>
-
-        {/* Phone */}
-        {lead.phone && (
-          <p className="text-[10px] text-gray-400 font-mono mb-2 flex items-center gap-1">
-            <Phone className="w-2.5 h-2.5" />{lead.phone}
-          </p>
-        )}
-
-        {/* Notes preview */}
-        {lead.notes && (
-          <p className="text-[10px] text-gray-500 line-clamp-1 mb-2 italic">{lead.notes}</p>
-        )}
-
-        {/* Actions (shown on hover) */}
+        {lead.phone && <p className="text-[10px] text-gray-400 font-mono mb-2 flex items-center gap-1"><Phone className="w-2.5 h-2.5" />{lead.phone}</p>}
+        {lead.notes && <p className="text-[10px] text-gray-500 line-clamp-1 mb-2 italic">{lead.notes}</p>}
         {hover && (
           <div className="flex gap-1 mt-1 pt-2 border-t border-gray-100">
             {lead.phone && (
-              <button onClick={() => onOpenChat(lead.phone)}
-                className="flex-1 flex items-center justify-center gap-1 py-1 bg-[#25d366]/10 hover:bg-[#25d366]/20 text-[#075e54] rounded text-[10px] font-bold transition-all">
+              <button onClick={() => onOpenChat(lead.phone)} className="flex-1 flex items-center justify-center gap-1 py-1 bg-[#25d366]/10 hover:bg-[#25d366]/20 text-[#075e54] rounded text-[10px] font-bold transition-all">
                 <MessageCircle className="w-3 h-3" /> Conversar
               </button>
             )}
-            <button onClick={async () => { if (confirm('Deletar lead?')) { await api.deleteLead(lead.id); onRefresh(); } }}
-              className="p-1 hover:bg-red-50 text-gray-300 hover:text-red-400 rounded transition-all">
-              <Trash2 className="w-3 h-3" />
-            </button>
+            <button onClick={async () => { if (confirm('Deletar lead?')) { await api.deleteLead(lead.id); onRefresh(); } }} className="p-1 hover:bg-red-50 text-gray-300 hover:text-red-400 rounded transition-all"><Trash2 className="w-3 h-3" /></button>
           </div>
         )}
-
-        {/* Stage quick-move (shown on hover) */}
         {hover && columns.length > 1 && (
           <div className="mt-1.5 flex gap-1 flex-wrap">
             {columns.filter(c => c.id !== col.id).map(c2 => {
               const c2color = CM[c2.color] || CM.zinc;
-              return (
-                <button key={c2.id} onClick={() => onStageChange(c2.id)}
-                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${c2color.light} ${c2color.text} hover:opacity-80 transition-all`}>
-                  → {c2.name}
-                </button>
-              );
+              return <button key={c2.id} onClick={() => onStageChange(c2.id)} className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${c2color.light} ${c2color.text} hover:opacity-80 transition-all`}>→ {c2.name}</button>;
             })}
           </div>
         )}
@@ -496,7 +477,7 @@ function KanbanCard({ lead, col, columns, onDragStart, onDragEnd, onOpenChat, on
 }
 
 // ============================================================================
-// CHAT VIEW — with auto-select by phone + always-visible stage selector
+// CHAT VIEW
 // ============================================================================
 function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }) {
   const [chats, setChats] = useState([]);
@@ -521,7 +502,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
   }, [cur, tenant.id]);
 
   useEffect(() => { load(); const i = setInterval(load, POLL_INTERVAL); return () => clearInterval(i); }, [tenant.id]);
-
   useEffect(() => {
     if (cur) {
       loadMsgs(cur.id); loadLead(cur);
@@ -530,14 +510,10 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
     }
   }, [cur?.id]);
 
-  // Auto-select chat when navigating from Kanban/Leads
   useEffect(() => {
     if (!requestedPhone || chats.length === 0) return;
     const clean = requestedPhone.replace(/\D/g, '');
-    const match = chats.find(c =>
-      (c.contact_phone || '').replace(/\D/g, '') === clean ||
-      (c.remote_jid || '').replace(/[^0-9]/g, '').includes(clean)
-    );
+    const match = chats.find(c => (c.contact_phone || '').replace(/\D/g, '') === clean || (c.remote_jid || '').replace(/[^0-9]/g, '').includes(clean));
     if (match) { selectChat(match); onPhoneHandled?.(); }
   }, [requestedPhone, chats]);
 
@@ -548,15 +524,11 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
       const chatList = await api.getChats(tenant.id);
       setChats(chatList);
       const activeCur = curRef.current;
-      if (activeCur) {
-        const upd = chatList.find(c => c.id === activeCur.id);
-        if (upd) setCur(upd);
-      }
+      if (activeCur) { const upd = chatList.find(c => c.id === activeCur.id); if (upd) setCur(upd); }
     } catch (e) {}
   };
 
   const loadMsgs = async (id) => { try { setMsgs(await api.getChatMessages(id, 100, 0)); } catch (e) {} };
-
   const loadLead = async (c) => {
     if (isGrp(c)) { setLead(null); return; }
     const ph = c.contact_phone || c.remote_jid?.split('@')[0];
@@ -565,31 +537,23 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
   };
 
   const isGrp = c => Number(c.is_group) === 1 || c.is_group === true;
-
   const chatDisplayName = (c) => {
     if (c.contact_name) return c.contact_name;
     if (!isGrp(c)) return c.contact_phone || c.remote_jid || '';
     return c.remote_jid?.replace('@g.us', '') || 'Grupo';
   };
-
   const selectChat = (c) => { setCur(c); setSearch(''); };
 
   const send = async () => {
     if (!msg.trim() || !cur) return;
-    const ph = cur.remote_jid && (isGrp(cur) || cur.remote_jid.includes('@lid'))
-      ? cur.remote_jid : cur.contact_phone || cur.remote_jid?.split('@')[0];
+    const ph = cur.remote_jid && (isGrp(cur) || cur.remote_jid.includes('@lid')) ? cur.remote_jid : cur.contact_phone || cur.remote_jid?.split('@')[0];
     setSending(true);
     try { await api.sendWhatsAppMessage(ph, msg, tenant.id, cur.id); setMsg(''); await loadMsgs(cur.id); await load(); }
     catch (e) { alert(e.message || 'Erro ao enviar'); }
     finally { setSending(false); }
   };
 
-  const handleFile = (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
-    if (f.size > 2 * 1024 * 1024) { alert('Max 2MB'); return; }
-    setFile(f);
-  };
+  const handleFile = (e) => { const f = e.target.files[0]; if (!f) return; if (f.size > 2 * 1024 * 1024) { alert('Max 2MB'); return; } setFile(f); };
 
   const sendFile = async () => {
     if (!file || !cur) return;
@@ -636,8 +600,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
 
   return (
     <div className="flex h-[calc(100vh-120px)] bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-
-      {/* ── Sidebar ── */}
       <div className="w-80 border-r border-gray-200 flex flex-col bg-white">
         <div className="p-3 border-b border-gray-100 space-y-2">
           <div className="relative">
@@ -650,7 +612,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
             ))}
           </div>
         </div>
-
         <div className="flex-1 overflow-y-auto">
           {filtered.map(c => (
             <div key={c.id} className={`flex items-center gap-2.5 px-3 py-3 cursor-pointer hover:bg-gray-50 border-b border-gray-50 ${cur?.id === c.id ? 'bg-[#f0f2f5]' : ''}`}>
@@ -673,11 +634,9 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
         </div>
       </div>
 
-      {/* ── Chat panel ── */}
       <div className="flex-1 flex flex-col">
         {cur ? (
           <>
-            {/* Header with stage selector always visible */}
             <div className="bg-[#f0f2f5] px-4 py-2.5 border-b border-gray-200">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2.5">
@@ -688,8 +647,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
                   </div>
                   {lead && <button onClick={() => setShowEdit(true)} className="ml-2 p-1 bg-blue-50 text-blue-500 rounded hover:bg-blue-100"><Edit2 className="w-3 h-3" /></button>}
                 </div>
-
-                {/* Stage selector — always visible for individual chats */}
                 {!isGrp(cur) && columns.length > 0 && (
                   <div className="flex flex-wrap gap-1 justify-end max-w-xs">
                     {columns.map(col => {
@@ -698,24 +655,14 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
                       return (
                         <button key={col.id}
                           onClick={async () => {
-                            if (lead) {
-                              await api.updateLead(lead.id, { stage: col.id });
-                              setLead({ ...lead, stage: col.id });
-                            } else {
-                              // Create lead and set stage
+                            if (lead) { await api.updateLead(lead.id, { stage: col.id }); setLead({ ...lead, stage: col.id }); }
+                            else {
                               const ph = cur.contact_phone || cur.remote_jid?.split('@')[0];
-                              if (ph) {
-                                try {
-                                  const newLead = await api.createLead({ tenantId: tenant.id, name: chatDisplayName(cur), phone: ph, source: 'whatsapp', stage: col.id });
-                                  setLead(newLead);
-                                } catch (e) {}
-                              }
+                              if (ph) { try { const nl = await api.createLead({ tenantId: tenant.id, name: chatDisplayName(cur), phone: ph, source: 'whatsapp', stage: col.id }); setLead(nl); } catch (e) {} }
                             }
                             onRefresh();
                           }}
-                          className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all ${
-                            isActive ? `${c.bg} text-white shadow-sm` : `${c.light} ${c.text} hover:opacity-80`
-                          }`}>
+                          className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all ${isActive ? `${c.bg} text-white shadow-sm` : `${c.light} ${c.text} hover:opacity-80`}`}>
                           {col.name}
                         </button>
                       );
@@ -725,7 +672,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
               </div>
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1" style={{ backgroundColor: '#eae6df' }}>
               {msgs.map(m => {
                 const fromMe = Number(m.is_from_me) === 1 || m.is_from_me === true;
@@ -749,7 +695,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
               <div ref={endRef} />
             </div>
 
-            {/* File preview */}
             {file && (
               <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-2"><Paperclip className="w-4 h-4 text-gray-400" /><span className="text-xs text-gray-600 truncate max-w-[200px]">{file.name}</span></div>
@@ -760,7 +705,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
               </div>
             )}
 
-            {/* Input bar */}
             <div className="bg-[#f0f2f5] px-3 py-2.5 flex items-center gap-2 border-t border-gray-200">
               <input type="file" ref={fileRef} onChange={handleFile} className="hidden" accept="image/*,video/*,.pdf,.doc,.docx" />
               <button onClick={() => fileRef.current?.click()} className="p-2 hover:bg-gray-200 rounded-full"><Paperclip className="w-4 h-4 text-gray-500" /></button>
@@ -793,7 +737,6 @@ function EditLeadModal({ lead, columns, onClose, onSave }) {
   const [f, setF] = useState({ name: lead.name || '', phone: lead.phone || '', email: lead.email || '', stage: lead.stage || '', notes: lead.notes || '' });
   const [custom, setCustom] = useState(() => { try { return JSON.parse(lead.custom_data || '{}'); } catch { return {}; } });
   const [nf, setNf] = useState('');
-
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -802,13 +745,7 @@ function EditLeadModal({ lead, columns, onClose, onSave }) {
           <div><label className="text-[10px] font-bold text-gray-400 uppercase">Nome</label><input value={f.name} onChange={e => setF({ ...f, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /></div>
           <div><label className="text-[10px] font-bold text-gray-400 uppercase">Telefone</label><input value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /></div>
           <div><label className="text-[10px] font-bold text-gray-400 uppercase">E-mail</label><input value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /></div>
-          {columns.length > 0 && (
-            <div><label className="text-[10px] font-bold text-gray-400 uppercase">Etapa</label>
-              <select value={f.stage} onChange={e => setF({ ...f, stage: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
-                {columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-          )}
+          {columns.length > 0 && <div><label className="text-[10px] font-bold text-gray-400 uppercase">Etapa</label><select value={f.stage} onChange={e => setF({ ...f, stage: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">{columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>}
           <div><label className="text-[10px] font-bold text-gray-400 uppercase">Observacoes</label><textarea value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} rows={2} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /></div>
           <div className="border-t border-gray-100 pt-3">
             <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Campos Personalizados</p>
@@ -820,8 +757,7 @@ function EditLeadModal({ lead, columns, onClose, onSave }) {
               </div>
             ))}
             <div className="flex gap-2">
-              <input value={nf} onChange={e => setNf(e.target.value)} placeholder="Novo campo..." className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs"
-                onKeyDown={e => { if (e.key === 'Enter' && nf.trim()) { setCustom({ ...custom, [nf.trim()]: '' }); setNf(''); } }} />
+              <input value={nf} onChange={e => setNf(e.target.value)} placeholder="Novo campo..." className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs" onKeyDown={e => { if (e.key === 'Enter' && nf.trim()) { setCustom({ ...custom, [nf.trim()]: '' }); setNf(''); } }} />
               <button onClick={() => { if (nf.trim()) { setCustom({ ...custom, [nf.trim()]: '' }); setNf(''); } }} className="px-3 py-1 bg-gray-100 rounded-lg text-xs font-bold"><Plus className="w-3 h-3" /></button>
             </div>
           </div>
@@ -836,7 +772,7 @@ function EditLeadModal({ lead, columns, onClose, onSave }) {
 }
 
 // ============================================================================
-// LEADS VIEW — with "Conversar" action
+// LEADS VIEW
 // ============================================================================
 function LeadsView({ leads, columns, tenant, onRefresh, onOpenChat }) {
   const [search, setSearch] = useState('');
@@ -855,7 +791,7 @@ function LeadsView({ leads, columns, tenant, onRefresh, onOpenChat }) {
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-4 py-2 text-sm shadow-sm w-56" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="bg-white border border-gray-200 rounded-lg pl-9 pr-4 py-2 text-sm shadow-sm w-56" />
           </div>
           <select value={stageFilter} onChange={e => setStageFilter(e.target.value)} className="bg-white border border-gray-200 rounded-lg py-2 px-3 text-xs shadow-sm">
             <option value="all">Todas as etapas</option>
@@ -864,18 +800,10 @@ function LeadsView({ leads, columns, tenant, onRefresh, onOpenChat }) {
         </div>
         <button onClick={() => setShowCreate(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Lead</button>
       </div>
-
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <table className="w-full text-left">
           <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase">
-            <tr>
-              <th className="p-3">Nome</th>
-              <th className="p-3">Telefone</th>
-              <th className="p-3">Etapa</th>
-              <th className="p-3">Origem</th>
-              <th className="p-3">Tempo</th>
-              <th className="p-3 text-right">Acoes</th>
-            </tr>
+            <tr><th className="p-3">Nome</th><th className="p-3">Telefone</th><th className="p-3">Etapa</th><th className="p-3">Origem</th><th className="p-3">Tempo</th><th className="p-3 text-right">Acoes</th></tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filtered.map(l => {
@@ -886,27 +814,12 @@ function LeadsView({ leads, columns, tenant, onRefresh, onOpenChat }) {
                 <tr key={l.id} className="hover:bg-gray-50/50">
                   <td className="p-3 font-bold text-xs">{l.name}</td>
                   <td className="p-3 text-xs text-gray-400 font-mono">{l.phone}</td>
-                  <td className="p-3">
-                    {colInfo
-                      ? <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${c.light} ${c.text}`}>{colInfo.name}</span>
-                      : <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold rounded">{l.stage || '-'}</span>}
-                  </td>
-                  <td className="p-3">
-                    {l.source === 'whatsapp'
-                      ? <span className="text-[9px] font-bold text-green-700 bg-green-50 rounded px-1.5 py-0.5 flex items-center gap-0.5 w-fit"><Zap className="w-2.5 h-2.5" /> WhatsApp</span>
-                      : <span className="text-[9px] text-gray-400 bg-gray-100 rounded px-1.5 py-0.5">{l.source || 'manual'}</span>}
-                  </td>
-                  <td className="p-3">
-                    <span className={`text-[10px] ${days > 7 ? 'text-red-600 font-bold' : days > 2 ? 'text-amber-600' : 'text-gray-400'}`}>{days}d</span>
-                  </td>
+                  <td className="p-3">{colInfo ? <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${c.light} ${c.text}`}>{colInfo.name}</span> : <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold rounded">{l.stage || '-'}</span>}</td>
+                  <td className="p-3">{l.source === 'whatsapp' ? <span className="text-[9px] font-bold text-green-700 bg-green-50 rounded px-1.5 py-0.5 flex items-center gap-0.5 w-fit"><Zap className="w-2.5 h-2.5" /> WhatsApp</span> : <span className="text-[9px] text-gray-400 bg-gray-100 rounded px-1.5 py-0.5">{l.source || 'manual'}</span>}</td>
+                  <td className="p-3"><span className={`text-[10px] ${days > 7 ? 'text-red-600 font-bold' : days > 2 ? 'text-amber-600' : 'text-gray-400'}`}>{days}d</span></td>
                   <td className="p-3">
                     <div className="flex gap-1 justify-end items-center">
-                      {l.phone && (
-                        <button onClick={() => onOpenChat(l.phone)}
-                          className="flex items-center gap-1 px-2 py-1 bg-[#25d366]/10 hover:bg-[#25d366]/20 text-[#075e54] rounded text-[9px] font-bold">
-                          <MessageCircle className="w-3 h-3" /> Conversar
-                        </button>
-                      )}
+                      {l.phone && <button onClick={() => onOpenChat(l.phone)} className="flex items-center gap-1 px-2 py-1 bg-[#25d366]/10 hover:bg-[#25d366]/20 text-[#075e54] rounded text-[9px] font-bold"><MessageCircle className="w-3 h-3" /> Conversar</button>}
                       <button onClick={() => setEditLead(l)} className="text-blue-400 p-1"><Edit2 className="w-3.5 h-3.5" /></button>
                       <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteLead(l.id); onRefresh(); } }} className="text-gray-300 hover:text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
@@ -918,7 +831,6 @@ function LeadsView({ leads, columns, tenant, onRefresh, onOpenChat }) {
         </table>
         {filtered.length === 0 && <div className="text-center py-8 text-gray-400 text-xs">Nenhum lead</div>}
       </div>
-
       {showCreate && <LeadCreateModal tenant={tenant} columns={columns} onClose={() => setShowCreate(false)} onSuccess={() => { setShowCreate(false); onRefresh(); }} />}
       {editLead && <EditLeadModal lead={editLead} columns={columns} onClose={() => setEditLead(null)} onSave={async data => { await api.updateLead(editLead.id, data); setEditLead(null); onRefresh(); }} />}
     </div>
@@ -954,10 +866,8 @@ function WhatsAppView({ tenant }) {
   const [token, setToken] = useState('');
   const [ld, setLd] = useState(false);
   const nm = `tenant_${tenant.id}`;
-
   useEffect(() => { ck(); const i = setInterval(ck, 5000); return () => clearInterval(i); }, []);
   const ck = async () => { try { setStatus(await api.getWhatsAppStatus(tenant.id)); } catch (e) {} };
-
   return (
     <div className="max-w-xl">
       <h2 className="font-bold text-lg mb-4">WhatsApp</h2>
@@ -996,21 +906,12 @@ function AnalyticsView({ leads, columns }) {
   const byStage = columns.map(col => ({ ...col, count: leads.filter(l => l.stage === col.id).length }));
   const lostCount = leads.filter(l => { const col = columns.find(c => c.id === l.stage); return col?.color === 'red'; }).length;
   const wonCount  = leads.filter(l => { const col = columns.find(c => c.id === l.stage); return col?.color === 'green'; }).length;
-
   return (
     <div>
       <h2 className="font-bold text-lg mb-4">Analytics</h2>
       <div className="grid grid-cols-4 gap-4 mb-6">
-        {[
-          { l: 'Total', v: t, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { l: 'WhatsApp', v: bySource.w, color: 'text-green-600', bg: 'bg-green-50' },
-          { l: 'Clientes', v: wonCount, color: 'text-emerald-700', bg: 'bg-emerald-50' },
-          { l: 'Perdidos', v: lostCount, color: 'text-red-600', bg: 'bg-red-50' },
-        ].map((m, i) => (
-          <div key={i} className={`${m.bg} border border-gray-100 rounded-xl p-4 shadow-sm`}>
-            <p className={`text-[10px] font-bold uppercase mb-1 ${m.color}`}>{m.l}</p>
-            <p className={`text-3xl font-black ${m.color}`}>{m.v}</p>
-          </div>
+        {[{ l: 'Total', v: t, color: 'text-blue-600', bg: 'bg-blue-50' }, { l: 'WhatsApp', v: bySource.w, color: 'text-green-600', bg: 'bg-green-50' }, { l: 'Clientes', v: wonCount, color: 'text-emerald-700', bg: 'bg-emerald-50' }, { l: 'Perdidos', v: lostCount, color: 'text-red-600', bg: 'bg-red-50' }].map((m, i) => (
+          <div key={i} className={`${m.bg} border border-gray-100 rounded-xl p-4 shadow-sm`}><p className={`text-[10px] font-bold uppercase mb-1 ${m.color}`}>{m.l}</p><p className={`text-3xl font-black ${m.color}`}>{m.v}</p></div>
         ))}
       </div>
       {columns.length > 0 && (
@@ -1022,16 +923,8 @@ function AnalyticsView({ leads, columns }) {
               const c = CM[col.color] || CM.zinc;
               return (
                 <div key={col.id}>
-                  <div className="flex justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${c.bg}`} />
-                      <span className="text-xs font-bold text-gray-600">{col.name}</span>
-                    </div>
-                    <span className="text-[10px] text-gray-400">{col.count} ({p.toFixed(0)}%)</span>
-                  </div>
-                  <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${c.bg}`} style={{ width: `${Math.max(p, 1)}%` }} />
-                  </div>
+                  <div className="flex justify-between mb-1"><div className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${c.bg}`} /><span className="text-xs font-bold text-gray-600">{col.name}</span></div><span className="text-[10px] text-gray-400">{col.count} ({p.toFixed(0)}%)</span></div>
+                  <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden"><div className={`h-full rounded-full ${c.bg}`} style={{ width: `${Math.max(p, 1)}%` }} /></div>
                 </div>
               );
             })}
@@ -1047,20 +940,14 @@ function KnowledgeView({ knowledge, tenant, onRefresh }) {
   const cats = ['Produtos/Servicos', 'Precos', 'Agendamento', 'FAQ'];
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="font-bold text-lg">Conhecimento</h2>
-        <button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Novo</button>
-      </div>
+      <div className="flex justify-between items-center mb-4"><h2 className="font-bold text-lg">Conhecimento</h2><button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Novo</button></div>
       <div className="grid grid-cols-2 gap-4">
         {cats.map(cat => (
           <div key={cat} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
             <h3 className="font-bold text-sm mb-3">{cat}</h3>
             {knowledge.filter(k => k.category === cat).map(item => (
               <div key={item.id} className="bg-gray-50 rounded-lg p-3 mb-2">
-                <div className="flex justify-between mb-1">
-                  <p className="font-bold text-xs">{item.question}</p>
-                  <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteKnowledge(item.id); onRefresh(); } }}><Trash2 className="w-3 h-3 text-gray-300" /></button>
-                </div>
+                <div className="flex justify-between mb-1"><p className="font-bold text-xs">{item.question}</p><button onClick={async () => { if (confirm('Deletar?')) { await api.deleteKnowledge(item.id); onRefresh(); } }}><Trash2 className="w-3 h-3 text-gray-300" /></button></div>
                 <p className="text-[10px] text-gray-500">{item.answer}</p>
               </div>
             ))}
@@ -1068,14 +955,7 @@ function KnowledgeView({ knowledge, tenant, onRefresh }) {
           </div>
         ))}
       </div>
-      {show && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <h2 className="font-bold mb-4">Novo</h2>
-            <KnowledgeForm tenant={tenant} onClose={() => setShow(false)} onSuccess={() => { setShow(false); onRefresh(); }} />
-          </div>
-        </div>
-      )}
+      {show && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl"><h2 className="font-bold mb-4">Novo</h2><KnowledgeForm tenant={tenant} onClose={() => setShow(false)} onSuccess={() => { setShow(false); onRefresh(); }} /></div></div>}
     </div>
   );
 }
@@ -1084,15 +964,10 @@ function KnowledgeForm({ tenant, onClose, onSuccess }) {
   const [f, setF] = useState({ category: 'FAQ', question: '', answer: '' });
   return (
     <form onSubmit={async e => { e.preventDefault(); await api.createKnowledge({ ...f, tenantId: tenant.id }); onSuccess(); }} className="space-y-3">
-      <select value={f.category} onChange={e => setF({ ...f, category: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
-        <option>Produtos/Servicos</option><option>Precos</option><option>Agendamento</option><option>FAQ</option>
-      </select>
+      <select value={f.category} onChange={e => setF({ ...f, category: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"><option>Produtos/Servicos</option><option>Precos</option><option>Agendamento</option><option>FAQ</option></select>
       <input placeholder="Pergunta" value={f.question} onChange={e => setF({ ...f, question: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
       <textarea placeholder="Resposta" value={f.answer} onChange={e => setF({ ...f, answer: e.target.value })} rows={3} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
-      <div className="flex gap-2">
-        <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button>
-        <button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Criar</button>
-      </div>
+      <div className="flex gap-2"><button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button><button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Criar</button></div>
     </form>
   );
 }
@@ -1102,15 +977,10 @@ function TeamView({ users, tenant, currentUser, onRefresh }) {
   const [editing, setEditing] = useState(null);
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="font-bold text-lg">Equipe</h2>
-        <button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Usuario</button>
-      </div>
+      <div className="flex justify-between items-center mb-4"><h2 className="font-bold text-lg">Equipe</h2><button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Usuario</button></div>
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <table className="w-full text-left">
-          <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase">
-            <tr><th className="p-3">Nome</th><th className="p-3">E-mail</th><th className="p-3">Funcao</th><th className="p-3">Permissoes</th><th className="p-3 text-right">Acoes</th></tr>
-          </thead>
+          <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase"><tr><th className="p-3">Nome</th><th className="p-3">E-mail</th><th className="p-3">Funcao</th><th className="p-3">Permissoes</th><th className="p-3 text-right">Acoes</th></tr></thead>
           <tbody className="divide-y divide-gray-100">
             {users.map(u => {
               const perms = (() => { try { return JSON.parse(u.permissions || '[]'); } catch { return []; } })();
@@ -1137,12 +1007,8 @@ function TeamView({ users, tenant, currentUser, onRefresh }) {
 
 function UserModal({ user, tenant, onClose, onSuccess }) {
   const allT = ['kanban', 'chat', 'leads', 'whatsapp', 'analytics', 'knowledge', 'team', 'settings'];
-  const [f, setF] = useState({
-    name: user?.name || '', email: user?.email || '', password: '', role: user?.role || 'client_user',
-    permissions: (() => { try { return JSON.parse(user?.permissions || '[]'); } catch { return []; } })()
-  });
+  const [f, setF] = useState({ name: user?.name || '', email: user?.email || '', password: '', role: user?.role || 'client_user', permissions: (() => { try { return JSON.parse(user?.permissions || '[]'); } catch { return []; } })() });
   const tp = p => setF({ ...f, permissions: f.permissions.includes(p) ? f.permissions.filter(x => x !== p) : [...f.permissions, p] });
-
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
@@ -1151,25 +1017,16 @@ function UserModal({ user, tenant, onClose, onSuccess }) {
           <input placeholder="Nome" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
           <input type="email" placeholder="E-mail" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
           <input type="password" placeholder={user ? 'Nova senha (vazio=manter)' : 'Senha'} value={f.password} onChange={e => setF({ ...f, password: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl text-sm p-2.5" required={!user} />
-          <select value={f.role} onChange={e => setF({ ...f, role: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
-            <option value="client_user">Usuario</option><option value="client_admin">Admin</option>
-          </select>
+          <select value={f.role} onChange={e => setF({ ...f, role: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"><option value="client_user">Usuario</option><option value="client_admin">Admin</option></select>
           {f.role === 'client_user' && (
             <div className="border border-gray-200 rounded-xl p-3">
               <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Permissoes</p>
               <div className="grid grid-cols-2 gap-1.5">
-                {allT.map(tab => (
-                  <label key={tab} className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs cursor-pointer ${f.permissions.includes(tab) ? 'bg-[#25d366]/10 text-[#075e54] font-bold' : 'bg-gray-50 text-gray-400'}`}>
-                    <input type="checkbox" checked={f.permissions.includes(tab)} onChange={() => tp(tab)} className="w-3 h-3" />{tab}
-                  </label>
-                ))}
+                {allT.map(tab => <label key={tab} className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs cursor-pointer ${f.permissions.includes(tab) ? 'bg-[#25d366]/10 text-[#075e54] font-bold' : 'bg-gray-50 text-gray-400'}`}><input type="checkbox" checked={f.permissions.includes(tab)} onChange={() => tp(tab)} className="w-3 h-3" />{tab}</label>)}
               </div>
             </div>
           )}
-          <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button>
-            <button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Salvar</button>
-          </div>
+          <div className="flex gap-2 pt-1"><button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button><button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Salvar</button></div>
         </form>
       </div>
     </div>
