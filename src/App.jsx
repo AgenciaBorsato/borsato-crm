@@ -707,7 +707,6 @@ function ChatView({ tenant, columns, onRefresh }) {
   const [filter, setFilter] = useState('all');
   const [file, setFile] = useState(null);
 
-  // useRef keeps the latest cur value accessible inside stale setInterval closures
   const curRef = useRef(cur);
   useEffect(() => {
     curRef.current = cur;
@@ -884,10 +883,6 @@ function ChatView({ tenant, columns, onRefresh }) {
     }
   };
 
-  // FIX: do NOT strip 'Z' from timestamps.
-  // MySQL returns timestamps as "2026-03-21T02:00:06.000Z" (UTC).
-  // Passing them directly to new Date() converts to local time correctly.
-  // Stripping 'Z' made the browser treat UTC time as local → showed wrong date.
   const fmt = (ts) => {
     if (!ts) return '';
     const d = new Date(ts);
@@ -985,17 +980,16 @@ function ChatView({ tenant, columns, onRefresh }) {
                 </div>
               </div>
 
-              {!isGrp(c) && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteChat(c.id);
-                  }}
-                  className="p-1 text-gray-300 hover:text-red-400 flex-shrink-0"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              )}
+              {/* FIX: lixeira disponível para todos os chats, individuais e grupos */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteChat(c.id);
+                }}
+                className="p-1 text-gray-300 hover:text-red-400 flex-shrink-0"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
             </div>
           ))}
         </div>
