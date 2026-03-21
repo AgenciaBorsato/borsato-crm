@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { DollarSign, Users, MessageCircle, TrendingUp, Plus, Search } from 'lucide-react';
-import MetricCard from '../components/cards/MetricCard';
+import MetricCard from '../components/cards/MetricCard.jsx';
 import CreateCrmModal from '../components/modals/CreateCrmModal';
 
 export default function SuperAdminPanel({
