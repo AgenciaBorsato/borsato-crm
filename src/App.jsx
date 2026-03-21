@@ -31,6 +31,11 @@ import {
   Pause
 } from 'lucide-react';
 
+// Polling interval: 4s reduces DB connection pressure vs 1.5s
+// At 1.5s with 2 endpoints, Vercel serverless opens ~80 DB connections/min
+// At 4s it drops to ~30/min — well within free tier limits
+const POLL_INTERVAL = 4000;
+
 // ============================================================================
 // MEDIA MESSAGE COMPONENT
 // ============================================================================
@@ -285,7 +290,8 @@ export default function BorsatoCRM() {
     try {
       setCurrentTenant(await api.getTenant(id));
     } catch (e) {
-      setError('Erro ao carregar tenant');
+      // Silent fail on background refresh — don't show error to keep UI stable
+      console.error('loadTenantData error:', e);
     } finally {
       setLoading(false);
     }
@@ -725,7 +731,7 @@ function ChatView({ tenant, columns, onRefresh }) {
 
   useEffect(() => {
     load();
-    const i = setInterval(load, 1500);
+    const i = setInterval(load, POLL_INTERVAL);
     return () => clearInterval(i);
   }, [tenant.id]);
 
@@ -733,7 +739,7 @@ function ChatView({ tenant, columns, onRefresh }) {
     if (cur) {
       loadMsgs(cur.id);
       loadLead(cur);
-      const i = setInterval(() => loadMsgs(cur.id), 1500);
+      const i = setInterval(() => loadMsgs(cur.id), POLL_INTERVAL);
       return () => clearInterval(i);
     }
   }, [cur?.id]);
@@ -980,7 +986,6 @@ function ChatView({ tenant, columns, onRefresh }) {
                 </div>
               </div>
 
-              {/* FIX: lixeira disponível para todos os chats, individuais e grupos */}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1953,7 +1958,7 @@ function UserModal({ user, tenant, onClose, onSuccess }) {
             placeholder={user ? 'Nova senha (vazio=manter)' : 'Senha'}
             value={f.password}
             onChange={(e) => setF({ ...f, password: e.target.value })}
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl text-sm p-2.5"
             required={!user}
           />
 
