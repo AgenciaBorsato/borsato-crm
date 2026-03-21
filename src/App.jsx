@@ -76,7 +76,6 @@ function MediaBubble({ msg, tenantId }) {
 
   const toggleAudio = () => {
     if (!audioRef.current) return;
-
     if (playing) {
       audioRef.current.pause();
     } else {
@@ -202,9 +201,7 @@ function ProfilePic({ phone, tenantId, name, size = 'w-9 h-9', textSize = 'text-
 
   useEffect(() => {
     if (!phone || tried || isGroup) return;
-
     setTried(true);
-
     api.fetchProfilePic(phone, tenantId)
       .then(data => {
         const url =
@@ -213,7 +210,6 @@ function ProfilePic({ phone, tenantId, name, size = 'w-9 h-9', textSize = 'text-
           data?.picture ||
           data?.url ||
           null;
-
         if (url) setPic(url);
       })
       .catch(() => {});
@@ -331,7 +327,6 @@ export default function BorsatoCRM() {
     if (currentView === 'superAdmin') {
       await loadTenants();
     }
-
     if (currentTenant) {
       await loadTenantData(currentTenant.id);
     }
@@ -712,6 +707,12 @@ function ChatView({ tenant, columns, onRefresh }) {
   const [filter, setFilter] = useState('all');
   const [file, setFile] = useState(null);
 
+  // ── FIX: useRef to always have the latest cur inside stale closures (setInterval) ──
+  const curRef = useRef(cur);
+  useEffect(() => {
+    curRef.current = cur;
+  }, [cur]);
+
   const endRef = useRef(null);
   const fileRef = useRef(null);
 
@@ -747,8 +748,12 @@ function ChatView({ tenant, columns, onRefresh }) {
       const chatList = await api.getChats(tenant.id);
       setChats(chatList);
 
-      if (cur) {
-        const updatedCurrent = chatList.find((c) => c.id === cur.id);
+      // Use curRef.current instead of cur to avoid stale closure:
+      // Without this, the setInterval captures the initial value of cur (null or
+      // the first chat) and overwrites the user's selection every 1.5s.
+      const activeCur = curRef.current;
+      if (activeCur) {
+        const updatedCurrent = chatList.find((c) => c.id === activeCur.id);
         if (updatedCurrent) {
           setCur(updatedCurrent);
         }
@@ -782,6 +787,12 @@ function ChatView({ tenant, columns, onRefresh }) {
   };
 
   const isGrp = (c) => Number(c.is_group) === 1 || c.is_group === true;
+
+  // Select a chat: update state, clear search so the full list is visible
+  const selectChat = (c) => {
+    setCur(c);
+    setSearch('');
+  };
 
   const send = async () => {
     if (!msg.trim() || !cur) return;
@@ -944,7 +955,8 @@ function ChatView({ tenant, columns, onRefresh }) {
                 cur?.id === c.id ? 'bg-[#f0f2f5]' : ''
               }`}
             >
-              <div onClick={() => setCur(c)} className="flex items-center gap-2.5 flex-1 min-w-0">
+              {/* FIX: use selectChat() which also clears the search box */}
+              <div onClick={() => selectChat(c)} className="flex items-center gap-2.5 flex-1 min-w-0">
                 <ProfilePic
                   phone={c.contact_phone || c.remote_jid}
                   tenantId={tenant.id}
