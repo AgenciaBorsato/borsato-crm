@@ -707,7 +707,7 @@ function ChatView({ tenant, columns, onRefresh }) {
   const [filter, setFilter] = useState('all');
   const [file, setFile] = useState(null);
 
-  // ── FIX: useRef to always have the latest cur inside stale closures (setInterval) ──
+  // useRef keeps the latest cur value accessible inside stale setInterval closures
   const curRef = useRef(cur);
   useEffect(() => {
     curRef.current = cur;
@@ -748,9 +748,6 @@ function ChatView({ tenant, columns, onRefresh }) {
       const chatList = await api.getChats(tenant.id);
       setChats(chatList);
 
-      // Use curRef.current instead of cur to avoid stale closure:
-      // Without this, the setInterval captures the initial value of cur (null or
-      // the first chat) and overwrites the user's selection every 1.5s.
       const activeCur = curRef.current;
       if (activeCur) {
         const updatedCurrent = chatList.find((c) => c.id === activeCur.id);
@@ -788,7 +785,6 @@ function ChatView({ tenant, columns, onRefresh }) {
 
   const isGrp = (c) => Number(c.is_group) === 1 || c.is_group === true;
 
-  // Select a chat: update state, clear search so the full list is visible
   const selectChat = (c) => {
     setCur(c);
     setSearch('');
@@ -888,9 +884,13 @@ function ChatView({ tenant, columns, onRefresh }) {
     }
   };
 
+  // FIX: do NOT strip 'Z' from timestamps.
+  // MySQL returns timestamps as "2026-03-21T02:00:06.000Z" (UTC).
+  // Passing them directly to new Date() converts to local time correctly.
+  // Stripping 'Z' made the browser treat UTC time as local → showed wrong date.
   const fmt = (ts) => {
     if (!ts) return '';
-    const d = new Date(String(ts).replace('Z', ''));
+    const d = new Date(ts);
     const n = new Date();
 
     if (d.toDateString() === n.toDateString()) {
@@ -955,7 +955,6 @@ function ChatView({ tenant, columns, onRefresh }) {
                 cur?.id === c.id ? 'bg-[#f0f2f5]' : ''
               }`}
             >
-              {/* FIX: use selectChat() which also clears the search box */}
               <div onClick={() => selectChat(c)} className="flex items-center gap-2.5 flex-1 min-w-0">
                 <ProfilePic
                   phone={c.contact_phone || c.remote_jid}
