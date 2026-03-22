@@ -109,9 +109,6 @@ function ProfilePic({ phone, tenantId, name, size = 'w-9 h-9', textSize = 'text-
   return <div className={`${size} rounded-full flex items-center justify-center bg-[#dfe5e7] flex-shrink-0`}><span className={`${textSize} font-bold text-[#075e54]`}>{(name || phone || '?').substring(0, 2).toUpperCase()}</span></div>;
 }
 
-// ============================================================================
-// APP ROOT
-// ============================================================================
 export default function BorsatoCRM() {
   const [currentUser, setCurrentUser] = useState(null);
   const [currentView, setCurrentView] = useState('login');
@@ -120,7 +117,6 @@ export default function BorsatoCRM() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Register global auth-error handler: any 401/403 from the API forces logout
   const doLogout = useCallback(() => {
     api.logout();
     localStorage.clear();
@@ -130,10 +126,7 @@ export default function BorsatoCRM() {
     setTenants([]);
   }, []);
 
-  useEffect(() => {
-    // Wire up the API to auto-logout on expired/invalid token
-    api.onAuthError(doLogout);
-  }, [doLogout]);
+  useEffect(() => { api.onAuthError(doLogout); }, [doLogout]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -151,10 +144,7 @@ export default function BorsatoCRM() {
   const loadTenants = async () => {
     setLoading(true);
     try { setTenants(await api.getTenants()); }
-    catch (e) {
-      // If auth error, doLogout was already called by onAuthError handler
-      if (e.message !== 'Sessao expirada') setError('Erro ao carregar');
-    }
+    catch (e) { if (e.message !== 'Sessao expirada') setError('Erro ao carregar'); }
     finally { setLoading(false); }
   };
 
@@ -177,22 +167,16 @@ export default function BorsatoCRM() {
     finally { setLoading(false); }
   };
 
-  const handleLogout = doLogout;
-
-  const handleEnterTenant = useCallback(async (tid) => {
-    await loadTenantData(tid);
-    setCurrentView('clientDashboard');
-  }, []);
-
+  const handleEnterTenant = useCallback(async (tid) => { await loadTenantData(tid); setCurrentView('clientDashboard'); }, []);
   const refreshData = useCallback(async () => {
     if (currentView === 'superAdmin') await loadTenants();
     if (currentTenant) await loadTenantData(currentTenant.id);
   }, [currentView, currentTenant]);
 
   if (currentView === 'login') return <LoginScreen onLogin={handleLogin} loading={loading} error={error} />;
-  if (currentView === 'superAdmin') return <SuperAdminPanel user={currentUser} tenants={tenants} onLogout={handleLogout} onRefresh={refreshData} onEnterTenant={handleEnterTenant} />;
+  if (currentView === 'superAdmin') return <SuperAdminPanel user={currentUser} tenants={tenants} onLogout={doLogout} onRefresh={refreshData} onEnterTenant={handleEnterTenant} />;
   if (currentView === 'clientDashboard' && currentTenant) return (
-    <ClientDashboard user={currentUser} tenant={currentTenant} onLogout={handleLogout} onRefresh={refreshData}
+    <ClientDashboard user={currentUser} tenant={currentTenant} onLogout={doLogout} onRefresh={refreshData}
       onBackToSuperAdmin={currentUser?.role === 'super_admin' ? () => { setCurrentTenant(null); loadTenants(); setCurrentView('superAdmin'); } : null} />
   );
   return <div className="h-screen bg-black flex items-center justify-center text-zinc-500">Carregando...</div>;
@@ -410,7 +394,17 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
   const handleFile = e => { const f = e.target.files[0]; if (!f) return; if (f.size > 2*1024*1024) { alert('Max 2MB'); return; } setFile(f); };
   const sendFile = async () => {
     if (!file || !cur) return; const ph = cur.contact_phone || cur.remote_jid?.split('@')[0]; setSending(true);
-    try { const reader = new FileReader(); reader.onload = async () => { const base64 = reader.result.split(',')[1]; const mt = file.type.startsWith('image') ? 'image' : file.type.startsWith('video') ? 'video' : 'document'; await api.sendWhatsAppMedia({ number: ph, base64, fileName: file.name, mediaType: mt, caption: '', tenantId: tenant.id, chatId: cur.id }); setFile(null); if (fileRef.current) fileRef.current.value = ''; await loadMsgs(cur.id); await load(); setSending(false); }; reader.readAsDataURL(file); } catch (e) { alert('Erro: ' + e.message); setSending(false); }
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result.split(',')[1];
+        const mt = file.type.startsWith('image') ? 'image' : file.type.startsWith('video') ? 'video' : 'document';
+        await api.sendWhatsAppMedia({ number: ph, base64, fileName: file.name, mediaType: mt, caption: '', tenantId: tenant.id, chatId: cur.id });
+        setFile(null); if (fileRef.current) fileRef.current.value = '';
+        await loadMsgs(cur.id); await load(); setSending(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (e) { alert('Erro: ' + e.message); setSending(false); }
   };
   const deleteChat = async id => {
     if (!confirm('Apagar conversa?')) return;
@@ -422,6 +416,39 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
   const tenantAIOn = Number(tenant.ai_enabled) === 1 || tenant.ai_enabled === true;
   const leadAIOn = lead ? (Number(lead.ai_enabled) === 1 || lead.ai_enabled === true) : false;
   const toggleLeadAI = async () => { if (!lead) return; const newVal = !leadAIOn; try { await api.setLeadAI(lead.id, newVal); setLead({ ...lead, ai_enabled: newVal ? 1 : 0 }); } catch { alert('Erro ao alterar IA'); } };
+
+  const renderStageButtons = () => {
+    if (isGrp(cur) || columns.length === 0) return null;
+    return (
+      <div className="flex flex-wrap gap-1 justify-end max-w-xs">
+        {columns.map(col => {
+          const c = CM[col.color] || CM.zinc;
+          const isActive = lead?.stage === col.id;
+          const handleClick = async () => {
+            if (lead) {
+              await api.updateLead(lead.id, { stage: col.id });
+              setLead({ ...lead, stage: col.id });
+            } else {
+              const ph = cur.contact_phone || cur.remote_jid?.split('@')[0];
+              if (ph) {
+                try {
+                  const nl = await api.createLead({ tenantId: tenant.id, name: chatDisplayName(cur), phone: ph, source: 'whatsapp', stage: col.id });
+                  setLead(nl);
+                } catch (err) { console.error(err); }
+              }
+            }
+            onRefresh();
+          };
+          return (
+            <button key={col.id} onClick={handleClick}
+              className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all ${isActive ? `${c.bg} text-white shadow-sm` : `${c.light} ${c.text} hover:opacity-80`}`}>
+              {col.name}
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <div className="flex h-[calc(100vh-120px)] bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
@@ -462,11 +489,7 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
                   )}
                   {!isGrp(cur) && lead && !tenantAIOn && <span className="ml-1 flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-400 rounded-lg text-[9px] font-bold"><BotOff className="w-3 h-3" /> IA desligada</span>}
                 </div>
-                {!isGrp(cur) && columns.length > 0 && (
-                  <div className="flex flex-wrap gap-1 justify-end max-w-xs">
-                    {columns.map(col => { const c = CM[col.color] || CM.zinc; const isActive = lead?.stage === col.id; return <button key={col.id} onClick={async () => { if (lead) { await api.updateLead(lead.id, { stage: col.id }); setLead({ ...lead, stage: col.id }); } else { const ph = cur.contact_phone || cur.remote_jid?.split('@')[0]; if (ph) { try { const nl = await api.createLead({ tenantId: tenant.id, name: chatDisplayName(cur), phone: ph, source: 'whatsapp', stage: col.id }); setLead(nl); } catch {} } } onRefresh(); }} className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all ${isActive ? `${c.bg} text-white shadow-sm` : `${c.light} ${c.text} hover:opacity-80`}`}>{col.name}</button>; }}
-                  </div>
-                )}
+                {renderStageButtons()}
               </div>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1" style={{ backgroundColor: '#eae6df' }}>
@@ -556,16 +579,21 @@ function LeadsView({ leads, columns, tenant, onRefresh, onOpenChat }) {
         <table className="w-full text-left">
           <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase"><tr><th className="p-3">Nome</th><th className="p-3">Telefone</th><th className="p-3">Etapa</th><th className="p-3">Origem</th><th className="p-3">Tempo</th><th className="p-3 text-right">Acoes</th></tr></thead>
           <tbody className="divide-y divide-gray-100">
-            {filtered.map(l => { const colInfo = columns.find(c => c.id === l.stage); const c = CM[colInfo?.color] || CM.zinc; const days = daysAgo(l.updated_at); return (
-              <tr key={l.id} className="hover:bg-gray-50/50">
-                <td className="p-3 font-bold text-xs">{l.name}</td>
-                <td className="p-3 text-xs text-gray-400 font-mono">{l.phone}</td>
-                <td className="p-3">{colInfo ? <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${c.light} ${c.text}`}>{colInfo.name}</span> : <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold rounded">{l.stage || '-'}</span>}</td>
-                <td className="p-3">{l.source === 'whatsapp' ? <span className="text-[9px] font-bold text-green-700 bg-green-50 rounded px-1.5 py-0.5 flex items-center gap-0.5 w-fit"><Zap className="w-2.5 h-2.5" /> WhatsApp</span> : <span className="text-[9px] text-gray-400 bg-gray-100 rounded px-1.5 py-0.5">{l.source || 'manual'}</span>}</td>
-                <td className="p-3"><span className={`text-[10px] ${days > 7 ? 'text-red-600 font-bold' : days > 2 ? 'text-amber-600' : 'text-gray-400'}`}>{days}d</span></td>
-                <td className="p-3"><div className="flex gap-1 justify-end items-center">{l.phone && <button onClick={() => onOpenChat(l.phone)} className="flex items-center gap-1 px-2 py-1 bg-[#25d366]/10 hover:bg-[#25d366]/20 text-[#075e54] rounded text-[9px] font-bold"><MessageCircle className="w-3 h-3" /> Conversar</button>}<button onClick={() => setEditLead(l)} className="text-blue-400 p-1"><Edit2 className="w-3.5 h-3.5" /></button><button onClick={async () => { if (confirm('Deletar?')) { await api.deleteLead(l.id); onRefresh(); } }} className="text-gray-300 hover:text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button></div></td>
-              </tr>
-            ); })}
+            {filtered.map(l => {
+              const colInfo = columns.find(c => c.id === l.stage);
+              const c = CM[colInfo?.color] || CM.zinc;
+              const days = daysAgo(l.updated_at);
+              return (
+                <tr key={l.id} className="hover:bg-gray-50/50">
+                  <td className="p-3 font-bold text-xs">{l.name}</td>
+                  <td className="p-3 text-xs text-gray-400 font-mono">{l.phone}</td>
+                  <td className="p-3">{colInfo ? <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${c.light} ${c.text}`}>{colInfo.name}</span> : <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold rounded">{l.stage || '-'}</span>}</td>
+                  <td className="p-3">{l.source === 'whatsapp' ? <span className="text-[9px] font-bold text-green-700 bg-green-50 rounded px-1.5 py-0.5 flex items-center gap-0.5 w-fit"><Zap className="w-2.5 h-2.5" /> WhatsApp</span> : <span className="text-[9px] text-gray-400 bg-gray-100 rounded px-1.5 py-0.5">{l.source || 'manual'}</span>}</td>
+                  <td className="p-3"><span className={`text-[10px] ${days > 7 ? 'text-red-600 font-bold' : days > 2 ? 'text-amber-600' : 'text-gray-400'}`}>{days}d</span></td>
+                  <td className="p-3"><div className="flex gap-1 justify-end items-center">{l.phone && <button onClick={() => onOpenChat(l.phone)} className="flex items-center gap-1 px-2 py-1 bg-[#25d366]/10 hover:bg-[#25d366]/20 text-[#075e54] rounded text-[9px] font-bold"><MessageCircle className="w-3 h-3" /> Conversar</button>}<button onClick={() => setEditLead(l)} className="text-blue-400 p-1"><Edit2 className="w-3.5 h-3.5" /></button><button onClick={async () => { if (confirm('Deletar?')) { await api.deleteLead(l.id); onRefresh(); } }} className="text-gray-300 hover:text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button></div></td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {filtered.length === 0 && <div className="text-center py-8 text-gray-400 text-xs">Nenhum lead</div>}
@@ -603,8 +631,9 @@ function WhatsAppView({ tenant }) {
     <div className="max-w-xl"><h2 className="font-bold text-lg mb-4">WhatsApp</h2>
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><h3 className="font-bold text-sm mb-3">Status</h3>
-          {status?.connected ? <div className="space-y-3"><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-[#25d366] rounded-full animate-pulse" /><span className="text-[#25d366] font-bold text-sm">Conectado</span></div><button onClick={async () => { await api.disconnectWhatsApp(tenant.id); ck(); }} className="w-full py-2 bg-red-50 text-red-500 rounded-lg text-xs font-bold">Desconectar</button></div>
-          : <div className="space-y-3"><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-gray-300 rounded-full" /><span className="text-gray-400 text-sm">Desconectado</span></div><input value={token} onChange={e => setToken(e.target.value)} placeholder="Token..." className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-xs font-mono" /><button onClick={async () => { setLd(true); try { await api.connectWhatsApp(tenant.id, token); setToken(''); ck(); } catch { alert('Erro'); } finally { setLd(false); } }} disabled={ld || !token.trim()} className="w-full py-2 bg-[#25d366] text-white rounded-lg text-xs font-bold disabled:opacity-50">{ld ? 'Salvando...' : 'Salvar'}</button><button onClick={ck} className="w-full py-2 bg-gray-50 text-[#075e54] rounded-lg text-xs font-bold border border-gray-200">Verificar</button></div>}
+          {status?.connected
+            ? <div className="space-y-3"><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-[#25d366] rounded-full animate-pulse" /><span className="text-[#25d366] font-bold text-sm">Conectado</span></div><button onClick={async () => { await api.disconnectWhatsApp(tenant.id); ck(); }} className="w-full py-2 bg-red-50 text-red-500 rounded-lg text-xs font-bold">Desconectar</button></div>
+            : <div className="space-y-3"><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-gray-300 rounded-full" /><span className="text-gray-400 text-sm">Desconectado</span></div><input value={token} onChange={e => setToken(e.target.value)} placeholder="Token..." className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-xs font-mono" /><button onClick={async () => { setLd(true); try { await api.connectWhatsApp(tenant.id, token); setToken(''); ck(); } catch { alert('Erro'); } finally { setLd(false); } }} disabled={ld || !token.trim()} className="w-full py-2 bg-[#25d366] text-white rounded-lg text-xs font-bold disabled:opacity-50">{ld ? 'Salvando...' : 'Salvar'}</button><button onClick={ck} className="w-full py-2 bg-gray-50 text-[#075e54] rounded-lg text-xs font-bold border border-gray-200">Verificar</button></div>}
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><h3 className="font-bold text-sm mb-3">Instancia</h3><div className="bg-gray-50 rounded-lg p-2.5 flex justify-between items-center"><code className="text-[#075e54] text-xs font-bold">{nm}</code><button onClick={() => navigator.clipboard.writeText(nm)} className="text-[10px] text-gray-400">Copiar</button></div></div>
       </div>
@@ -621,7 +650,22 @@ function AnalyticsView({ leads, columns }) {
   return (
     <div><h2 className="font-bold text-lg mb-4">Analytics</h2>
       <div className="grid grid-cols-4 gap-4 mb-6">{[{ l: 'Total', v: t, color: 'text-blue-600', bg: 'bg-blue-50' }, { l: 'WhatsApp', v: bySource.w, color: 'text-green-600', bg: 'bg-green-50' }, { l: 'Clientes', v: wonCount, color: 'text-emerald-700', bg: 'bg-emerald-50' }, { l: 'Perdidos', v: lostCount, color: 'text-red-600', bg: 'bg-red-50' }].map((m, i) => <div key={i} className={`${m.bg} border border-gray-100 rounded-xl p-4 shadow-sm`}><p className={`text-[10px] font-bold uppercase mb-1 ${m.color}`}>{m.l}</p><p className={`text-3xl font-black ${m.color}`}>{m.v}</p></div>)}</div>
-      {columns.length > 0 && <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><h3 className="font-bold text-sm mb-4">Por Etapa</h3><div className="space-y-3">{byStage.map(col => { const p = t > 0 ? (col.count / t) * 100 : 0; const c = CM[col.color] || CM.zinc; return <div key={col.id}><div className="flex justify-between mb-1"><div className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${c.bg}`} /><span className="text-xs font-bold text-gray-600">{col.name}</span></div><span className="text-[10px] text-gray-400">{col.count} ({p.toFixed(0)}%)</span></div><div className="h-2.5 bg-gray-100 rounded-full overflow-hidden"><div className={`h-full rounded-full ${c.bg}`} style={{ width: `${Math.max(p, 1)}%` }} /></div></div>; })}</div></div>}
+      {columns.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><h3 className="font-bold text-sm mb-4">Por Etapa</h3>
+          <div className="space-y-3">
+            {byStage.map(col => {
+              const p = t > 0 ? (col.count / t) * 100 : 0;
+              const c = CM[col.color] || CM.zinc;
+              return (
+                <div key={col.id}>
+                  <div className="flex justify-between mb-1"><div className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${c.bg}`} /><span className="text-xs font-bold text-gray-600">{col.name}</span></div><span className="text-[10px] text-gray-400">{col.count} ({p.toFixed(0)}%)</span></div>
+                  <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden"><div className={`h-full rounded-full ${c.bg}`} style={{ width: `${Math.max(p, 1)}%` }} /></div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -632,7 +676,20 @@ function KnowledgeView({ knowledge, tenant, onRefresh }) {
   return (
     <div>
       <div className="flex justify-between items-center mb-4"><h2 className="font-bold text-lg">Conhecimento</h2><button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Novo</button></div>
-      <div className="grid grid-cols-2 gap-4">{cats.map(cat => <div key={cat} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"><h3 className="font-bold text-sm mb-3">{cat}</h3>{knowledge.filter(k => k.category === cat).map(item => <div key={item.id} className="bg-gray-50 rounded-lg p-3 mb-2"><div className="flex justify-between mb-1"><p className="font-bold text-xs">{item.question}</p><button onClick={async () => { if (confirm('Deletar?')) { await api.deleteKnowledge(item.id); onRefresh(); } }}><Trash2 className="w-3 h-3 text-gray-300" /></button></div><p className="text-[10px] text-gray-500">{item.answer}</p></div>)}{knowledge.filter(k => k.category === cat).length === 0 && <p className="text-[10px] text-gray-300 text-center py-3">Vazio</p>}</div>)}</div>
+      <div className="grid grid-cols-2 gap-4">
+        {cats.map(cat => (
+          <div key={cat} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <h3 className="font-bold text-sm mb-3">{cat}</h3>
+            {knowledge.filter(k => k.category === cat).map(item => (
+              <div key={item.id} className="bg-gray-50 rounded-lg p-3 mb-2">
+                <div className="flex justify-between mb-1"><p className="font-bold text-xs">{item.question}</p><button onClick={async () => { if (confirm('Deletar?')) { await api.deleteKnowledge(item.id); onRefresh(); } }}><Trash2 className="w-3 h-3 text-gray-300" /></button></div>
+                <p className="text-[10px] text-gray-500">{item.answer}</p>
+              </div>
+            ))}
+            {knowledge.filter(k => k.category === cat).length === 0 && <p className="text-[10px] text-gray-300 text-center py-3">Vazio</p>}
+          </div>
+        ))}
+      </div>
       {show && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl"><h2 className="font-bold mb-4">Novo</h2><KnowledgeForm tenant={tenant} onClose={() => setShow(false)} onSuccess={() => { setShow(false); onRefresh(); }} /></div></div>}
     </div>
   );
@@ -651,13 +708,33 @@ function KnowledgeForm({ tenant, onClose, onSuccess }) {
 }
 
 function TeamView({ users, tenant, currentUser, onRefresh }) {
-  const [show, setShow] = useState(false); const [editing, setEditing] = useState(null);
+  const [show, setShow] = useState(false);
+  const [editing, setEditing] = useState(null);
   return (
     <div>
       <div className="flex justify-between items-center mb-4"><h2 className="font-bold text-lg">Equipe</h2><button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Usuario</button></div>
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-        <table className="w-full text-left"><thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase"><tr><th className="p-3">Nome</th><th className="p-3">E-mail</th><th className="p-3">Funcao</th><th className="p-3">Permissoes</th><th className="p-3 text-right">Acoes</th></tr></thead>
-          <tbody className="divide-y divide-gray-100">{users.map(u => { const perms = (() => { try { return JSON.parse(u.permissions || '[]'); } catch { return []; } })(); return <tr key={u.id}><td className="p-3 font-bold text-xs">{u.name}</td><td className="p-3 text-xs text-gray-400">{u.email}</td><td className="p-3"><span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${u.role === 'super_admin' ? 'bg-purple-50 text-purple-500' : u.role === 'client_admin' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-500'}`}>{u.role === 'super_admin' ? 'Mestre' : u.role === 'client_admin' ? 'Admin' : 'Usuario'}</span></td><td className="p-3 text-[9px] text-gray-400">{u.role === 'client_user' ? perms.join(', ') || 'Nenhuma' : ''}</td><td className="p-3 text-right flex gap-1 justify-end">{u.role === 'client_user' && <button onClick={() => setEditing(u)} className="text-blue-400"><Edit2 className="w-3.5 h-3.5" /></button>}{u.id !== currentUser.id && <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteUser(u.id); onRefresh(); } }} className="text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>}</td></tr>; })}</tbody>
+        <table className="w-full text-left">
+          <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase">
+            <tr><th className="p-3">Nome</th><th className="p-3">E-mail</th><th className="p-3">Funcao</th><th className="p-3">Permissoes</th><th className="p-3 text-right">Acoes</th></tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {users.map(u => {
+              const perms = (() => { try { return JSON.parse(u.permissions || '[]'); } catch { return []; } })();
+              return (
+                <tr key={u.id}>
+                  <td className="p-3 font-bold text-xs">{u.name}</td>
+                  <td className="p-3 text-xs text-gray-400">{u.email}</td>
+                  <td className="p-3"><span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${u.role === 'super_admin' ? 'bg-purple-50 text-purple-500' : u.role === 'client_admin' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-500'}`}>{u.role === 'super_admin' ? 'Mestre' : u.role === 'client_admin' ? 'Admin' : 'Usuario'}</span></td>
+                  <td className="p-3 text-[9px] text-gray-400">{u.role === 'client_user' ? perms.join(', ') || 'Nenhuma' : ''}</td>
+                  <td className="p-3 text-right flex gap-1 justify-end">
+                    {u.role === 'client_user' && <button onClick={() => setEditing(u)} className="text-blue-400"><Edit2 className="w-3.5 h-3.5" /></button>}
+                    {u.id !== currentUser.id && <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteUser(u.id); onRefresh(); } }} className="text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
         </table>
       </div>
       {(show || editing) && <UserModal user={editing} tenant={tenant} onClose={() => { setShow(false); setEditing(null); }} onSuccess={() => { setShow(false); setEditing(null); onRefresh(); }} />}
@@ -678,7 +755,12 @@ function UserModal({ user, tenant, onClose, onSuccess }) {
           <input type="email" placeholder="E-mail" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
           <input type="password" placeholder={user ? 'Nova senha (vazio=manter)' : 'Senha'} value={f.password} onChange={e => setF({ ...f, password: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl text-sm p-2.5" required={!user} />
           <select value={f.role} onChange={e => setF({ ...f, role: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"><option value="client_user">Usuario</option><option value="client_admin">Admin</option></select>
-          {f.role === 'client_user' && <div className="border border-gray-200 rounded-xl p-3"><p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Permissoes</p><div className="grid grid-cols-2 gap-1.5">{allT.map(tab => <label key={tab} className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs cursor-pointer ${f.permissions.includes(tab) ? 'bg-[#25d366]/10 text-[#075e54] font-bold' : 'bg-gray-50 text-gray-400'}`}><input type="checkbox" checked={f.permissions.includes(tab)} onChange={() => tp(tab)} className="w-3 h-3" />{tab}</label>)}</div></div>}
+          {f.role === 'client_user' && (
+            <div className="border border-gray-200 rounded-xl p-3">
+              <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Permissoes</p>
+              <div className="grid grid-cols-2 gap-1.5">{allT.map(tab => <label key={tab} className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs cursor-pointer ${f.permissions.includes(tab) ? 'bg-[#25d366]/10 text-[#075e54] font-bold' : 'bg-gray-50 text-gray-400'}`}><input type="checkbox" checked={f.permissions.includes(tab)} onChange={() => tp(tab)} className="w-3 h-3" />{tab}</label>)}</div>
+            </div>
+          )}
           <div className="flex gap-2 pt-1"><button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button><button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Salvar</button></div>
         </form>
       </div>
@@ -694,37 +776,72 @@ function SettingsView({ tenant, onRefresh }) {
 
   const savePrompt = async () => {
     setSaving(true);
-    try { await api.updateTenant(tenant.id, { name: tenant.name, plan: tenant.plan, monthlyValue: tenant.monthly_value, aiPrompt: prompt, customFields: JSON.parse(tenant.custom_fields || '[]'), active: tenant.active }); alert('Salvo!'); onRefresh(); }
-    catch { alert('Erro'); } finally { setSaving(false); }
+    try {
+      await api.updateTenant(tenant.id, { name: tenant.name, plan: tenant.plan, monthlyValue: tenant.monthly_value, aiPrompt: prompt, customFields: JSON.parse(tenant.custom_fields || '[]'), active: tenant.active });
+      alert('Salvo!');
+      onRefresh();
+    } catch { alert('Erro'); }
+    finally { setSaving(false); }
   };
 
   const toggleAI = async () => {
     setTogglingAI(true);
     try { await api.setTenantAI(tenant.id, !aiEnabled); setAiEnabled(!aiEnabled); onRefresh(); }
-    catch { alert('Erro ao alterar IA'); } finally { setTogglingAI(false); }
+    catch { alert('Erro ao alterar IA'); }
+    finally { setTogglingAI(false); }
   };
 
   return (
     <div className="max-w-xl space-y-4">
       <h2 className="font-bold text-lg">Configuracoes</h2>
+
       <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1"><Bot className="w-4 h-4 text-purple-600" /><h3 className="font-bold text-sm">Assistente IA</h3><span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${aiEnabled ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-400'}`}>{aiEnabled ? 'ATIVO' : 'DESLIGADO'}</span></div>
-            <p className="text-xs text-gray-400 leading-relaxed">Quando ativo, a IA responde automaticamente mensagens recebidas de leads usando a base de conhecimento. Voce pode pausar individualmente por contato na tela de Conversas.</p>
+            <div className="flex items-center gap-2 mb-1">
+              <Bot className="w-4 h-4 text-purple-600" />
+              <h3 className="font-bold text-sm">Assistente IA</h3>
+              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${aiEnabled ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-400'}`}>
+                {aiEnabled ? 'ATIVO' : 'DESLIGADO'}
+              </span>
+            </div>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Quando ativo, a IA responde automaticamente mensagens recebidas de leads usando a base de conhecimento.
+              Voce pode pausar individualmente por contato na tela de Conversas.
+            </p>
           </div>
-          <button onClick={toggleAI} disabled={togglingAI} className={`flex-shrink-0 w-12 h-6 rounded-full transition-all relative ${aiEnabled ? 'bg-purple-500' : 'bg-gray-300'} disabled:opacity-50`}>
+          <button
+            onClick={toggleAI}
+            disabled={togglingAI}
+            className={`flex-shrink-0 w-12 h-6 rounded-full transition-all relative ${aiEnabled ? 'bg-purple-500' : 'bg-gray-300'} disabled:opacity-50`}>
             <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${aiEnabled ? 'left-6' : 'left-0.5'}`} />
           </button>
         </div>
-        {aiEnabled && <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 text-[10px] text-purple-600 bg-purple-50 rounded-lg px-3 py-2"><Bot className="w-3 h-3 flex-shrink-0" /> IA ativa — respondendo automaticamente a novos leads via WhatsApp</div>}
+        {aiEnabled && (
+          <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 text-[10px] text-purple-600 bg-purple-50 rounded-lg px-3 py-2">
+            <Bot className="w-3 h-3 flex-shrink-0" />
+            IA ativa - respondendo automaticamente a novos leads via WhatsApp
+          </div>
+        )}
       </div>
+
       <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-        <h3 className="font-bold text-sm mb-1 flex items-center gap-2"><Brain className="w-4 h-4 text-gray-400" /> Personalidade da IA</h3>
+        <h3 className="font-bold text-sm mb-1 flex items-center gap-2">
+          <Brain className="w-4 h-4 text-gray-400" /> Personalidade da IA
+        </h3>
         <p className="text-[10px] text-gray-400 mb-3">Defina como a IA deve se apresentar. Se vazio, usa atendimento padrao cordial.</p>
-        <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={6} placeholder={'Exemplo:\nVoce e a assistente da Clinica Exemplo.\nSe apresente como Ana e seja sempre educada.\nNao marque consultas sem confirmar disponibilidade.'} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm mb-3 font-mono text-xs leading-relaxed" />
-        <button onClick={savePrompt} disabled={saving} className="px-5 py-2 bg-[#25d366] text-white font-bold rounded-xl text-sm disabled:opacity-50">{saving ? 'Salvando...' : 'Salvar prompt'}</button>
+        <textarea
+          value={prompt}
+          onChange={e => setPrompt(e.target.value)}
+          rows={6}
+          placeholder={"Exemplo:\nVoce e a assistente da Clinica Exemplo.\nSe apresente como Ana e seja sempre educada.\nNao marque consultas sem confirmar disponibilidade."}
+          className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm mb-3 font-mono text-xs leading-relaxed"
+        />
+        <button onClick={savePrompt} disabled={saving} className="px-5 py-2 bg-[#25d366] text-white font-bold rounded-xl text-sm disabled:opacity-50">
+          {saving ? 'Salvando...' : 'Salvar prompt'}
+        </button>
       </div>
+
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
         <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">Como funciona</p>
         <div className="space-y-1 text-[11px] text-gray-500">
