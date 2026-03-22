@@ -5,7 +5,7 @@ import {
   MessageSquare, LayoutGrid, Users, Settings, Plus, Search, Send, X, Check,
   Trash2, BarChart3, Brain, Edit2, UserPlus, ArrowLeft, Smartphone, Image,
   Mic, FileText, MapPin, CheckCheck, Paperclip, Users2, Download, Play, Pause,
-  MessageCircle, Phone, Clock, Zap, Bot, BotOff
+  MessageCircle, Phone, Clock, Zap, Bot
 } from 'lucide-react';
 
 const POLL_INTERVAL = 4000;
@@ -808,13 +808,13 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
                       title={leadAIOn ? 'IA ativa - clique para pausar' : 'IA pausada - clique para ativar'}
                       className={`ml-1 flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold transition-all ${leadAIOn ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
                     >
-                      {leadAIOn ? <Bot className="w-3 h-3" /> : <BotOff className="w-3 h-3" />}
+                      <Bot className={`w-3 h-3 ${leadAIOn ? '' : 'opacity-40'}`} />
                       {leadAIOn ? 'IA ativa' : 'IA pausada'}
                     </button>
                   )}
                   {!isGrp(cur) && lead && !tenantAIOn && (
                     <span className="ml-1 flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-400 rounded-lg text-[9px] font-bold">
-                      <BotOff className="w-3 h-3" /> IA desligada
+                      <Bot className="w-3 h-3 opacity-40" /> IA desligada
                     </span>
                   )}
                 </div>
