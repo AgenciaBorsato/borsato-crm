@@ -5,7 +5,7 @@ import {
   MessageSquare, LayoutGrid, Users, Settings, Plus, Search, Send, X, Check,
   Trash2, BarChart3, Brain, Edit2, UserPlus, ArrowLeft, Smartphone, Image,
   Mic, FileText, MapPin, CheckCheck, Paperclip, Users2, Download, Play, Pause,
-  MessageCircle, Phone, Clock, Zap, Bot
+  MessageCircle, Phone, Clock, Zap, Bot, RotateCcw
 } from 'lucide-react';
 
 const POLL_INTERVAL = 4000;
@@ -566,6 +566,10 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
   const [showEdit, setShowEdit] = useState(false);
   const [filter, setFilter] = useState('all');
   const [file, setFile] = useState(null);
+  // Lixeira
+  const [showTrash, setShowTrash] = useState(false);
+  const [deletedChats, setDeletedChats] = useState([]);
+  const [loadingTrash, setLoadingTrash] = useState(false);
   const curRef = useRef(cur);
   const endRef = useRef(null);
   const fileRef = useRef(null);
@@ -611,12 +615,30 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
     try { setLead(await api.getLeadByPhone(ph, tenant.id)); } catch (e) { setLead(null); }
   };
 
-  const isGrp = c => Number(c.is_group) === 1 || c.is_group === true;
-  const chatDisplayName = c => {
-    if (c.contact_name) return c.contact_name;
-    if (!isGrp(c)) return c.contact_phone || c.remote_jid || '';
-    return c.remote_jid?.replace('@g.us', '') || 'Grupo';
+  const loadDeletedChats = async () => {
+    setLoadingTrash(true);
+    try { setDeletedChats(await api.getDeletedChats(tenant.id)); } catch {}
+    finally { setLoadingTrash(false); }
   };
+
+  const restoreChat = async (chatId) => {
+    try {
+      await api.restoreChat(chatId);
+      setDeletedChats(prev => prev.filter(c => c.id !== chatId));
+      await load();
+    } catch { alert('Erro ao restaurar conversa'); }
+  };
+
+  const isGrp = c => Number(c.is_group) === 1 || c.is_group === true;
+
+  // Grupos sem nome resolvido (apenas numeros) mostram 'Grupo' em vez do JID numerico
+  const chatDisplayName = c => {
+    const name = c.contact_name;
+    if (name && !/^\d{10,}$/.test(name)) return name;
+    if (!isGrp(c)) return c.contact_phone || c.remote_jid || '';
+    return 'Grupo';
+  };
+
   const selectChat = c => { setCur(c); setSearch(''); };
 
   const send = async () => {
@@ -657,7 +679,7 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
   };
 
   const deleteChat = async id => {
-    if (!confirm('Apagar conversa?')) return;
+    if (!confirm('Apagar conversa? Ela vai para a lixeira e pode ser restaurada.')) return;
     try {
       await api.deleteChat(id);
       if (cur?.id === id) { setCur(null); setLead(null); setMsgs([]); }
@@ -734,6 +756,7 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
 
   return (
     <div className="flex h-[calc(100vh-120px)] bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      {/* Sidebar */}
       <div className="w-80 border-r border-gray-200 flex flex-col bg-white">
         <div className="p-3 border-b border-gray-100 space-y-2">
           <div className="relative">
@@ -784,8 +807,19 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
             </div>
           ))}
         </div>
+        {/* Botao lixeira */}
+        <div className="p-2 border-t border-gray-100">
+          <button
+            onClick={() => { setShowTrash(true); loadDeletedChats(); }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg text-xs font-bold transition-all"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Lixeira
+          </button>
+        </div>
       </div>
 
+      {/* Chat body */}
       <div className="flex-1 flex flex-col">
         {cur ? (
           <>
@@ -899,6 +933,66 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
           onSave={async data => { await api.updateLead(lead.id, data); setLead({ ...lead, ...data }); setShowEdit(false); onRefresh(); }}
         />
       )}
+
+      {showTrash && (
+        <TrashModal
+          chats={deletedChats}
+          loading={loadingTrash}
+          onClose={() => setShowTrash(false)}
+          onRestore={restoreChat}
+          chatDisplayName={chatDisplayName}
+          isGrp={isGrp}
+          fmt={fmt}
+        />
+      )}
+    </div>
+  );
+}
+
+function TrashModal({ chats, loading, onClose, onRestore, chatDisplayName, isGrp, fmt }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+        <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <RotateCcw className="w-4 h-4 text-gray-400" />
+            <h2 className="font-bold text-sm">Lixeira</h2>
+            {chats.length > 0 && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold">{chats.length}</span>}
+          </div>
+          <button onClick={onClose}><X className="w-4 h-4 text-gray-400" /></button>
+        </div>
+        <div className="max-h-96 overflow-y-auto">
+          {loading ? (
+            <div className="py-12 text-center text-gray-400 text-xs">Carregando...</div>
+          ) : chats.length === 0 ? (
+            <div className="py-12 text-center text-gray-400">
+              <Trash2 className="w-8 h-8 mx-auto mb-2 opacity-20" />
+              <p className="text-xs font-bold">Lixeira vazia</p>
+              <p className="text-[10px] mt-1">Conversas excluidas aparecem aqui</p>
+            </div>
+          ) : chats.map(c => (
+            <div key={c.id} className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50">
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-xs truncate">
+                  {chatDisplayName(c)}
+                  {isGrp(c) && <span className="ml-1 text-[8px] bg-gray-100 text-gray-400 px-1 rounded">GRUPO</span>}
+                </p>
+                <p className="text-[10px] text-gray-400 truncate">{c.last_message}</p>
+                <p className="text-[9px] text-gray-300 mt-0.5">Excluido em {fmt(c.deleted_at)}</p>
+              </div>
+              <button
+                onClick={() => onRestore(c.id)}
+                className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-[#25d366]/10 text-[#075e54] rounded-lg text-[10px] font-bold hover:bg-[#25d366]/20 transition-all"
+              >
+                <RotateCcw className="w-3 h-3" /> Restaurar
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="px-5 py-3 bg-gray-50 border-t border-gray-100">
+          <p className="text-[10px] text-gray-400 text-center">Conversas restauradas voltam para a lista principal com o historico intacto</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1161,10 +1255,6 @@ function AnalyticsView({ leads, columns }) {
   );
 }
 
-// ================= KNOWLEDGE =================
-// O campo 'question' no banco e usado internamente como titulo/categoria da entrada.
-// Na UI exibimos apenas o conteudo (answer) — a IA avalia qual parte usar com base na mensagem recebida.
-
 function KnowledgeView({ knowledge, tenant, onRefresh }) {
   const [show, setShow] = useState(false);
   const cats = ['Produtos/Servicos', 'Precos', 'Agendamento', 'FAQ'];
@@ -1216,7 +1306,6 @@ function KnowledgeForm({ tenant, onClose, onSuccess }) {
     <form
       onSubmit={async e => {
         e.preventDefault();
-        // question armazena a categoria como identificador interno; answer e o conteudo real
         await api.createKnowledge({ category: f.category, question: f.category, answer: f.content, tenantId: tenant.id });
         onSuccess();
       }}
