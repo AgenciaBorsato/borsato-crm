@@ -4,7 +4,6 @@ class ApiService {
     this._onAuthError = null;
   }
 
-  // Register a callback to be called on 401/403 errors
   onAuthError(cb) { this._onAuthError = cb; }
 
   async request(endpoint, options = {}) {
@@ -17,7 +16,6 @@ class ApiService {
     const response = await fetch(`${this.baseUrl}${endpoint}`, { ...options, headers });
     let data = null;
     try { data = await response.json(); } catch (e) { data = null; }
-    // Auth error — trigger logout callback
     if (response.status === 401 || response.status === 403) {
       if (this._onAuthError) this._onAuthError();
       throw new Error('Sessao expirada');
@@ -70,8 +68,10 @@ class ApiService {
 
   // CHATS
   async getChats(tid) { return await this.request(`/api/chats?tenantId=${encodeURIComponent(tid)}`); }
+  async getDeletedChats(tid) { return await this.request(`/api/chats/deleted?tenantId=${encodeURIComponent(tid)}`); }
   async getChatMessages(chatId, limit = 50, offset = 0) { return await this.request(`/api/chats/${encodeURIComponent(chatId)}/messages?limit=${limit}&offset=${offset}`); }
   async deleteChat(id) { return await this.request(`/api/chats/${id}`, { method: 'DELETE' }); }
+  async restoreChat(id) { return await this.request(`/api/chats/${id}/restore`, { method: 'POST' }); }
 
   // KNOWLEDGE
   async createKnowledge(data) { return await this.request('/api/knowledge', { method: 'POST', body: JSON.stringify(data) }); }
