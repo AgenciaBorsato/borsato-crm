@@ -1,7 +1,11 @@
 class ApiService {
   constructor() {
     this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    this._onAuthError = null;
   }
+
+  // Register a callback to be called on 401/403 errors
+  onAuthError(cb) { this._onAuthError = cb; }
 
   async request(endpoint, options = {}) {
     const token = localStorage.getItem('token');
@@ -13,6 +17,11 @@ class ApiService {
     const response = await fetch(`${this.baseUrl}${endpoint}`, { ...options, headers });
     let data = null;
     try { data = await response.json(); } catch (e) { data = null; }
+    // Auth error — trigger logout callback
+    if (response.status === 401 || response.status === 403) {
+      if (this._onAuthError) this._onAuthError();
+      throw new Error('Sessao expirada');
+    }
     if (!response.ok) throw new Error(data?.error || 'Erro');
     return data;
   }
@@ -33,12 +42,8 @@ class ApiService {
   async deleteTenant(id) { return await this.request(`/api/tenants/${id}`, { method: 'DELETE' }); }
 
   // AI CONTROLS
-  async setTenantAI(id, enabled) {
-    return await this.request(`/api/tenants/${id}/ai`, { method: 'PUT', body: JSON.stringify({ enabled }) });
-  }
-  async setLeadAI(id, enabled) {
-    return await this.request(`/api/leads/${id}/ai`, { method: 'PUT', body: JSON.stringify({ enabled }) });
-  }
+  async setTenantAI(id, enabled) { return await this.request(`/api/tenants/${id}/ai`, { method: 'PUT', body: JSON.stringify({ enabled }) }); }
+  async setLeadAI(id, enabled) { return await this.request(`/api/leads/${id}/ai`, { method: 'PUT', body: JSON.stringify({ enabled }) }); }
 
   // LEADS
   async getLeads(tid) { return await this.request(`/api/leads?tenantId=${encodeURIComponent(tid)}`); }
