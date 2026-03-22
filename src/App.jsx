@@ -1161,6 +1161,10 @@ function AnalyticsView({ leads, columns }) {
   );
 }
 
+// ================= KNOWLEDGE =================
+// O campo 'question' no banco e usado internamente como titulo/categoria da entrada.
+// Na UI exibimos apenas o conteudo (answer) — a IA avalia qual parte usar com base na mensagem recebida.
+
 function KnowledgeView({ knowledge, tenant, onRefresh }) {
   const [show, setShow] = useState(false);
   const cats = ['Produtos/Servicos', 'Precos', 'Agendamento', 'FAQ'];
@@ -1177,14 +1181,14 @@ function KnowledgeView({ knowledge, tenant, onRefresh }) {
           <div key={cat} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
             <h3 className="font-bold text-sm mb-3">{cat}</h3>
             {knowledge.filter(k => k.category === cat).map(item => (
-              <div key={item.id} className="bg-gray-50 rounded-lg p-3 mb-2">
-                <div className="flex justify-between mb-1">
-                  <p className="font-bold text-xs">{item.question}</p>
-                  <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteKnowledge(item.id); onRefresh(); } }}>
-                    <Trash2 className="w-3 h-3 text-gray-300" />
-                  </button>
-                </div>
-                <p className="text-[10px] text-gray-500">{item.answer}</p>
+              <div key={item.id} className="bg-gray-50 rounded-lg p-3 mb-2 flex justify-between items-start gap-2">
+                <p className="text-xs text-gray-700 leading-relaxed flex-1">{item.answer}</p>
+                <button
+                  onClick={async () => { if (confirm('Deletar?')) { await api.deleteKnowledge(item.id); onRefresh(); } }}
+                  className="flex-shrink-0 mt-0.5"
+                >
+                  <Trash2 className="w-3 h-3 text-gray-300 hover:text-red-400" />
+                </button>
               </div>
             ))}
             {knowledge.filter(k => k.category === cat).length === 0 && (
@@ -1196,7 +1200,8 @@ function KnowledgeView({ knowledge, tenant, onRefresh }) {
       {show && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <h2 className="font-bold mb-4">Novo</h2>
+            <h2 className="font-bold mb-1">Novo conteudo</h2>
+            <p className="text-[11px] text-gray-400 mb-4">Escreva qualquer informacao sobre o seu negocio. A IA decide o que usar em cada conversa.</p>
             <KnowledgeForm tenant={tenant} onClose={() => setShow(false)} onSuccess={() => { setShow(false); onRefresh(); }} />
           </div>
         </div>
@@ -1206,20 +1211,38 @@ function KnowledgeView({ knowledge, tenant, onRefresh }) {
 }
 
 function KnowledgeForm({ tenant, onClose, onSuccess }) {
-  const [f, setF] = useState({ category: 'FAQ', question: '', answer: '' });
+  const [f, setF] = useState({ category: 'FAQ', content: '' });
   return (
-    <form onSubmit={async e => { e.preventDefault(); await api.createKnowledge({ ...f, tenantId: tenant.id }); onSuccess(); }} className="space-y-3">
-      <select value={f.category} onChange={e => setF({ ...f, category: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
+    <form
+      onSubmit={async e => {
+        e.preventDefault();
+        // question armazena a categoria como identificador interno; answer e o conteudo real
+        await api.createKnowledge({ category: f.category, question: f.category, answer: f.content, tenantId: tenant.id });
+        onSuccess();
+      }}
+      className="space-y-3"
+    >
+      <select
+        value={f.category}
+        onChange={e => setF({ ...f, category: e.target.value })}
+        className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"
+      >
         <option>Produtos/Servicos</option>
         <option>Precos</option>
         <option>Agendamento</option>
         <option>FAQ</option>
       </select>
-      <input placeholder="Pergunta" value={f.question} onChange={e => setF({ ...f, question: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
-      <textarea placeholder="Resposta" value={f.answer} onChange={e => setF({ ...f, answer: e.target.value })} rows={3} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
+      <textarea
+        placeholder="Ex: Atendemos de segunda a sexta das 8h as 18h. Agendamentos pelo WhatsApp ou pelo site..."
+        value={f.content}
+        onChange={e => setF({ ...f, content: e.target.value })}
+        rows={5}
+        className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"
+        required
+      />
       <div className="flex gap-2">
         <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button>
-        <button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Criar</button>
+        <button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Salvar</button>
       </div>
     </form>
   );
