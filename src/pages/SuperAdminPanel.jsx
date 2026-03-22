@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import {
-  DollarSign, Users, MessageCircle, TrendingUp, Plus, Search,
-  LogIn, Edit2, ToggleLeft, ToggleRight, ChevronUp, ChevronDown,
-  BarChart2, Calendar, Zap, AlertCircle, CheckCircle, Clock, X, Eye, EyeOff
+  TrendingUp, Plus, Search,
+  LogIn, Edit2, ChevronUp, ChevronDown,
+  BarChart2, AlertCircle, CheckCircle, Users, X
 } from 'lucide-react';
-import MetricCard from '../components/cards/MetricCard.jsx';
 import CreateCrmModal from '../components/modals/CreateCrmModal.jsx';
+import EditCrmModal from '../components/modals/EditCrmModal.jsx';
 import api from '../api.js';
 
 function fmt(n) {
@@ -18,195 +18,14 @@ const PLAN_COLORS = {
   Starter:    'bg-gray-100 text-gray-500',
 };
 
-// ── Edit Tenant Modal ─────────────────────────────────────────────────────────
-
-function EditTenantModal({ tenant, onClose, onSuccess }) {
-  const [crm, setCrm] = useState({
-    name: tenant.name || '',
-    plan: tenant.plan || 'Pro',
-    monthlyValue: tenant.monthly_value || 497,
-    active: tenant.active !== false,
-  });
-  const [admin, setAdmin] = useState({
-    name: '',
-    email: tenant.email || '',
-    password: '',
-  });
-  const [showPw, setShowPw] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState('crm'); // 'crm' | 'admin'
-
-  const save = async () => {
-    setSaving(true);
-    try {
-      // Atualiza dados do CRM
-      await api.updateTenant(tenant.id, {
-        name: crm.name,
-        plan: crm.plan,
-        monthlyValue: crm.monthlyValue,
-        aiPrompt: tenant.ai_prompt || '',
-        customFields: (() => { try { return JSON.parse(tenant.custom_fields || '[]'); } catch { return []; } })(),
-        active: crm.active,
-      });
-
-      // Atualiza admin se preencheu algo
-      if (admin.name || admin.email || admin.password) {
-        // Busca o usuario admin do tenant
-        const users = await api.request(`/api/users?tenantId=${tenant.id}`);
-        const adminUser = users?.find(u => u.role === 'client_admin');
-        if (adminUser) {
-          const payload = {
-            name: admin.name || adminUser.name,
-            email: admin.email || adminUser.email,
-            role: adminUser.role,
-            permissions: (() => { try { return JSON.parse(adminUser.permissions || '[]'); } catch { return []; } })(),
-          };
-          if (admin.password) payload.password = admin.password;
-          await api.updateUser(adminUser.id, payload);
-        }
-      }
-
-      onSuccess();
-    } catch (e) {
-      alert('Erro ao salvar: ' + e.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="flex justify-between items-center px-6 pt-5 pb-4 border-b border-gray-100">
-          <div>
-            <h2 className="font-bold text-lg">Editar CRM</h2>
-            <p className="text-[11px] text-gray-400">{tenant.name}</p>
-          </div>
-          <button onClick={onClose}><X className="w-4 h-4 text-gray-400" /></button>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex border-b border-gray-100">
-          {[{ id: 'crm', label: 'Dados do CRM' }, { id: 'admin', label: 'Usuário Admin' }].map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`flex-1 py-2.5 text-xs font-bold transition-colors ${
-                tab === t.id ? 'border-b-2 border-[#25d366] text-[#075e54]' : 'text-gray-400 hover:text-gray-600'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Body */}
-        <div className="px-6 py-5 space-y-3 max-h-[60vh] overflow-y-auto">
-          {tab === 'crm' && (
-            <>
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Nome do CRM</label>
-                <input value={crm.name} onChange={e => setCrm({ ...crm, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Plano</label>
-                <select value={crm.plan} onChange={e => setCrm({ ...crm, plan: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
-                  <option>Starter</option>
-                  <option>Pro</option>
-                  <option>Enterprise</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Mensalidade (R$)</label>
-                <input type="number" value={crm.monthlyValue} onChange={e => setCrm({ ...crm, monthlyValue: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" />
-              </div>
-              <div className="pt-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-2 block">Status</label>
-                <button
-                  onClick={() => setCrm({ ...crm, active: !crm.active })}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border w-full ${
-                    crm.active ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'
-                  }`}
-                >
-                  {crm.active
-                    ? <ToggleRight className="w-7 h-7 text-[#25d366]" />
-                    : <ToggleLeft className="w-7 h-7 text-gray-300" />}
-                  <span className={`text-sm font-bold ${crm.active ? 'text-green-700' : 'text-gray-400'}`}>
-                    {crm.active ? 'Ativo' : 'Inativo'}
-                  </span>
-                </button>
-              </div>
-            </>
-          )}
-
-          {tab === 'admin' && (
-            <>
-              <p className="text-[11px] text-gray-400 bg-gray-50 rounded-lg px-3 py-2">
-                Preencha apenas os campos que deseja alterar. Campos vazios mantêm o valor atual.
-              </p>
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Nome do Admin</label>
-                <input
-                  placeholder="Nome atual mantido se vazio"
-                  value={admin.name}
-                  onChange={e => setAdmin({ ...admin, name: e.target.value })}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">E-mail</label>
-                <input
-                  type="email"
-                  value={admin.email}
-                  onChange={e => setAdmin({ ...admin, email: e.target.value })}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Nova Senha</label>
-                <div className="relative">
-                  <input
-                    type={showPw ? 'text' : 'password'}
-                    placeholder="Deixe vazio para não alterar"
-                    value={admin.password}
-                    onChange={e => setAdmin({ ...admin, password: e.target.value })}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm pr-10"
-                  />
-                  <button
-                    onClick={() => setShowPw(!showPw)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  >
-                    {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex gap-2 px-6 pb-5">
-          <button onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button>
-          <button onClick={save} disabled={saving} className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold disabled:opacity-50">
-            {saving ? 'Salvando...' : 'Salvar'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Main Panel ────────────────────────────────────────────────────────────────
-
 export default function SuperAdminPanel({ user, tenants = [], onLogout, onRefresh, onEnterTenant }) {
-  const [showCreate, setShowCreate]   = useState(false);
-  const [editTarget, setEditTarget]   = useState(null);
-  const [search, setSearch]           = useState('');
-  const [sort, setSort]               = useState('name');
-  const [sortDir, setSortDir]         = useState('asc');
-  const [planFilter, setPlanFilter]   = useState('all');
-  const [statusFilter, setStatus]     = useState('all');
+  const [showCreate, setShowCreate] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
+  const [search, setSearch]         = useState('');
+  const [sort, setSort]             = useState('name');
+  const [sortDir, setSortDir]       = useState('asc');
+  const [planFilter, setPlanFilter] = useState('all');
+  const [statusFilter, setStatus]   = useState('all');
 
   const mrr        = tenants.reduce((a, t) => a + (parseFloat(t.monthly_value) || 0), 0);
   const totalLeads = tenants.reduce((a, t) => a + (t.leadCount || 0), 0);
@@ -256,6 +75,7 @@ export default function SuperAdminPanel({ user, tenants = [], onLogout, onRefres
 
   return (
     <div className="min-h-screen bg-[#f0f2f5]">
+      {/* Top bar */}
       <div className="bg-[#075e54] text-white px-6 py-3 flex justify-between items-center shadow">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center font-black text-base">BR</div>
@@ -274,37 +94,26 @@ export default function SuperAdminPanel({ user, tenants = [], onLogout, onRefres
 
         {/* KPI grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">MRR</p>
-            <p className="text-xl font-black text-[#075e54]">{fmt(mrr)}</p>
-          </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">ARR</p>
-            <p className="text-xl font-black text-indigo-600">{fmt(arr)}</p>
-          </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Ticket Médio</p>
-            <p className="text-xl font-black text-amber-600">{fmt(ticket)}</p>
-          </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Clientes</p>
-            <p className="text-xl font-black text-blue-600">{tenants.length}</p>
-            <p className="text-[9px] text-gray-400 mt-0.5">{active} ativos · {inactive} inativos</p>
-          </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Leads Totais</p>
-            <p className="text-xl font-black text-green-600">{totalLeads}</p>
-          </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Leads/Cliente</p>
-            <p className="text-xl font-black text-purple-600">{tenants.length > 0 ? (totalLeads / tenants.length).toFixed(1) : '0'}</p>
-          </div>
+          {[
+            { label: 'MRR',          value: fmt(mrr),    color: 'text-[#075e54]' },
+            { label: 'ARR',          value: fmt(arr),    color: 'text-indigo-600' },
+            { label: 'Ticket Médio', value: fmt(ticket), color: 'text-amber-600' },
+            { label: 'Clientes',     value: tenants.length, color: 'text-blue-600', sub: `${active} ativos · ${inactive} inativos` },
+            { label: 'Leads Totais', value: totalLeads,  color: 'text-green-600' },
+            { label: 'Leads/Cliente',value: tenants.length > 0 ? (totalLeads / tenants.length).toFixed(1) : '0', color: 'text-purple-600' },
+          ].map((m, i) => (
+            <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">{m.label}</p>
+              <p className={`text-xl font-black ${m.color}`}>{m.value}</p>
+              {m.sub && <p className="text-[9px] text-gray-400 mt-0.5">{m.sub}</p>}
+            </div>
+          ))}
         </div>
 
         {/* Plan dist + top revenue */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-            <h3 className="font-bold text-sm mb-4 flex items-center gap-2"><BarChart2 className="w-4 h-4 text-gray-400" /> Distribuição por Plano</h3>
+            <h3 className="font-bold text-sm mb-4 flex items-center gap-2"><BarChart2 className="w-4 h-4 text-gray-400" /> Distribuicao por Plano</h3>
             <div className="space-y-3">
               {planDist.map(({ plan, count, pct }) => (
                 <div key={plan}>
@@ -378,9 +187,9 @@ export default function SuperAdminPanel({ user, tenants = [], onLogout, onRefres
                   <th className="p-3">Plano</th>
                   <th className="p-3 cursor-pointer hover:text-gray-600" onClick={() => toggleSort('mrr')}>MRR <SortIcon col="mrr" /></th>
                   <th className="p-3 cursor-pointer hover:text-gray-600" onClick={() => toggleSort('leads')}>Leads <SortIcon col="leads" /></th>
-                  <th className="p-3 cursor-pointer hover:text-gray-600" onClick={() => toggleSort('users')}>Usuários <SortIcon col="users" /></th>
+                  <th className="p-3 cursor-pointer hover:text-gray-600" onClick={() => toggleSort('users')}>Usuarios <SortIcon col="users" /></th>
                   <th className="p-3">Status</th>
-                  <th className="p-3 text-right">Ações</th>
+                  <th className="p-3 text-right">Acoes</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -437,7 +246,7 @@ export default function SuperAdminPanel({ user, tenants = [], onLogout, onRefres
         <CreateCrmModal onClose={() => setShowCreate(false)} onSuccess={() => { setShowCreate(false); onRefresh?.(); }} />
       )}
       {editTarget && (
-        <EditTenantModal tenant={editTarget} onClose={() => setEditTarget(null)} onSuccess={() => { setEditTarget(null); onRefresh?.(); }} />
+        <EditCrmModal tenant={editTarget} onClose={() => setEditTarget(null)} onSuccess={() => { setEditTarget(null); onRefresh?.(); }} />
       )}
     </div>
   );
