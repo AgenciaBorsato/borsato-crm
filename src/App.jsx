@@ -180,7 +180,6 @@ function LeadSummaryCard({ lead, onRefresh, compact = false }) {
   };
 
   if (compact) {
-    // Versao compacta para o header do chat
     return (
       <div className="px-4 py-1.5 border-b border-amber-100 bg-amber-50/70">
         <div className="flex items-start gap-2">
@@ -219,7 +218,6 @@ function LeadSummaryCard({ lead, onRefresh, compact = false }) {
     );
   }
 
-  // Versao completa para o modal do lead
   return (
     <div className="border border-amber-200 bg-amber-50 rounded-xl p-3">
       <div className="flex items-center justify-between mb-2">
@@ -275,15 +273,39 @@ export default function BorsatoCRM() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const ud = localStorage.getItem('userData');
-    if (token && ud) {
-      try {
-        const u = JSON.parse(ud);
-        setCurrentUser(u);
-        if (u.role === 'super_admin') { setCurrentView('superAdmin'); loadTenants(); }
-        else { setCurrentView('clientDashboard'); loadTenantData(u.tenantId); }
-      } catch (e) { localStorage.clear(); }
-    }
+    if (!token || !ud) return;
+    try {
+      const u = JSON.parse(ud);
+      setCurrentUser(u);
+
+      // Restaura a view que estava ativa antes do refresh
+      const savedView = localStorage.getItem('currentView') || null;
+      const savedTenantId = localStorage.getItem('currentTenantId') || null;
+
+      if (u.role === 'super_admin') {
+        loadTenants();
+        // Super admin estava dentro de um tenant — restaura esse tenant
+        if (savedView === 'clientDashboard' && savedTenantId) {
+          loadTenantData(savedTenantId).then(() => setCurrentView('clientDashboard'));
+        } else {
+          setCurrentView('superAdmin');
+        }
+      } else {
+        // Usuario normal — sempre vai pro clientDashboard do proprio tenant
+        loadTenantData(u.tenantId).then(() => setCurrentView('clientDashboard'));
+      }
+    } catch (e) { localStorage.clear(); }
   }, []);
+
+  // Persiste a view atual sempre que mudar
+  useEffect(() => {
+    if (currentView !== 'login') localStorage.setItem('currentView', currentView);
+  }, [currentView]);
+
+  // Persiste o tenant atual sempre que mudar
+  useEffect(() => {
+    if (currentTenant?.id) localStorage.setItem('currentTenantId', currentTenant.id);
+  }, [currentTenant]);
 
   const loadTenants = async () => {
     setLoading(true);
@@ -305,8 +327,15 @@ export default function BorsatoCRM() {
       const { user } = await api.login(c.email, c.password);
       setCurrentUser(user);
       localStorage.setItem('userData', JSON.stringify(user));
-      if (user.role === 'super_admin') { setCurrentView('superAdmin'); await loadTenants(); }
-      else { setCurrentView('clientDashboard'); await loadTenantData(user.tenantId); }
+      if (user.role === 'super_admin') {
+        setCurrentView('superAdmin');
+        localStorage.setItem('currentView', 'superAdmin');
+        localStorage.removeItem('currentTenantId');
+        await loadTenants();
+      } else {
+        await loadTenantData(user.tenantId);
+        setCurrentView('clientDashboard');
+      }
     } catch (e) { setError('E-mail ou senha incorretos'); }
     finally { setLoading(false); }
   };
@@ -314,6 +343,8 @@ export default function BorsatoCRM() {
   const handleEnterTenant = useCallback(async (tid) => {
     await loadTenantData(tid);
     setCurrentView('clientDashboard');
+    localStorage.setItem('currentView', 'clientDashboard');
+    localStorage.setItem('currentTenantId', tid);
   }, []);
 
   const refreshData = useCallback(async () => {
@@ -333,6 +364,8 @@ export default function BorsatoCRM() {
       onRefresh={refreshData}
       onBackToSuperAdmin={currentUser?.role === 'super_admin' ? () => {
         setCurrentTenant(null);
+        localStorage.setItem('currentView', 'superAdmin');
+        localStorage.removeItem('currentTenantId');
         loadTenants();
         setCurrentView('superAdmin');
       } : null}
@@ -634,7 +667,6 @@ function KanbanCard({ lead, col, columns, onDragStart, onDragEnd, onOpenChat, on
             <Phone className="w-2.5 h-2.5" />{lead.phone}
           </p>
         )}
-        {/* Resumo resumido no card */}
         {lead.conversation_summary && (
           <p className="text-[9px] text-amber-700 bg-amber-50 rounded px-1.5 py-1 mb-2 line-clamp-1 italic">{lead.conversation_summary}</p>
         )}
@@ -984,7 +1016,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
               </div>
             </div>
 
-            {/* Card de contexto do lead — visivel no chat */}
             {!isGrp(cur) && lead && (
               <LeadSummaryCard
                 lead={lead}
@@ -1169,7 +1200,6 @@ function EditLeadModal({ lead, columns, onClose, onSave, onRefresh }) {
           )}
           <div><label className="text-[10px] font-bold text-gray-400 uppercase">Observacoes</label><textarea value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} rows={2} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /></div>
 
-          {/* Historico estrategico da conversa */}
           <LeadSummaryCard lead={localLead} onRefresh={handleRefreshContext} compact={false} />
 
           <div className="border-t border-gray-100 pt-3">
