@@ -67,6 +67,7 @@ class ApiService {
   async fetchMedia(tenantId, messageKey) { return await this.request('/api/whatsapp/media', { method: 'POST', body: JSON.stringify({ tenantId, messageKey }) }); }
   async fetchProfilePic(phone, tenantId) { return await this.request(`/api/whatsapp/profile-pic/${encodeURIComponent(phone)}?tenantId=${encodeURIComponent(tenantId)}`); }
   async getGroupParticipants(tenantId, groupJid) { return await this.request(`/api/whatsapp/group-participants?tenantId=${encodeURIComponent(tenantId)}&groupJid=${encodeURIComponent(groupJid)}`); }
+  async sendReaction(tenantId, chatId, messageId, remoteJid, emoji) { return await this.request('/api/whatsapp/react', { method: 'POST', body: JSON.stringify({ tenantId, chatId, messageId, remoteJid, emoji }) }); }
 
   // CHATS
   async getChats(tid) { return await this.request(`/api/chats?tenantId=${encodeURIComponent(tid)}`); }
