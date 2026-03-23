@@ -1072,7 +1072,8 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
                         </div>
                       )}
                       {m.sender_name && <p className={`text-[10px] font-bold mb-0.5 flex items-center gap-1 ${isAI ? 'text-purple-600' : fromMe ? 'text-[#075e54]' : 'text-[#6b7280]'}`}>{isAI && <Bot className="w-2.5 h-2.5" />}{m.sender_name}</p>}
-                      {hasMedia && <MediaBubble msg={m} tenantId={tenant.id} />}
+                      {hasMedia && <MediaBubble msg={m} tenantId={tenant.id} cachedSrc={cachedSrc} />}
+                      
                       {m.content && !isPlaceholder && renderText(m.content, myName)}
                       {m.content && isPlaceholder && !hasMedia && <p className="text-[13px] text-gray-500 italic">{m.content}</p>}
                       <div className="flex items-center justify-end gap-0.5 mt-0.5">
