@@ -1027,6 +1027,9 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
               {msgs.map(m => {
                 const fromMe = Number(m.is_from_me) === 1 || m.is_from_me === true;
                 const hasMedia = m.media_url && m.message_type !== 'text';
+            const cachedSrc = fromMe ? (localMediaCache.current[m.id] || null) : null;
+  const isMedia = ['image','video','document','audio','sticker'].includes(m.message_type);
+  const hasMedia = isMedia && (m.media_url || cachedSrc);
                 const isPlaceholder = ['[Imagem]','[Audio]','[Video]','[Documento]','[Sticker]','[Localizacao]','[Contato]','[Mensagem]','[Reacao]'].includes(m.content);
                 const isAI = m.sender_name === 'IA';
                 const isMentionedMsg = !fromMe && mentionsMe(m.content);
