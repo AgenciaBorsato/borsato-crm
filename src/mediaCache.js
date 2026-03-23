@@ -14,7 +14,6 @@ export function getCachedMedia(msgId) {
 
 export function setCachedMedia(msgId, src) {
   if (cache.size >= MAX_ENTRIES) {
-    // Remove entrada mais antiga (primeira inserida)
     const firstKey = cache.keys().next().value;
     cache.delete(firstKey);
   }
