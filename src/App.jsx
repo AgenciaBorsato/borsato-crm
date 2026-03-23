@@ -134,7 +134,6 @@ function ProfilePic({ phone, tenantId, name, size = 'w-9 h-9', textSize = 'text-
   );
 }
 
-// Card de resumo do lead — exibido no header do chat e na aba leads
 function LeadSummaryCard({ lead, onRefresh, compact = false }) {
   const [expanded, setExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -277,32 +276,25 @@ export default function BorsatoCRM() {
     try {
       const u = JSON.parse(ud);
       setCurrentUser(u);
-
-      // Restaura a view que estava ativa antes do refresh
       const savedView = localStorage.getItem('currentView') || null;
       const savedTenantId = localStorage.getItem('currentTenantId') || null;
-
       if (u.role === 'super_admin') {
         loadTenants();
-        // Super admin estava dentro de um tenant — restaura esse tenant
         if (savedView === 'clientDashboard' && savedTenantId) {
           loadTenantData(savedTenantId).then(() => setCurrentView('clientDashboard'));
         } else {
           setCurrentView('superAdmin');
         }
       } else {
-        // Usuario normal — sempre vai pro clientDashboard do proprio tenant
         loadTenantData(u.tenantId).then(() => setCurrentView('clientDashboard'));
       }
     } catch (e) { localStorage.clear(); }
   }, []);
 
-  // Persiste a view atual sempre que mudar
   useEffect(() => {
     if (currentView !== 'login') localStorage.setItem('currentView', currentView);
   }, [currentView]);
 
-  // Persiste o tenant atual sempre que mudar
   useEffect(() => {
     if (currentTenant?.id) localStorage.setItem('currentTenantId', currentTenant.id);
   }, [currentTenant]);
@@ -719,7 +711,8 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
   const [showEdit, setShowEdit] = useState(false);
-  const [filter, setFilter] = useState('all');
+  // MUDANCA: padrao agora e 'individual' (Contatos). Filtro 'Todos' removido.
+  const [filter, setFilter] = useState('individual');
   const [file, setFile] = useState(null);
   const [showTrash, setShowTrash] = useState(false);
   const [deletedChats, setDeletedChats] = useState([]);
@@ -848,6 +841,7 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   };
 
+  // Filtro: 'individual' oculta grupos, 'group' oculta individuais. Sem fallback 'all'.
   const filtered = chats.filter(c => {
     if (filter === 'individual' && isGrp(c)) return false;
     if (filter === 'group' && !isGrp(c)) return false;
@@ -924,8 +918,9 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-xs" />
           </div>
+          {/* MUDANCA: removido filtro 'Todos'. Apenas Contatos (individual) e Grupos. */}
           <div className="flex gap-1">
-            {[{ id: 'all', l: 'Todos' }, { id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }].map(f => (
+            {[{ id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }].map(f => (
               <button
                 key={f.id}
                 onClick={() => setFilter(f.id)}
