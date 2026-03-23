@@ -87,6 +87,7 @@ function MediaBubble({ msg, tenantId, cachedSrc }) {
   };
 
   useEffect(() => {
+    if (cachedSrc) { setMedia(cachedSrc); return; }
     const autoTypes = ['image', 'sticker'];
     if (autoTypes.includes(msg.message_type) && msg.media_url && msg.media_url !== 'undefined') {
       loadMedia();
