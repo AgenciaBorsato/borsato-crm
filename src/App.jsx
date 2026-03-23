@@ -866,7 +866,11 @@ const base64 = dataUrl.split(',')[1];
         const mt = file.type.startsWith('image') ? 'image' : file.type.startsWith('video') ? 'video' : 'document';
         await api.sendWhatsAppMedia({ number: ph, base64, fileName: file.name, mediaType: mt, caption: '', tenantId: tenant.id, chatId: cur.id });
         setFile(null); if (fileRef.current) fileRef.current.value = '';
-        await loadMsgs(cur.id); await load(); setSending(false);
+        await loadMsgs(cur.id); const newMsgs = await api.getChatMessages(cur.id, 100, 0);
+const lastSent = [...newMsgs].reverse().find(m => Number(m.is_from_me) === 1 && ['image','video','document'].includes(m.message_type));
+if (lastSent) localMediaCache.current[lastSent.id] = dataUrl;
+setMsgs(newMsgs);
+ await load(); setSending(false);
       };
       reader.readAsDataURL(file);
     } catch (e) { alert('Erro: ' + e.message); setSending(false); }
