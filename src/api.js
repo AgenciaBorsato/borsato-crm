@@ -50,6 +50,7 @@ class ApiService {
   async updateLeadStage(id, stage) { return await this.request(`/api/leads/${id}`, { method: 'PUT', body: JSON.stringify({ stage }) }); }
   async deleteLead(id) { return await this.request(`/api/leads/${id}`, { method: 'DELETE' }); }
   async getLeadByPhone(phone, tid) { return await this.request(`/api/leads/by-phone/${encodeURIComponent(phone)}?tenantId=${encodeURIComponent(tid)}`); }
+  async refreshLeadContext(leadId) { return await this.request(`/api/leads/${leadId}/refresh-context`, { method: 'POST' }); }
 
   // KANBAN
   async getKanbanColumns(tid) { return await this.request(`/api/kanban-columns?tenantId=${encodeURIComponent(tid)}`); }
