@@ -861,7 +861,8 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
     try {
       const reader = new FileReader();
       reader.onload = async () => {
-        const base64 = reader.result.split(',')[1];
+        const base64 = const dataUrl = reader.result;
+const base64 = dataUrl.split(',')[1];
         const mt = file.type.startsWith('image') ? 'image' : file.type.startsWith('video') ? 'video' : 'document';
         await api.sendWhatsAppMedia({ number: ph, base64, fileName: file.name, mediaType: mt, caption: '', tenantId: tenant.id, chatId: cur.id });
         setFile(null); if (fileRef.current) fileRef.current.value = '';
