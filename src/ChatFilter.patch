@@ -1,0 +1,6 @@
+PATCH INSTRUCTIONS - applied directly via push_files below
+
+Change 1: useState('all') -> useState('individual')
+Change 2: Remove { id: 'all', l: 'Todos' } from filter array
+
+All other logic untouched.
