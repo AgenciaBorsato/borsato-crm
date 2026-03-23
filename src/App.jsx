@@ -25,6 +25,39 @@ function daysAgo(dateStr) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
 }
 
+// Detecta URLs no texto e transforma em links clicaveis
+function renderText(text) {
+  if (!text) return null;
+  const urlRegex = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+\.[a-z]{2,}[^\s<>"']*)/gi;
+  const parts = text.split(urlRegex);
+  if (parts.length === 1) {
+    return <span className="text-[13px] text-gray-800 whitespace-pre-wrap break-words">{text}</span>;
+  }
+  return (
+    <span className="text-[13px] text-gray-800 whitespace-pre-wrap break-words">
+      {parts.map((part, i) => {
+        if (urlRegex.test(part)) {
+          urlRegex.lastIndex = 0;
+          const href = part.startsWith('http') ? part : 'https://' + part;
+          return (
+            <a
+              key={i}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#075e54] underline underline-offset-2 decoration-[#075e54]/40 hover:decoration-[#075e54] break-all"
+              onClick={e => e.stopPropagation()}
+            >
+              {part}
+            </a>
+          );
+        }
+        return part;
+      })}
+    </span>
+  );
+}
+
 function MediaBubble({ msg, tenantId }) {
   const [media, setMedia] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -49,8 +82,10 @@ function MediaBubble({ msg, tenantId }) {
     finally { setLoading(false); }
   };
 
+  // Auto-carrega imagens e stickers ao montar
   useEffect(() => {
-    if (msg.message_type === 'sticker' && msg.media_url && msg.media_url !== 'undefined') {
+    const autoTypes = ['image', 'sticker'];
+    if (autoTypes.includes(msg.message_type) && msg.media_url && msg.media_url !== 'undefined') {
       loadMedia();
     }
   }, [msg.id]);
@@ -63,16 +98,29 @@ function MediaBubble({ msg, tenantId }) {
 
   if (msg.message_type === 'image') return (
     <div className="mb-1">
-      {media ? (
-        <a href={media} download={`img_${msg.id}.jpg`} target="_blank" rel="noopener noreferrer">
-          <img src={media} alt="" className="max-w-[250px] rounded-lg cursor-pointer hover:opacity-90" />
-        </a>
-      ) : (
-        <button onClick={loadMedia} disabled={loading} className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-200">
-          <Image className="w-5 h-5 text-[#25d366]" />
-          <span className="text-xs text-gray-600">{loading ? 'Carregando...' : 'Ver imagem'}</span>
-        </button>
+      {loading && !media && (
+        <div className="w-[200px] h-[140px] bg-gray-100 rounded-xl flex items-center justify-center">
+          <div className="w-5 h-5 border-2 border-[#25d366] border-t-transparent rounded-full animate-spin" />
+        </div>
       )}
+      {media ? (
+        <img
+          src={media}
+          alt=""
+          className="max-w-[260px] rounded-xl cursor-zoom-in shadow-sm hover:opacity-95 transition-opacity"
+          onClick={() => {
+            const w = window.open('', '_blank');
+            w.document.write(`<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="${media}" style="max-width:100%;max-height:100vh;object-fit:contain" /></body></html>`);
+            w.document.close();
+          }}
+          onError={(e) => { e.currentTarget.style.display='none'; }}
+        />
+      ) : (!loading && (
+        <button onClick={loadMedia} className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-200">
+          <Image className="w-5 h-5 text-[#25d366]" />
+          <span className="text-xs text-gray-600">Ver imagem</span>
+        </button>
+      ))}
     </div>
   );
   if (msg.message_type === 'audio') return (
@@ -325,7 +373,7 @@ export default function BorsatoCRM() {
         await loadTenantData(user.tenantId);
         setCurrentView('clientDashboard');
       }
-    } catch (e) { setError('E-mail ou senha incorretos'); }
+      } catch (e) { setError('E-mail ou senha incorretos'); }
     finally { setLoading(false); }
   };
 
@@ -396,15 +444,12 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem(`activeTab_${tenant.id}`) || 'kanban');
   const [columns, setColumns] = useState([]);
   const [requestedPhone, setRequestedPhone] = useState(null);
-  // NOVO: monitoramento de conexao WhatsApp
   const [whatsappConnected, setWhatsappConnected] = useState(true);
   const [waBannerDismissed, setWaBannerDismissed] = useState(false);
 
   useEffect(() => { localStorage.setItem(`activeTab_${tenant.id}`, activeTab); }, [activeTab, tenant.id]);
   useEffect(() => { loadCols(); }, [tenant.id]);
 
-  // Verifica status do WhatsApp a cada 60 segundos
-  // Banner vermelho aparece automaticamente se desconectado
   useEffect(() => {
     const checkWA = async () => {
       try {
@@ -468,7 +513,6 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
         </div>
       </div>
 
-      {/* BANNER: WhatsApp desconectado */}
       {!whatsappConnected && !waBannerDismissed && (
         <div className="bg-red-500 text-white px-5 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -476,31 +520,20 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
             <span className="text-xs font-bold">WhatsApp desconectado — mensagens nao estao sendo recebidas nem enviadas</span>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <button onClick={() => setActiveTab('whatsapp')} className="bg-white text-red-600 hover:bg-red-50 px-3 py-1 rounded text-[10px] font-bold transition-all">
-              Reconectar
-            </button>
-            <button onClick={() => setWaBannerDismissed(true)} className="text-white/70 hover:text-white p-0.5">
-              <X className="w-3.5 h-3.5" />
-            </button>
+            <button onClick={() => setActiveTab('whatsapp')} className="bg-white text-red-600 hover:bg-red-50 px-3 py-1 rounded text-[10px] font-bold transition-all">Reconectar</button>
+            <button onClick={() => setWaBannerDismissed(true)} className="text-white/70 hover:text-white p-0.5"><X className="w-3.5 h-3.5" /></button>
           </div>
         </div>
       )}
 
       <div className="bg-[#075e54]/90 px-6 flex gap-0.5 overflow-x-auto">
         {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             className={`py-2.5 px-3 flex items-center gap-1.5 text-[11px] font-bold border-b-2 whitespace-nowrap ${
               activeTab === tab.id ? 'border-white text-white' : 'border-transparent text-white/50 hover:text-white/80'
-            }`}
-          >
-            <tab.icon className="w-3.5 h-3.5" />
-            {tab.label}
-            {/* Ponto vermelho na aba WhatsApp quando desconectado */}
-            {tab.id === 'whatsapp' && !whatsappConnected && (
-              <span className="w-1.5 h-1.5 bg-red-400 rounded-full" />
-            )}
+            }`}>
+            <tab.icon className="w-3.5 h-3.5" />{tab.label}
+            {tab.id === 'whatsapp' && !whatsappConnected && <span className="w-1.5 h-1.5 bg-red-400 rounded-full" />}
           </button>
         ))}
       </div>
@@ -526,9 +559,7 @@ function KanbanView({ leads, columns, tenant, onRefresh, onOpenChat }) {
   const [filter, setFilter] = useState('');
 
   const getLeadsForColumn = (col, colIdx) => {
-    const f = filter
-      ? leads.filter(l => (l.name || '').toLowerCase().includes(filter.toLowerCase()) || (l.phone || '').includes(filter))
-      : leads;
+    const f = filter ? leads.filter(l => (l.name || '').toLowerCase().includes(filter.toLowerCase()) || (l.phone || '').includes(filter)) : leads;
     return f.filter(l => l.stage === col.id || (colIdx === 0 && (l.stage === 'novo' || l.stage === 'new' || !l.stage)));
   };
 
@@ -547,10 +578,7 @@ function KanbanView({ leads, columns, tenant, onRefresh, onOpenChat }) {
         </button>
       </div>
       {columns.length === 0 ? (
-        <div className="text-center py-20 text-gray-400">
-          <LayoutGrid className="w-12 h-12 mx-auto mb-3 opacity-20" />
-          <p className="font-bold text-sm mb-1">Nenhuma etapa criada</p>
-        </div>
+        <div className="text-center py-20 text-gray-400"><LayoutGrid className="w-12 h-12 mx-auto mb-3 opacity-20" /><p className="font-bold text-sm mb-1">Nenhuma etapa criada</p></div>
       ) : (
         <div className="flex gap-3 overflow-x-auto pb-4 items-start">
           {columns.map((col, colIdx) => {
@@ -616,13 +644,8 @@ function KanbanCard({ lead, col, columns, onDragStart, onDragEnd, onOpenChat, on
       <div className={`h-0.5 rounded-t-lg ${c.bg} opacity-60`} />
       <div className="p-2.5">
         <div className="flex justify-between items-center mb-1.5">
-          {lead.source === 'whatsapp'
-            ? <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-green-700 bg-green-100 rounded px-1.5 py-0.5"><Zap className="w-2.5 h-2.5" /> WhatsApp</span>
-            : <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5"><Plus className="w-2.5 h-2.5" /> Manual</span>}
-          {days > 7 ? <span className="text-[9px] font-bold text-red-600 bg-red-50 rounded px-1.5 py-0.5 flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {days}d</span>
-            : days > 2 ? <span className="text-[9px] font-bold text-amber-600 bg-amber-50 rounded px-1.5 py-0.5 flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {days}d</span>
-            : days > 0 ? <span className="text-[9px] text-gray-400 flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {days}d</span>
-            : <span className="text-[9px] text-[#25d366] font-bold">Hoje</span>}
+          {lead.source === 'whatsapp' ? <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-green-700 bg-green-100 rounded px-1.5 py-0.5"><Zap className="w-2.5 h-2.5" /> WhatsApp</span> : <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5"><Plus className="w-2.5 h-2.5" /> Manual</span>}
+          {days > 7 ? <span className="text-[9px] font-bold text-red-600 bg-red-50 rounded px-1.5 py-0.5 flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {days}d</span> : days > 2 ? <span className="text-[9px] font-bold text-amber-600 bg-amber-50 rounded px-1.5 py-0.5 flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {days}d</span> : days > 0 ? <span className="text-[9px] text-gray-400 flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {days}d</span> : <span className="text-[9px] text-[#25d366] font-bold">Hoje</span>}
         </div>
         <p className="font-bold text-[13px] text-gray-800 leading-tight mb-0.5 truncate">{lead.name || '\u2014'}</p>
         {lead.phone && <p className="text-[10px] text-gray-400 font-mono mb-2 flex items-center gap-1"><Phone className="w-2.5 h-2.5" />{lead.phone}</p>}
@@ -646,10 +669,7 @@ function KanbanCard({ lead, col, columns, onDragStart, onDragEnd, onOpenChat, on
 
 function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }) {
   const [chats, setChats] = useState([]);
-  const [cur, setCur] = useState(() => {
-    const s = localStorage.getItem(`currentChat_${tenant.id}`);
-    return s ? JSON.parse(s) : null;
-  });
+  const [cur, setCur] = useState(() => { const s = localStorage.getItem(`currentChat_${tenant.id}`); return s ? JSON.parse(s) : null; });
   const [lead, setLead] = useState(null);
   const [msgs, setMsgs] = useState([]);
   const [msg, setMsg] = useState('');
@@ -664,25 +684,21 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
   const curRef = useRef(cur);
   const endRef = useRef(null);
   const fileRef = useRef(null);
-  // Rastreamento de nao-lidos para notificacoes
   const prevUnreadRef = useRef(0);
   const initialLoadRef = useRef(true);
 
-  // Beep de notificacao via Web Audio API — sem arquivo externo
   const playNotificationSound = useCallback(() => {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+      osc.connect(gain); gain.connect(ctx.destination);
       osc.type = 'sine';
       osc.frequency.setValueAtTime(880, ctx.currentTime);
       osc.frequency.setValueAtTime(660, ctx.currentTime + 0.12);
       gain.gain.setValueAtTime(0.25, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.35);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.35);
     } catch {}
   }, []);
 
@@ -693,25 +709,16 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
   }, [cur, tenant.id]);
   useEffect(() => { load(); const i = setInterval(load, POLL_INTERVAL); return () => clearInterval(i); }, [tenant.id]);
   useEffect(() => {
-    if (cur) {
-      loadMsgs(cur.id);
-      loadLead(cur);
-      const i = setInterval(() => loadMsgs(cur.id), POLL_INTERVAL);
-      return () => clearInterval(i);
-    }
+    if (cur) { loadMsgs(cur.id); loadLead(cur); const i = setInterval(() => loadMsgs(cur.id), POLL_INTERVAL); return () => clearInterval(i); }
   }, [cur?.id]);
   useEffect(() => {
     if (!requestedPhone || chats.length === 0) return;
     const clean = requestedPhone.replace(/\D/g, '');
-    const match = chats.find(c =>
-      (c.contact_phone || '').replace(/\D/g, '') === clean ||
-      (c.remote_jid || '').replace(/[^0-9]/g, '').includes(clean)
-    );
+    const match = chats.find(c => (c.contact_phone || '').replace(/\D/g, '') === clean || (c.remote_jid || '').replace(/[^0-9]/g, '').includes(clean));
     if (match) { selectChat(match); onPhoneHandled?.(); }
   }, [requestedPhone, chats]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs]);
 
-  // Limpa badge do titulo quando a aba volta ao foco
   useEffect(() => {
     const handleVisibility = () => {
       if (!document.hidden) {
@@ -720,10 +727,7 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibility);
-      document.title = 'Borsato CRM';
-    };
+    return () => { document.removeEventListener('visibilitychange', handleVisibility); document.title = 'Borsato CRM'; };
   }, [chats]);
 
   const load = async () => {
@@ -732,12 +736,8 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
       setChats(chatList);
       const ac = curRef.current;
       if (ac) { const upd = chatList.find(c => c.id === ac.id); if (upd) setCur(upd); }
-
-      // Notificacao: beep + badge no titulo quando chega mensagem nova
       const totalUnread = chatList.reduce((sum, c) => sum + (Number(c.unread_count) || 0), 0);
-      if (!initialLoadRef.current && totalUnread > prevUnreadRef.current) {
-        playNotificationSound();
-      }
+      if (!initialLoadRef.current && totalUnread > prevUnreadRef.current) playNotificationSound();
       document.title = totalUnread > 0 ? `(${totalUnread}) Borsato CRM` : 'Borsato CRM';
       prevUnreadRef.current = totalUnread;
       initialLoadRef.current = false;
@@ -751,11 +751,7 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
     if (!ph) { setLead(null); return; }
     try { setLead(await api.getLeadByPhone(ph, tenant.id)); } catch (e) { setLead(null); }
   };
-  const loadDeletedChats = async () => {
-    setLoadingTrash(true);
-    try { setDeletedChats(await api.getDeletedChats(tenant.id)); } catch {}
-    finally { setLoadingTrash(false); }
-  };
+  const loadDeletedChats = async () => { setLoadingTrash(true); try { setDeletedChats(await api.getDeletedChats(tenant.id)); } catch {} finally { setLoadingTrash(false); } };
   const restoreChat = async (chatId) => {
     try { await api.restoreChat(chatId); setDeletedChats(prev => prev.filter(c => c.id !== chatId)); await load(); }
     catch { alert('Erro ao restaurar conversa'); }
@@ -772,20 +768,13 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
 
   const send = async () => {
     if (!msg.trim() || !cur) return;
-    const ph = cur.remote_jid && (isGrp(cur) || cur.remote_jid.includes('@lid'))
-      ? cur.remote_jid
-      : cur.contact_phone || cur.remote_jid?.split('@')[0];
+    const ph = cur.remote_jid && (isGrp(cur) || cur.remote_jid.includes('@lid')) ? cur.remote_jid : cur.contact_phone || cur.remote_jid?.split('@')[0];
     setSending(true);
     try { await api.sendWhatsAppMessage(ph, msg, tenant.id, cur.id); setMsg(''); await loadMsgs(cur.id); await load(); }
     catch (e) { alert(e.message || 'Erro ao enviar'); } finally { setSending(false); }
   };
 
-  const handleFile = e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    if (f.size > 2 * 1024 * 1024) { alert('Max 2MB'); return; }
-    setFile(f);
-  };
+  const handleFile = e => { const f = e.target.files[0]; if (!f) return; if (f.size > 2 * 1024 * 1024) { alert('Max 2MB'); return; } setFile(f); };
 
   const sendFile = async () => {
     if (!file || !cur) return;
@@ -797,11 +786,8 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
         const base64 = reader.result.split(',')[1];
         const mt = file.type.startsWith('image') ? 'image' : file.type.startsWith('video') ? 'video' : 'document';
         await api.sendWhatsAppMedia({ number: ph, base64, fileName: file.name, mediaType: mt, caption: '', tenantId: tenant.id, chatId: cur.id });
-        setFile(null);
-        if (fileRef.current) fileRef.current.value = '';
-        await loadMsgs(cur.id);
-        await load();
-        setSending(false);
+        setFile(null); if (fileRef.current) fileRef.current.value = '';
+        await loadMsgs(cur.id); await load(); setSending(false);
       };
       reader.readAsDataURL(file);
     } catch (e) { alert('Erro: ' + e.message); setSending(false); }
@@ -809,17 +795,13 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
 
   const deleteChat = async id => {
     if (!confirm('Apagar conversa? Ela vai para a lixeira e pode ser restaurada.')) return;
-    try {
-      await api.deleteChat(id);
-      if (cur?.id === id) { setCur(null); setLead(null); setMsgs([]); }
-      await load();
-    } catch { alert('Erro'); }
+    try { await api.deleteChat(id); if (cur?.id === id) { setCur(null); setLead(null); setMsgs([]); } await load(); }
+    catch { alert('Erro'); }
   };
 
   const fmt = ts => {
     if (!ts) return '';
-    const d = new Date(ts);
-    const n = new Date();
+    const d = new Date(ts), n = new Date();
     if (d.toDateString() === n.toDateString()) return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   };
@@ -849,10 +831,7 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
 
   const handleLeadContextRefresh = async () => {
     if (!lead) return;
-    try {
-      const result = await api.refreshLeadContext(lead.id);
-      if (result?.lead) setLead(prev => ({ ...prev, ...result.lead }));
-    } catch {}
+    try { const result = await api.refreshLeadContext(lead.id); if (result?.lead) setLead(prev => ({ ...prev, ...result.lead })); } catch {}
   };
 
   const renderStageButtons = () => {
@@ -863,25 +842,11 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
           const cc = CM[col.color] || CM.zinc;
           const isActive = lead?.stage === col.id;
           const handleClick = async () => {
-            if (lead) {
-              await api.updateLead(lead.id, { stage: col.id });
-              setLead({ ...lead, stage: col.id });
-            } else {
-              const ph = cur.contact_phone || cur.remote_jid?.split('@')[0];
-              if (ph) {
-                try {
-                  const nl = await api.createLead({ tenantId: tenant.id, name: chatDisplayName(cur), phone: ph, source: 'whatsapp', stage: col.id });
-                  setLead(nl);
-                } catch (err) { console.error(err); }
-              }
-            }
+            if (lead) { await api.updateLead(lead.id, { stage: col.id }); setLead({ ...lead, stage: col.id }); }
+            else { const ph = cur.contact_phone || cur.remote_jid?.split('@')[0]; if (ph) { try { const nl = await api.createLead({ tenantId: tenant.id, name: chatDisplayName(cur), phone: ph, source: 'whatsapp', stage: col.id }); setLead(nl); } catch (err) { console.error(err); } } }
             onRefresh();
           };
-          return (
-            <button key={col.id} onClick={handleClick} className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all ${isActive ? `${cc.bg} text-white shadow-sm` : `${cc.light} ${cc.text} hover:opacity-80`}`}>
-              {col.name}
-            </button>
-          );
+          return <button key={col.id} onClick={handleClick} className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all ${isActive ? `${cc.bg} text-white shadow-sm` : `${cc.light} ${cc.text} hover:opacity-80`}`}>{col.name}</button>;
         })}
       </div>
     );
@@ -908,32 +873,21 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
                 <ProfilePic phone={c.contact_phone || c.remote_jid} tenantId={tenant.id} name={chatDisplayName(c)} isGroup={isGrp(c)} />
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between">
-                    <p className="font-bold text-xs truncate">
-                      {chatDisplayName(c)}
-                      {isGrp(c) && <span className="ml-1 text-[8px] bg-gray-100 text-gray-400 px-1 rounded">GRUPO</span>}
-                    </p>
+                    <p className="font-bold text-xs truncate">{chatDisplayName(c)}{isGrp(c) && <span className="ml-1 text-[8px] bg-gray-100 text-gray-400 px-1 rounded">GRUPO</span>}</p>
                     <span className="text-[9px] text-gray-400">{fmt(c.last_message_time)}</span>
                   </div>
                   <div className="flex justify-between mt-0.5">
                     <p className="text-[10px] text-gray-400 truncate">{c.last_message}</p>
-                    {Number(c.unread_count) > 0 && (
-                      <span className="ml-1 bg-[#25d366] text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                        {Number(c.unread_count) > 9 ? '9+' : c.unread_count}
-                      </span>
-                    )}
+                    {Number(c.unread_count) > 0 && <span className="ml-1 bg-[#25d366] text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{Number(c.unread_count) > 9 ? '9+' : c.unread_count}</span>}
                   </div>
                 </div>
               </div>
-              <button onClick={e => { e.stopPropagation(); deleteChat(c.id); }} className="p-1 text-gray-300 hover:text-red-400 flex-shrink-0">
-                <Trash2 className="w-3 h-3" />
-              </button>
+              <button onClick={e => { e.stopPropagation(); deleteChat(c.id); }} className="p-1 text-gray-300 hover:text-red-400 flex-shrink-0"><Trash2 className="w-3 h-3" /></button>
             </div>
           ))}
         </div>
         <div className="p-2 border-t border-gray-100">
-          <button onClick={() => { setShowTrash(true); loadDeletedChats(); }} className="w-full flex items-center gap-2 px-3 py-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg text-xs font-bold transition-all">
-            <RotateCcw className="w-3.5 h-3.5" /> Lixeira
-          </button>
+          <button onClick={() => { setShowTrash(true); loadDeletedChats(); }} className="w-full flex items-center gap-2 px-3 py-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg text-xs font-bold transition-all"><RotateCcw className="w-3.5 h-3.5" /> Lixeira</button>
         </div>
       </div>
 
@@ -954,9 +908,7 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
                       <Bot className={`w-3 h-3 ${leadAIOn ? '' : 'opacity-40'}`} /> {leadAIOn ? 'IA ativa' : 'IA pausada'}
                     </button>
                   )}
-                  {!isGrp(cur) && lead && !tenantAIOn && (
-                    <span className="ml-1 flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-400 rounded-lg text-[9px] font-bold"><Bot className="w-3 h-3 opacity-40" /> IA desligada</span>
-                  )}
+                  {!isGrp(cur) && lead && !tenantAIOn && <span className="ml-1 flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-400 rounded-lg text-[9px] font-bold"><Bot className="w-3 h-3 opacity-40" /> IA desligada</span>}
                 </div>
                 {renderStageButtons()}
               </div>
@@ -973,7 +925,7 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
                     <div className={`max-w-[65%] rounded-lg px-2.5 py-1.5 shadow-sm ${fromMe ? (isAI ? 'bg-purple-50 border border-purple-100' : 'bg-[#d9fdd3]') : 'bg-white'}`}>
                       {m.sender_name && <p className={`text-[10px] font-bold mb-0.5 flex items-center gap-1 ${isAI ? 'text-purple-600' : fromMe ? 'text-[#075e54]' : 'text-[#6b7280]'}`}>{isAI && <Bot className="w-2.5 h-2.5" />}{m.sender_name}</p>}
                       {hasMedia && <MediaBubble msg={m} tenantId={tenant.id} />}
-                      {m.content && !isPlaceholder && <p className="text-[13px] text-gray-800 whitespace-pre-wrap break-words">{m.content}</p>}
+                      {m.content && !isPlaceholder && renderText(m.content)}
                       {m.content && isPlaceholder && !hasMedia && <p className="text-[13px] text-gray-500 italic">{m.content}</p>}
                       <div className="flex items-center justify-end gap-0.5 mt-0.5">
                         <span className="text-[9px] text-gray-500">{fmt(m.timestamp)}</span>
@@ -1008,12 +960,8 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
         )}
       </div>
 
-      {showEdit && lead && (
-        <EditLeadModal lead={lead} columns={columns} onClose={() => setShowEdit(false)} onSave={async data => { await api.updateLead(lead.id, data); setLead({ ...lead, ...data }); setShowEdit(false); onRefresh(); }} onRefresh={() => loadLead(cur)} />
-      )}
-      {showTrash && (
-        <TrashModal chats={deletedChats} loading={loadingTrash} onClose={() => setShowTrash(false)} onRestore={restoreChat} chatDisplayName={chatDisplayName} isGrp={isGrp} fmt={fmt} />
-      )}
+      {showEdit && lead && <EditLeadModal lead={lead} columns={columns} onClose={() => setShowEdit(false)} onSave={async data => { await api.updateLead(lead.id, data); setLead({ ...lead, ...data }); setShowEdit(false); onRefresh(); }} onRefresh={() => loadLead(cur)} />}
+      {showTrash && <TrashModal chats={deletedChats} loading={loadingTrash} onClose={() => setShowTrash(false)} onRestore={restoreChat} chatDisplayName={chatDisplayName} isGrp={isGrp} fmt={fmt} />}
     </div>
   );
 }
@@ -1023,22 +971,13 @@ function TrashModal({ chats, loading, onClose, onRestore, chatDisplayName, isGrp
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
         <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <RotateCcw className="w-4 h-4 text-gray-400" />
-            <h2 className="font-bold text-sm">Lixeira</h2>
-            {chats.length > 0 && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold">{chats.length}</span>}
-          </div>
+          <div className="flex items-center gap-2"><RotateCcw className="w-4 h-4 text-gray-400" /><h2 className="font-bold text-sm">Lixeira</h2>{chats.length > 0 && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold">{chats.length}</span>}</div>
           <button onClick={onClose}><X className="w-4 h-4 text-gray-400" /></button>
         </div>
         <div className="max-h-96 overflow-y-auto">
-          {loading ? (
-            <div className="py-12 text-center text-gray-400 text-xs">Carregando...</div>
-          ) : chats.length === 0 ? (
-            <div className="py-12 text-center text-gray-400">
-              <Trash2 className="w-8 h-8 mx-auto mb-2 opacity-20" />
-              <p className="text-xs font-bold">Lixeira vazia</p>
-              <p className="text-[10px] mt-1">Conversas excluidas aparecem aqui</p>
-            </div>
+          {loading ? <div className="py-12 text-center text-gray-400 text-xs">Carregando...</div>
+          : chats.length === 0 ? (
+            <div className="py-12 text-center text-gray-400"><Trash2 className="w-8 h-8 mx-auto mb-2 opacity-20" /><p className="text-xs font-bold">Lixeira vazia</p><p className="text-[10px] mt-1">Conversas excluidas aparecem aqui</p></div>
           ) : chats.map(c => (
             <div key={c.id} className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50">
               <div className="flex-1 min-w-0">
@@ -1046,15 +985,11 @@ function TrashModal({ chats, loading, onClose, onRestore, chatDisplayName, isGrp
                 <p className="text-[10px] text-gray-400 truncate">{c.last_message}</p>
                 <p className="text-[9px] text-gray-300 mt-0.5">Excluido em {fmt(c.deleted_at)}</p>
               </div>
-              <button onClick={() => onRestore(c.id)} className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-[#25d366]/10 text-[#075e54] rounded-lg text-[10px] font-bold hover:bg-[#25d366]/20 transition-all">
-                <RotateCcw className="w-3 h-3" /> Restaurar
-              </button>
+              <button onClick={() => onRestore(c.id)} className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-[#25d366]/10 text-[#075e54] rounded-lg text-[10px] font-bold hover:bg-[#25d366]/20 transition-all"><RotateCcw className="w-3 h-3" /> Restaurar</button>
             </div>
           ))}
         </div>
-        <div className="px-5 py-3 bg-gray-50 border-t border-gray-100">
-          <p className="text-[10px] text-gray-400 text-center">Conversas restauradas voltam para a lista principal com o historico intacto</p>
-        </div>
+        <div className="px-5 py-3 bg-gray-50 border-t border-gray-100"><p className="text-[10px] text-gray-400 text-center">Conversas restauradas voltam para a lista principal com o historico intacto</p></div>
       </div>
     </div>
   );
@@ -1065,14 +1000,7 @@ function EditLeadModal({ lead, columns, onClose, onSave, onRefresh }) {
   const [custom, setCustom] = useState(() => { try { return JSON.parse(lead.custom_data || '{}'); } catch { return {}; } });
   const [nf, setNf] = useState('');
   const [localLead, setLocalLead] = useState(lead);
-
-  const handleRefreshContext = async () => {
-    try {
-      const result = await api.refreshLeadContext(lead.id);
-      if (result?.lead) { setLocalLead(prev => ({ ...prev, ...result.lead })); onRefresh?.(); }
-    } catch {}
-  };
-
+  const handleRefreshContext = async () => { try { const result = await api.refreshLeadContext(lead.id); if (result?.lead) { setLocalLead(prev => ({ ...prev, ...result.lead })); onRefresh?.(); } } catch {} };
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -1081,14 +1009,7 @@ function EditLeadModal({ lead, columns, onClose, onSave, onRefresh }) {
           <div><label className="text-[10px] font-bold text-gray-400 uppercase">Nome</label><input value={f.name} onChange={e => setF({ ...f, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /></div>
           <div><label className="text-[10px] font-bold text-gray-400 uppercase">Telefone</label><input value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /></div>
           <div><label className="text-[10px] font-bold text-gray-400 uppercase">E-mail</label><input value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /></div>
-          {columns.length > 0 && (
-            <div>
-              <label className="text-[10px] font-bold text-gray-400 uppercase">Etapa</label>
-              <select value={f.stage} onChange={e => setF({ ...f, stage: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
-                {columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-          )}
+          {columns.length > 0 && <div><label className="text-[10px] font-bold text-gray-400 uppercase">Etapa</label><select value={f.stage} onChange={e => setF({ ...f, stage: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">{columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>}
           <div><label className="text-[10px] font-bold text-gray-400 uppercase">Observacoes</label><textarea value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} rows={2} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /></div>
           <LeadSummaryCard lead={localLead} onRefresh={handleRefreshContext} compact={false} />
           <div className="border-t border-gray-100 pt-3">
@@ -1120,32 +1041,19 @@ function LeadsView({ leads, columns, tenant, onRefresh, onOpenChat }) {
   const [showCreate, setShowCreate] = useState(false);
   const [editLead, setEditLead] = useState(null);
   const [stageFilter, setStageFilter] = useState('all');
-
-  const filtered = leads.filter(l => {
-    if (stageFilter !== 'all' && l.stage !== stageFilter) return false;
-    return (l.name || '').toLowerCase().includes(search.toLowerCase()) || (l.phone || '').includes(search);
-  });
-
+  const filtered = leads.filter(l => { if (stageFilter !== 'all' && l.stage !== stageFilter) return false; return (l.name || '').toLowerCase().includes(search.toLowerCase()) || (l.phone || '').includes(search); });
   return (
     <div>
       <div className="flex flex-wrap justify-between items-center mb-4 gap-3">
         <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="bg-white border border-gray-200 rounded-lg pl-9 pr-4 py-2 text-sm shadow-sm w-56" />
-          </div>
-          <select value={stageFilter} onChange={e => setStageFilter(e.target.value)} className="bg-white border border-gray-200 rounded-lg py-2 px-3 text-xs shadow-sm">
-            <option value="all">Todas as etapas</option>
-            {columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <div className="relative"><Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="bg-white border border-gray-200 rounded-lg pl-9 pr-4 py-2 text-sm shadow-sm w-56" /></div>
+          <select value={stageFilter} onChange={e => setStageFilter(e.target.value)} className="bg-white border border-gray-200 rounded-lg py-2 px-3 text-xs shadow-sm"><option value="all">Todas as etapas</option>{columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
         </div>
         <button onClick={() => setShowCreate(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Lead</button>
       </div>
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <table className="w-full text-left">
-          <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase">
-            <tr><th className="p-3">Nome</th><th className="p-3">Telefone</th><th className="p-3">Contexto IA</th><th className="p-3">Etapa</th><th className="p-3">Origem</th><th className="p-3">Tempo</th><th className="p-3 text-right">Acoes</th></tr>
-          </thead>
+          <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase"><tr><th className="p-3">Nome</th><th className="p-3">Telefone</th><th className="p-3">Contexto IA</th><th className="p-3">Etapa</th><th className="p-3">Origem</th><th className="p-3">Tempo</th><th className="p-3 text-right">Acoes</th></tr></thead>
           <tbody className="divide-y divide-gray-100">
             {filtered.map(l => {
               const colInfo = columns.find(c => c.id === l.stage);
@@ -1159,13 +1067,7 @@ function LeadsView({ leads, columns, tenant, onRefresh, onOpenChat }) {
                   <td className="p-3">{colInfo ? <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${c.light} ${c.text}`}>{colInfo.name}</span> : <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold rounded">{l.stage || '-'}</span>}</td>
                   <td className="p-3">{l.source === 'whatsapp' ? <span className="text-[9px] font-bold text-green-700 bg-green-50 rounded px-1.5 py-0.5 flex items-center gap-0.5 w-fit"><Zap className="w-2.5 h-2.5" /> WhatsApp</span> : <span className="text-[9px] text-gray-400 bg-gray-100 rounded px-1.5 py-0.5">{l.source || 'manual'}</span>}</td>
                   <td className="p-3"><span className={`text-[10px] ${days > 7 ? 'text-red-600 font-bold' : days > 2 ? 'text-amber-600' : 'text-gray-400'}`}>{days}d</span></td>
-                  <td className="p-3">
-                    <div className="flex gap-1 justify-end items-center">
-                      {l.phone && <button onClick={() => onOpenChat(l.phone)} className="flex items-center gap-1 px-2 py-1 bg-[#25d366]/10 hover:bg-[#25d366]/20 text-[#075e54] rounded text-[9px] font-bold"><MessageCircle className="w-3 h-3" /> Conversar</button>}
-                      <button onClick={() => setEditLead(l)} className="text-blue-400 p-1"><Edit2 className="w-3.5 h-3.5" /></button>
-                      <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteLead(l.id); onRefresh(); } }} className="text-gray-300 hover:text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
-                    </div>
-                  </td>
+                  <td className="p-3"><div className="flex gap-1 justify-end items-center">{l.phone && <button onClick={() => onOpenChat(l.phone)} className="flex items-center gap-1 px-2 py-1 bg-[#25d366]/10 hover:bg-[#25d366]/20 text-[#075e54] rounded text-[9px] font-bold"><MessageCircle className="w-3 h-3" /> Conversar</button>}<button onClick={() => setEditLead(l)} className="text-blue-400 p-1"><Edit2 className="w-3.5 h-3.5" /></button><button onClick={async () => { if (confirm('Deletar?')) { await api.deleteLead(l.id); onRefresh(); } }} className="text-gray-300 hover:text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button></div></td>
                 </tr>
               );
             })}
@@ -1250,17 +1152,8 @@ function AnalyticsView({ leads, columns }) {
     <div>
       <h2 className="font-bold text-lg mb-4">Analytics</h2>
       <div className="grid grid-cols-5 gap-4 mb-6">
-        {[
-          { l: 'Total', v: t, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { l: 'WhatsApp', v: bySource.w, color: 'text-green-600', bg: 'bg-green-50' },
-          { l: 'Clientes', v: wonCount, color: 'text-emerald-700', bg: 'bg-emerald-50' },
-          { l: 'Perdidos', v: lostCount, color: 'text-red-600', bg: 'bg-red-50' },
-          { l: 'Com Contexto', v: withSummary, color: 'text-amber-700', bg: 'bg-amber-50' },
-        ].map((m, i) => (
-          <div key={i} className={`${m.bg} border border-gray-100 rounded-xl p-4 shadow-sm`}>
-            <p className={`text-[10px] font-bold uppercase mb-1 ${m.color}`}>{m.l}</p>
-            <p className={`text-3xl font-black ${m.color}`}>{m.v}</p>
-          </div>
+        {[{l:'Total',v:t,color:'text-blue-600',bg:'bg-blue-50'},{l:'WhatsApp',v:bySource.w,color:'text-green-600',bg:'bg-green-50'},{l:'Clientes',v:wonCount,color:'text-emerald-700',bg:'bg-emerald-50'},{l:'Perdidos',v:lostCount,color:'text-red-600',bg:'bg-red-50'},{l:'Com Contexto',v:withSummary,color:'text-amber-700',bg:'bg-amber-50'}].map((m,i) => (
+          <div key={i} className={`${m.bg} border border-gray-100 rounded-xl p-4 shadow-sm`}><p className={`text-[10px] font-bold uppercase mb-1 ${m.color}`}>{m.l}</p><p className={`text-3xl font-black ${m.color}`}>{m.v}</p></div>
         ))}
       </div>
       {columns.length > 0 && (
@@ -1272,10 +1165,7 @@ function AnalyticsView({ leads, columns }) {
               const c = CM[col.color] || CM.zinc;
               return (
                 <div key={col.id}>
-                  <div className="flex justify-between mb-1">
-                    <div className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${c.bg}`} /><span className="text-xs font-bold text-gray-600">{col.name}</span></div>
-                    <span className="text-[10px] text-gray-400">{col.count} ({p.toFixed(0)}%)</span>
-                  </div>
+                  <div className="flex justify-between mb-1"><div className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${c.bg}`} /><span className="text-xs font-bold text-gray-600">{col.name}</span></div><span className="text-[10px] text-gray-400">{col.count} ({p.toFixed(0)}%)</span></div>
                   <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden"><div className={`h-full rounded-full ${c.bg}`} style={{ width: `${Math.max(p, 1)}%` }} /></div>
                 </div>
               );
@@ -1292,10 +1182,7 @@ function KnowledgeView({ knowledge, tenant, onRefresh }) {
   const cats = ['Produtos/Servicos', 'Precos', 'Agendamento', 'FAQ'];
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="font-bold text-lg">Conhecimento</h2>
-        <button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Novo</button>
-      </div>
+      <div className="flex justify-between items-center mb-4"><h2 className="font-bold text-lg">Conhecimento</h2><button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Novo</button></div>
       <div className="grid grid-cols-2 gap-4">
         {cats.map(cat => (
           <div key={cat} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
@@ -1310,15 +1197,7 @@ function KnowledgeView({ knowledge, tenant, onRefresh }) {
           </div>
         ))}
       </div>
-      {show && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <h2 className="font-bold mb-1">Novo conteudo</h2>
-            <p className="text-[11px] text-gray-400 mb-4">Escreva qualquer informacao sobre o seu negocio. A IA decide o que usar em cada conversa.</p>
-            <KnowledgeForm tenant={tenant} onClose={() => setShow(false)} onSuccess={() => { setShow(false); onRefresh(); }} />
-          </div>
-        </div>
-      )}
+      {show && (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl"><h2 className="font-bold mb-1">Novo conteudo</h2><p className="text-[11px] text-gray-400 mb-4">Escreva qualquer informacao sobre o seu negocio. A IA decide o que usar em cada conversa.</p><KnowledgeForm tenant={tenant} onClose={() => setShow(false)} onSuccess={() => { setShow(false); onRefresh(); }} /></div></div>)}
     </div>
   );
 }
@@ -1327,14 +1206,9 @@ function KnowledgeForm({ tenant, onClose, onSuccess }) {
   const [f, setF] = useState({ category: 'FAQ', content: '' });
   return (
     <form onSubmit={async e => { e.preventDefault(); await api.createKnowledge({ category: f.category, question: f.category, answer: f.content, tenantId: tenant.id }); onSuccess(); }} className="space-y-3">
-      <select value={f.category} onChange={e => setF({ ...f, category: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
-        <option>Produtos/Servicos</option><option>Precos</option><option>Agendamento</option><option>FAQ</option>
-      </select>
-      <textarea placeholder="Ex: Atendemos de segunda a sexta das 8h as 18h. Agendamentos pelo WhatsApp ou pelo site..." value={f.content} onChange={e => setF({ ...f, content: e.target.value })} rows={5} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
-      <div className="flex gap-2">
-        <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button>
-        <button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Salvar</button>
-      </div>
+      <select value={f.category} onChange={e => setF({ ...f, category: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"><option>Produtos/Servicos</option><option>Precos</option><option>Agendamento</option><option>FAQ</option></select>
+      <textarea placeholder="Ex: Atendemos de segunda a sexta das 8h as 18h..." value={f.content} onChange={e => setF({ ...f, content: e.target.value })} rows={5} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
+      <div className="flex gap-2"><button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button><button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Salvar</button></div>
     </form>
   );
 }
@@ -1344,15 +1218,10 @@ function TeamView({ users, tenant, currentUser, onRefresh }) {
   const [editing, setEditing] = useState(null);
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="font-bold text-lg">Equipe</h2>
-        <button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Usuario</button>
-      </div>
+      <div className="flex justify-between items-center mb-4"><h2 className="font-bold text-lg">Equipe</h2><button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Usuario</button></div>
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <table className="w-full text-left">
-          <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase">
-            <tr><th className="p-3">Nome</th><th className="p-3">E-mail</th><th className="p-3">Funcao</th><th className="p-3">Permissoes</th><th className="p-3 text-right">Acoes</th></tr>
-          </thead>
+          <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase"><tr><th className="p-3">Nome</th><th className="p-3">E-mail</th><th className="p-3">Funcao</th><th className="p-3">Permissoes</th><th className="p-3 text-right">Acoes</th></tr></thead>
           <tbody className="divide-y divide-gray-100">
             {users.map(u => {
               const perms = (() => { try { return JSON.parse(u.permissions || '[]'); } catch { return []; } })();
@@ -1360,63 +1229,35 @@ function TeamView({ users, tenant, currentUser, onRefresh }) {
                 <tr key={u.id}>
                   <td className="p-3 font-bold text-xs">{u.name}</td>
                   <td className="p-3 text-xs text-gray-400">{u.email}</td>
-                  <td className="p-3">
-                    <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${u.role === 'super_admin' ? 'bg-purple-50 text-purple-500' : u.role === 'client_admin' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-500'}`}>
-                      {u.role === 'super_admin' ? 'Mestre' : u.role === 'client_admin' ? 'Admin' : 'Usuario'}
-                    </span>
-                  </td>
-                  <td className="p-3 text-[9px] text-gray-400">{u.role === 'client_user' ? perms.join(', ') || 'Nenhuma' : ''}</td>
-                  <td className="p-3 text-right">
-                    <div className="flex gap-1 justify-end">
-                      {u.role === 'client_user' && <button onClick={() => setEditing(u)} className="text-blue-400"><Edit2 className="w-3.5 h-3.5" /></button>}
-                      {u.id !== currentUser.id && <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteUser(u.id); onRefresh(); } }} className="text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>}
-                    </div>
-                  </td>
+                  <td className="p-3"><span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${u.role==='super_admin'?'bg-purple-50 text-purple-500':u.role==='client_admin'?'bg-amber-50 text-amber-600':'bg-blue-50 text-blue-500'}`}>{u.role==='super_admin'?'Mestre':u.role==='client_admin'?'Admin':'Usuario'}</span></td>
+                  <td className="p-3 text-[9px] text-gray-400">{u.role==='client_user'?perms.join(', ')||'Nenhuma':''}</td>
+                  <td className="p-3 text-right"><div className="flex gap-1 justify-end">{u.role==='client_user'&&<button onClick={()=>setEditing(u)} className="text-blue-400"><Edit2 className="w-3.5 h-3.5" /></button>}{u.id!==currentUser.id&&<button onClick={async()=>{if(confirm('Deletar?')){await api.deleteUser(u.id);onRefresh();}}} className="text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>}</div></td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-      {(show || editing) && <UserModal user={editing} tenant={tenant} onClose={() => { setShow(false); setEditing(null); }} onSuccess={() => { setShow(false); setEditing(null); onRefresh(); }} />}
+      {(show||editing)&&<UserModal user={editing} tenant={tenant} onClose={()=>{setShow(false);setEditing(null);}} onSuccess={()=>{setShow(false);setEditing(null);onRefresh();}} />}
     </div>
   );
 }
 
 function UserModal({ user, tenant, onClose, onSuccess }) {
-  const allT = ['kanban', 'chat', 'leads', 'whatsapp', 'analytics', 'knowledge', 'team', 'settings'];
-  const [f, setF] = useState({
-    name: user?.name || '', email: user?.email || '', password: '', role: user?.role || 'client_user',
-    permissions: (() => { try { return JSON.parse(user?.permissions || '[]'); } catch { return []; } })(),
-  });
-  const tp = p => setF({ ...f, permissions: f.permissions.includes(p) ? f.permissions.filter(x => x !== p) : [...f.permissions, p] });
+  const allT = ['kanban','chat','leads','whatsapp','analytics','knowledge','team','settings'];
+  const [f, setF] = useState({ name: user?.name||'', email: user?.email||'', password: '', role: user?.role||'client_user', permissions: (()=>{try{return JSON.parse(user?.permissions||'[]')}catch{return[]}})() });
+  const tp = p => setF({...f, permissions: f.permissions.includes(p)?f.permissions.filter(x=>x!==p):[...f.permissions,p]});
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-        <h2 className="font-bold mb-4">{user ? 'Editar' : 'Novo'} Usuario</h2>
-        <form onSubmit={async e => { e.preventDefault(); try { if (user) { await api.updateUser(user.id, { name: f.name, email: f.email, role: f.role, permissions: f.permissions, ...(f.password ? { password: f.password } : {}) }); } else { await api.createUser({ ...f, tenantId: tenant.id }); } onSuccess(); } catch (err) { alert('Erro: ' + err.message); } }} className="space-y-3">
-          <input placeholder="Nome" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
-          <input type="email" placeholder="E-mail" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
-          <input type="password" placeholder={user ? 'Nova senha (vazio=manter)' : 'Senha'} value={f.password} onChange={e => setF({ ...f, password: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl text-sm p-2.5" required={!user} />
-          <select value={f.role} onChange={e => setF({ ...f, role: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
-            <option value="client_user">Usuario</option><option value="client_admin">Admin</option>
-          </select>
-          {f.role === 'client_user' && (
-            <div className="border border-gray-200 rounded-xl p-3">
-              <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Permissoes</p>
-              <div className="grid grid-cols-2 gap-1.5">
-                {allT.map(tab => (
-                  <label key={tab} className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs cursor-pointer ${f.permissions.includes(tab) ? 'bg-[#25d366]/10 text-[#075e54] font-bold' : 'bg-gray-50 text-gray-400'}`}>
-                    <input type="checkbox" checked={f.permissions.includes(tab)} onChange={() => tp(tab)} className="w-3 h-3" />{tab}
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button>
-            <button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Salvar</button>
-          </div>
+        <h2 className="font-bold mb-4">{user?'Editar':'Novo'} Usuario</h2>
+        <form onSubmit={async e=>{e.preventDefault();try{if(user){await api.updateUser(user.id,{name:f.name,email:f.email,role:f.role,permissions:f.permissions,...(f.password?{password:f.password}:{})});}else{await api.createUser({...f,tenantId:tenant.id});}onSuccess();}catch(err){alert('Erro: '+err.message);}}} className="space-y-3">
+          <input placeholder="Nome" value={f.name} onChange={e=>setF({...f,name:e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
+          <input type="email" placeholder="E-mail" value={f.email} onChange={e=>setF({...f,email:e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
+          <input type="password" placeholder={user?'Nova senha (vazio=manter)':'Senha'} value={f.password} onChange={e=>setF({...f,password:e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl text-sm p-2.5" required={!user} />
+          <select value={f.role} onChange={e=>setF({...f,role:e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"><option value="client_user">Usuario</option><option value="client_admin">Admin</option></select>
+          {f.role==='client_user'&&(<div className="border border-gray-200 rounded-xl p-3"><p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Permissoes</p><div className="grid grid-cols-2 gap-1.5">{allT.map(tab=>(<label key={tab} className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs cursor-pointer ${f.permissions.includes(tab)?'bg-[#25d366]/10 text-[#075e54] font-bold':'bg-gray-50 text-gray-400'}`}><input type="checkbox" checked={f.permissions.includes(tab)} onChange={()=>tp(tab)} className="w-3 h-3" />{tab}</label>))}</div></div>)}
+          <div className="flex gap-2 pt-1"><button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button><button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Salvar</button></div>
         </form>
       </div>
     </div>
@@ -1431,19 +1272,14 @@ function SettingsView({ tenant, onRefresh }) {
 
   const savePrompt = async () => {
     setSaving(true);
-    try {
-      await api.updateTenant(tenant.id, { name: tenant.name, plan: tenant.plan, monthlyValue: tenant.monthly_value, aiPrompt: prompt, customFields: JSON.parse(tenant.custom_fields || '[]'), active: tenant.active });
-      alert('Salvo!');
-      onRefresh();
-    } catch { alert('Erro'); }
-    finally { setSaving(false); }
+    try { await api.updateTenant(tenant.id, { name: tenant.name, plan: tenant.plan, monthlyValue: tenant.monthly_value, aiPrompt: prompt, customFields: JSON.parse(tenant.custom_fields || '[]'), active: tenant.active }); alert('Salvo!'); onRefresh(); }
+    catch { alert('Erro'); } finally { setSaving(false); }
   };
 
   const toggleAI = async () => {
     setTogglingAI(true);
     try { await api.setTenantAI(tenant.id, !aiEnabled); setAiEnabled(!aiEnabled); onRefresh(); }
-    catch { alert('Erro ao alterar IA'); }
-    finally { setTogglingAI(false); }
+    catch { alert('Erro ao alterar IA'); } finally { setTogglingAI(false); }
   };
 
   return (
@@ -1452,24 +1288,18 @@ function SettingsView({ tenant, onRefresh }) {
       <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <Bot className="w-4 h-4 text-purple-600" />
-              <h3 className="font-bold text-sm">Assistente IA</h3>
-              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${aiEnabled ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-400'}`}>{aiEnabled ? 'ATIVO' : 'DESLIGADO'}</span>
-            </div>
+            <div className="flex items-center gap-2 mb-1"><Bot className="w-4 h-4 text-purple-600" /><h3 className="font-bold text-sm">Assistente IA</h3><span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${aiEnabled?'bg-purple-100 text-purple-700':'bg-gray-100 text-gray-400'}`}>{aiEnabled?'ATIVO':'DESLIGADO'}</span></div>
             <p className="text-xs text-gray-400 leading-relaxed">Quando ativo, a IA responde automaticamente mensagens recebidas de leads usando a base de conhecimento e o historico da conversa. Voce pode pausar individualmente por contato na tela de Conversas.</p>
           </div>
-          <button onClick={toggleAI} disabled={togglingAI} className={`flex-shrink-0 w-12 h-6 rounded-full transition-all relative ${aiEnabled ? 'bg-purple-500' : 'bg-gray-300'} disabled:opacity-50`}>
-            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${aiEnabled ? 'left-6' : 'left-0.5'}`} />
-          </button>
+          <button onClick={toggleAI} disabled={togglingAI} className={`flex-shrink-0 w-12 h-6 rounded-full transition-all relative ${aiEnabled?'bg-purple-500':'bg-gray-300'} disabled:opacity-50`}><div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${aiEnabled?'left-6':'left-0.5'}`} /></button>
         </div>
-        {aiEnabled && <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 text-[10px] text-purple-600 bg-purple-50 rounded-lg px-3 py-2"><Bot className="w-3 h-3 flex-shrink-0" />IA ativa — responde com memoria de sessao, resumo do lead e base de conhecimento</div>}
+        {aiEnabled&&<div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 text-[10px] text-purple-600 bg-purple-50 rounded-lg px-3 py-2"><Bot className="w-3 h-3 flex-shrink-0" />IA ativa — responde com memoria de sessao, resumo do lead e base de conhecimento</div>}
       </div>
       <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
         <h3 className="font-bold text-sm mb-1 flex items-center gap-2"><Brain className="w-4 h-4 text-gray-400" /> Personalidade da IA</h3>
         <p className="text-[10px] text-gray-400 mb-3">Defina como a IA deve se apresentar. Se vazio, usa atendimento padrao cordial.</p>
-        <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={6} placeholder={"Exemplo:\nVoce e a assistente da Clinica Exemplo.\nSe apresente como Ana e seja sempre educada.\nNao marque consultas sem confirmar disponibilidade."} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm mb-3 font-mono text-xs leading-relaxed" />
-        <button onClick={savePrompt} disabled={saving} className="px-5 py-2 bg-[#25d366] text-white font-bold rounded-xl text-sm disabled:opacity-50">{saving ? 'Salvando...' : 'Salvar prompt'}</button>
+        <textarea value={prompt} onChange={e=>setPrompt(e.target.value)} rows={6} placeholder={"Exemplo:\nVoce e a assistente da Clinica Exemplo.\nSe apresente como Ana e seja sempre educada.\nNao marque consultas sem confirmar disponibilidade."} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm mb-3 font-mono text-xs leading-relaxed" />
+        <button onClick={savePrompt} disabled={saving} className="px-5 py-2 bg-[#25d366] text-white font-bold rounded-xl text-sm disabled:opacity-50">{saving?'Salvando...':'Salvar prompt'}</button>
       </div>
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
         <p className="text-[10px] font-bold text-amber-700 uppercase mb-2 flex items-center gap-1"><Brain className="w-3 h-3" /> Memoria da IA</p>
