@@ -39,7 +39,8 @@ function MediaBubble({ msg, tenantId }) {
       if (data.base64) {
         let src = data.base64;
         if (!src.startsWith('data:')) {
-          const mm = { image: 'image/jpeg', audio: 'audio/ogg', video: 'video/mp4', document: 'application/pdf' };
+          // sticker: image/webp; outros tipos mapeados normalmente
+          const mm = { image: 'image/jpeg', audio: 'audio/ogg', video: 'video/mp4', document: 'application/pdf', sticker: 'image/webp' };
           src = `data:${mm[msg.message_type] || 'application/octet-stream'};base64,${src}`;
         }
         setMedia(src);
@@ -47,6 +48,13 @@ function MediaBubble({ msg, tenantId }) {
     } catch (e) {}
     finally { setLoading(false); }
   };
+
+  // Stickers carregam automaticamente (igual a imagens)
+  useEffect(() => {
+    if (msg.message_type === 'sticker' && msg.media_url && msg.media_url !== 'undefined') {
+      loadMedia();
+    }
+  }, [msg.id]);
 
   const toggleAudio = () => {
     if (!audioRef.current) return;
@@ -100,7 +108,19 @@ function MediaBubble({ msg, tenantId }) {
         : <button onClick={loadMedia} disabled={loading} className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-200"><FileText className="w-5 h-5 text-gray-400" /><span className="text-xs">{loading ? 'Carregando...' : 'Baixar'}</span></button>}
     </div>
   );
-  if (msg.message_type === 'sticker') return <div className="mb-1 text-2xl">{String.fromCodePoint(0x1F3A8)}</div>;
+  if (msg.message_type === 'sticker') return (
+    <div className="mb-1">
+      {media ? (
+        <img src={media} alt="sticker" className="w-[140px] h-[140px] object-contain" />
+      ) : loading ? (
+        <div className="w-[80px] h-[80px] bg-gray-50 rounded-lg flex items-center justify-center">
+          <div className="w-4 h-4 border-2 border-[#25d366] border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
+        <div className="text-2xl">{String.fromCodePoint(0x1F3A8)}</div>
+      )}
+    </div>
+  );
   if (msg.message_type === 'location') return (
     <div className="mb-1 bg-gray-100 rounded-lg p-2 flex items-center gap-2">
       <MapPin className="w-4 h-4 text-red-500" />
@@ -134,6 +154,7 @@ function ProfilePic({ phone, tenantId, name, size = 'w-9 h-9', textSize = 'text-
   );
 }
 
+// Card de resumo do lead — exibido no header do chat e na aba leads
 function LeadSummaryCard({ lead, onRefresh, compact = false }) {
   const [expanded, setExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -711,7 +732,7 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
   const [showEdit, setShowEdit] = useState(false);
-  // MUDANCA: padrao agora e 'individual' (Contatos). Filtro 'Todos' removido.
+  // Padrao: Contatos (individual). Filtro "Todos" removido.
   const [filter, setFilter] = useState('individual');
   const [file, setFile] = useState(null);
   const [showTrash, setShowTrash] = useState(false);
@@ -841,7 +862,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   };
 
-  // Filtro: 'individual' oculta grupos, 'group' oculta individuais. Sem fallback 'all'.
   const filtered = chats.filter(c => {
     if (filter === 'individual' && isGrp(c)) return false;
     if (filter === 'group' && !isGrp(c)) return false;
@@ -918,7 +938,7 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-xs" />
           </div>
-          {/* MUDANCA: removido filtro 'Todos'. Apenas Contatos (individual) e Grupos. */}
+          {/* Filtros: Contatos (padrao) e Grupos. "Todos" removido. */}
           <div className="flex gap-1">
             {[{ id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }].map(f => (
               <button
