@@ -25,11 +25,8 @@ function daysAgo(dateStr) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
 }
 
-// Renderiza texto com links clicaveis e @mencoes destacadas
-// myName: nome do usuario logado para destacar mencoes proprias
 function renderText(text, myName = '') {
   if (!text) return null;
-  // Regex combinada: URLs e @mencoes
   const tokenRegex = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+\.[a-z]{2,}[^\s<>"']*|@[\w\u00C0-\u024F]+)/gi;
   const parts = text.split(tokenRegex);
   if (parts.length === 1) {
@@ -172,7 +169,6 @@ function MediaBubble({ msg, tenantId }) {
   return null;
 }
 
-// Avatar de participante — sem foto, apenas iniciais
 function ParticipantAvatar({ name, phone, size = 'w-8 h-8', textSize = 'text-[10px]' }) {
   const display = name || phone || '?';
   return (
@@ -671,13 +667,11 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
   const [deletedChats, setDeletedChats] = useState([]);
   const [loadingTrash, setLoadingTrash] = useState(false);
 
-  // Participantes do grupo
   const [participants, setParticipants] = useState([]);
   const [loadingPart, setLoadingPart] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
 
-  // Mention autocomplete
-  const [mentionQuery, setMentionQuery] = useState(null); // null = inativo
+  const [mentionQuery, setMentionQuery] = useState(null);
   const [mentionIdx, setMentionIdx] = useState(0);
   const mentionStartRef = useRef(-1);
   const inputRef = useRef(null);
@@ -715,7 +709,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
     if (cur) { loadMsgs(cur.id); loadLead(cur); const i = setInterval(() => loadMsgs(cur.id), POLL_INTERVAL); return () => clearInterval(i); }
   }, [cur?.id]);
 
-  // Carregar participantes quando grupo abre
   useEffect(() => {
     if (cur && isGrp(cur)) {
       setShowParticipants(false);
@@ -731,10 +724,7 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
 
   const loadParticipants = async (groupJid) => {
     setLoadingPart(true);
-    try {
-      const d = await api.getGroupParticipants(tenant.id, groupJid);
-      setParticipants(d?.participants || []);
-    } catch {}
+    try { const d = await api.getGroupParticipants(tenant.id, groupJid); setParticipants(d?.participants || []); } catch {}
     finally { setLoadingPart(false); }
   };
 
@@ -793,13 +783,11 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
   };
   const selectChat = c => { setCur(c); setSearch(''); };
 
-  // Verifica se uma mensagem menciona o usuario logado
   const mentionsMe = useCallback((content) => {
     if (!myName || !content) return false;
     return content.toLowerCase().includes(`@${myName.toLowerCase()}`);
   }, [myName]);
 
-  // Sugestoes de mencao filtradas
   const mentionSuggestions = (mentionQuery !== null && isGrp(cur) && participants.length > 0)
     ? participants.filter(p => {
         const n = (p.name || p.phone || '').toLowerCase();
@@ -807,7 +795,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
       }).slice(0, 8)
     : [];
 
-  // Selecionar participante da lista de mencao
   const selectMention = (p) => {
     const name = p.name || p.phone || 'Contato';
     const before = msg.slice(0, mentionStartRef.current);
@@ -819,7 +806,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
     setTimeout(() => inputRef.current?.focus(), 10);
   };
 
-  // Handler do input com detecao de @
   const handleMsgChange = (e) => {
     const val = e.target.value;
     const pos = e.target.selectionStart;
@@ -843,18 +829,24 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
     const ph = cur.remote_jid && (isGrp(cur) || cur.remote_jid.includes('@lid')) ? cur.remote_jid : cur.contact_phone || cur.remote_jid?.split('@')[0];
     setSending(true);
     setMentionQuery(null);
-    try { await api.sendWhatsAppMessage(ph, msg, tenant.id, cur.id); setMsg(''); await loadMsgs(cur.id); await load(); }
+    try {
+      await api.sendWhatsAppMessage(ph, msg, tenant.id, cur.id);
+      setMsg('');
+      // Reset altura do textarea
+      if (inputRef.current) { inputRef.current.style.height = 'auto'; }
+      await loadMsgs(cur.id); await load();
+    }
     catch (e) { alert(e.message || 'Erro ao enviar'); } finally { setSending(false); }
   };
 
   const handleKeyDown = (e) => {
-    // Navegacao no autocomplete de mencao
     if (mentionQuery !== null && mentionSuggestions.length > 0) {
       if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIdx(i => Math.min(i + 1, mentionSuggestions.length - 1)); return; }
       if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIdx(i => Math.max(i - 1, 0)); return; }
       if (e.key === 'Enter') { e.preventDefault(); selectMention(mentionSuggestions[mentionIdx]); return; }
       if (e.key === 'Escape') { setMentionQuery(null); return; }
     }
+    // Enter envia; Shift+Enter quebra linha (comportamento natural do textarea)
     if (e.key === 'Enter' && !e.shiftKey && !sending) { e.preventDefault(); send(); }
   };
 
@@ -936,9 +928,12 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
     );
   };
 
+  // 6 emojis de reaction comuns
+  const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
   return (
     <div className="flex h-[calc(100vh-120px)] bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-      {/* Sidebar de conversas */}
+      {/* Sidebar */}
       <div className="w-80 border-r border-gray-200 flex flex-col bg-white">
         <div className="p-3 border-b border-gray-100 space-y-2">
           <div className="relative">
@@ -969,7 +964,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
                     <div className="flex justify-between mt-0.5 items-center">
                       <p className="text-[10px] text-gray-400 truncate">{c.last_message}</p>
                       <div className="flex items-center gap-1 flex-shrink-0 ml-1">
-                        {/* Badge @ quando usuario foi mencionado na ultima mensagem */}
                         {isMentionedInLast && (
                           <span className="bg-teal-500 text-white text-[8px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5">
                             <AtSign className="w-2 h-2" />
@@ -994,11 +988,10 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
         </div>
       </div>
 
-      {/* Area do chat */}
+      {/* Chat */}
       <div className="flex-1 flex flex-col relative overflow-hidden">
         {cur ? (
           <>
-            {/* Header */}
             <div className="bg-[#f0f2f5] px-4 py-2.5 border-b border-gray-200">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2.5">
@@ -1028,7 +1021,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
 
             {!isGrp(cur) && lead && <LeadSummaryCard lead={lead} onRefresh={handleLeadContextRefresh} compact={true} />}
 
-            {/* Mensagens */}
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1" style={{ backgroundColor: '#eae6df' }}>
               {msgs.map(m => {
                 const fromMe = Number(m.is_from_me) === 1 || m.is_from_me === true;
@@ -1036,8 +1028,30 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
                 const isPlaceholder = ['[Imagem]','[Audio]','[Video]','[Documento]','[Sticker]','[Localizacao]','[Contato]','[Mensagem]','[Reacao]'].includes(m.content);
                 const isAI = m.sender_name === 'IA';
                 const isMentionedMsg = !fromMe && mentionsMe(m.content);
+                // Reaction real: emoji armazenado (nao placeholder)
+                const isReaction = m.message_type === 'reaction' && m.content && !m.content.startsWith('[');
+                if (isReaction) return (
+                  <div key={m.id} className={`flex ${fromMe ? 'justify-end' : 'justify-start'} my-0.5`}>
+                    <div className="flex items-center gap-1.5 bg-white/80 border border-gray-200 rounded-full px-2.5 py-1 shadow-sm">
+                      <span className="text-lg leading-none">{m.content}</span>
+                      {m.sender_name && <span className="text-[9px] text-gray-400 font-bold">{m.sender_name}</span>}
+                      <span className="text-[8px] text-gray-300">{fmt(m.timestamp)}</span>
+                    </div>
+                  </div>
+                );
                 return (
-                  <div key={m.id} className={`flex ${fromMe ? 'justify-end' : 'justify-start'}`}>
+                  <div key={m.id} className={`flex ${fromMe ? 'justify-end' : 'justify-start'} group items-end gap-1`}>
+                    {/* Emoji picker no lado oposto da bolha, visivel no hover */}
+                    {fromMe && (
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-white border border-gray-200 rounded-full px-1 py-0.5 shadow-sm mb-1 self-end">
+                        {REACTION_EMOJIS.map(emoji => (
+                          <button key={emoji} onClick={async () => { try { await api.sendReaction(tenant.id, cur?.id, m.id, m.remote_jid || cur?.remote_jid, emoji); await loadMsgs(cur.id); } catch {} }}
+                            className="text-sm hover:scale-125 transition-transform p-0.5 rounded-full hover:bg-gray-100" title={`Reagir com ${emoji}`}>
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <div className={`max-w-[65%] rounded-lg px-2.5 py-1.5 shadow-sm transition-all ${
                       fromMe
                         ? (isAI ? 'bg-purple-50 border border-purple-100' : 'bg-[#d9fdd3]')
@@ -1045,7 +1059,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
                           ? 'bg-yellow-50 border border-yellow-200'
                           : 'bg-white'
                     }`}>
-                      {/* Badge de mencao */}
                       {isMentionedMsg && (
                         <div className="flex items-center gap-1 mb-0.5">
                           <span className="text-[8px] font-bold text-teal-600 bg-teal-50 border border-teal-200 rounded px-1 py-0.5 flex items-center gap-0.5">
@@ -1062,6 +1075,16 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
                         {fromMe && getStatus(m.status)}
                       </div>
                     </div>
+                    {!fromMe && (
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-white border border-gray-200 rounded-full px-1 py-0.5 shadow-sm mb-1 self-end">
+                        {REACTION_EMOJIS.map(emoji => (
+                          <button key={emoji} onClick={async () => { try { await api.sendReaction(tenant.id, cur?.id, m.id, m.remote_jid || cur?.remote_jid, emoji); await loadMsgs(cur.id); } catch {} }}
+                            className="text-sm hover:scale-125 transition-transform p-0.5 rounded-full hover:bg-gray-100" title={`Reagir com ${emoji}`}>
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1078,9 +1101,8 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
               </div>
             )}
 
-            {/* Input com dropdown de mencao */}
-            <div className="bg-[#f0f2f5] px-3 py-2.5 flex items-center gap-2 border-t border-gray-200 relative">
-              {/* Dropdown de sugestoes de @ */}
+            {/* Input area — textarea com Shift+Enter + dropdown @ */}
+            <div className="bg-[#f0f2f5] px-3 py-2.5 flex items-end gap-2 border-t border-gray-200 relative">
               {mentionSuggestions.length > 0 && (
                 <div className="absolute bottom-full left-3 right-3 mb-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20 max-h-52 overflow-y-auto">
                   <div className="px-3 py-1.5 border-b border-gray-100 flex items-center gap-1.5">
@@ -1104,20 +1126,24 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
                 </div>
               )}
               <input type="file" ref={fileRef} onChange={handleFile} className="hidden" accept="image/*,video/*,.pdf,.doc,.docx" />
-              <button onClick={() => fileRef.current?.click()} className="p-2 hover:bg-gray-200 rounded-full"><Paperclip className="w-4 h-4 text-gray-500" /></button>
-              <input
+              <button onClick={() => fileRef.current?.click()} className="p-2 hover:bg-gray-200 rounded-full flex-shrink-0 mb-0.5"><Paperclip className="w-4 h-4 text-gray-500" /></button>
+              {/* TEXTAREA: Enter envia, Shift+Enter quebra linha */}
+              <textarea
                 ref={inputRef}
                 value={msg}
                 onChange={handleMsgChange}
                 onKeyDown={handleKeyDown}
                 disabled={sending}
+                rows={1}
                 placeholder={isGrp(cur) ? 'Mensagem... (@ para mencionar)' : 'Mensagem...'}
-                className="flex-1 bg-white border border-gray-200 rounded-full px-4 py-2 text-sm outline-none focus:border-[#25d366]"
+                className="flex-1 bg-white border border-gray-200 rounded-2xl px-4 py-2 text-sm outline-none focus:border-[#25d366] resize-none overflow-y-auto leading-relaxed"
+                style={{ maxHeight: '120px' }}
+                onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }}
               />
-              <button onClick={send} disabled={sending || !msg.trim()} className="p-2 bg-[#25d366] text-white rounded-full disabled:opacity-40"><Send className="w-4 h-4" /></button>
+              <button onClick={send} disabled={sending || !msg.trim()} className="p-2 bg-[#25d366] text-white rounded-full disabled:opacity-40 flex-shrink-0 mb-0.5"><Send className="w-4 h-4" /></button>
             </div>
 
-            {/* Painel lateral de participantes */}
+            {/* Drawer de participantes */}
             {showParticipants && isGrp(cur) && (
               <div className="absolute right-0 top-0 bottom-0 w-64 bg-white border-l border-gray-200 z-10 flex flex-col shadow-2xl">
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-[#f0f2f5]">
@@ -1127,7 +1153,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
                   </div>
                   <button onClick={() => setShowParticipants(false)} className="p-1 hover:bg-gray-200 rounded-full transition-colors"><X className="w-4 h-4 text-gray-400" /></button>
                 </div>
-
                 {loadingPart ? (
                   <div className="flex items-center justify-center py-10">
                     <div className="w-6 h-6 border-2 border-[#25d366] border-t-transparent rounded-full animate-spin" />
@@ -1140,7 +1165,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
                   </div>
                 ) : (
                   <div className="flex-1 overflow-y-auto">
-                    {/* Admins primeiro */}
                     {participants.filter(p => p.admin).length > 0 && (
                       <div className="px-3 pt-3 pb-1">
                         <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Administradores</span>
@@ -1169,8 +1193,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
                     ))}
                   </div>
                 )}
-
-                {/* Botao recarregar */}
                 <div className="p-2 border-t border-gray-100">
                   <button onClick={() => loadParticipants(cur.remote_jid)} disabled={loadingPart}
                     className="w-full flex items-center justify-center gap-1.5 py-1.5 text-[10px] text-gray-400 hover:text-[#075e54] hover:bg-gray-50 rounded-lg font-bold transition-all disabled:opacity-40">
@@ -1193,7 +1215,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
   );
 }
 
-// Linha de participante no painel lateral
 function ParticipantRow({ p, onMention }) {
   const [hover, setHover] = useState(false);
   return (
