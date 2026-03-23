@@ -61,8 +61,8 @@ function renderText(text, myName = '') {
   );
 }
 
-function MediaBubble({ msg, tenantId }) {
-  const [media, setMedia] = useState(null);
+function MediaBubble({ msg, tenantId, cachedSrc }) {
+  const [media, setMedia] = useState(cachedSrc || null);
   const [loading, setLoading] = useState(false);
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef(null);
