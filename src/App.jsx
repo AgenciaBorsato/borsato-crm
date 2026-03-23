@@ -5,7 +5,8 @@ import {
   MessageSquare, LayoutGrid, Users, Settings, Plus, Search, Send, X, Check,
   Trash2, BarChart3, Brain, Edit2, UserPlus, ArrowLeft, Smartphone, Image,
   Mic, FileText, MapPin, CheckCheck, Paperclip, Users2, Download, Play, Pause,
-  MessageCircle, Phone, Clock, Zap, Bot, RotateCcw, RefreshCw, ChevronDown, ChevronUp
+  MessageCircle, Phone, Clock, Zap, Bot, RotateCcw, RefreshCw, ChevronDown, ChevronUp,
+  AlertTriangle
 } from 'lucide-react';
 
 const POLL_INTERVAL = 4000;
@@ -39,7 +40,6 @@ function MediaBubble({ msg, tenantId }) {
       if (data.base64) {
         let src = data.base64;
         if (!src.startsWith('data:')) {
-          // sticker: image/webp; outros tipos mapeados normalmente
           const mm = { image: 'image/jpeg', audio: 'audio/ogg', video: 'video/mp4', document: 'application/pdf', sticker: 'image/webp' };
           src = `data:${mm[msg.message_type] || 'application/octet-stream'};base64,${src}`;
         }
@@ -49,7 +49,6 @@ function MediaBubble({ msg, tenantId }) {
     finally { setLoading(false); }
   };
 
-  // Stickers carregam automaticamente (igual a imagens)
   useEffect(() => {
     if (msg.message_type === 'sticker' && msg.media_url && msg.media_url !== 'undefined') {
       loadMedia();
@@ -154,7 +153,6 @@ function ProfilePic({ phone, tenantId, name, size = 'w-9 h-9', textSize = 'text-
   );
 }
 
-// Card de resumo do lead — exibido no header do chat e na aba leads
 function LeadSummaryCard({ lead, onRefresh, compact = false }) {
   const [expanded, setExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -176,10 +174,7 @@ function LeadSummaryCard({ lead, onRefresh, compact = false }) {
   const handleRefresh = async (e) => {
     e.stopPropagation();
     setRefreshing(true);
-    try {
-      await api.refreshLeadContext(lead.id);
-      onRefresh?.();
-    } catch {}
+    try { await api.refreshLeadContext(lead.id); onRefresh?.(); } catch {}
     finally { setRefreshing(false); }
   };
 
@@ -208,21 +203,14 @@ function LeadSummaryCard({ lead, onRefresh, compact = false }) {
             <div className="flex items-center gap-2 mb-0.5">
               <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wide">Contexto da conversa</span>
               {stageBadge()}
-              <button
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="ml-auto p-0.5 text-amber-400 hover:text-amber-600 disabled:opacity-40"
-                title="Atualizar resumo"
-              >
+              <button onClick={handleRefresh} disabled={refreshing} className="ml-auto p-0.5 text-amber-400 hover:text-amber-600 disabled:opacity-40" title="Atualizar resumo">
                 <RefreshCw className={`w-2.5 h-2.5 ${refreshing ? 'animate-spin' : ''}`} />
               </button>
               <button onClick={() => setExpanded(!expanded)} className="p-0.5 text-amber-400 hover:text-amber-600">
                 {expanded ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
               </button>
             </div>
-            <p className={`text-[10px] text-amber-800 leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}>
-              {lead.conversation_summary}
-            </p>
+            <p className={`text-[10px] text-amber-800 leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}>{lead.conversation_summary}</p>
             {expanded && memoryEntries.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {memoryEntries.map(([k, v]) => (
@@ -246,18 +234,11 @@ function LeadSummaryCard({ lead, onRefresh, compact = false }) {
           <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Historico Estrategico</span>
           {stageBadge()}
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="flex items-center gap-1 text-[9px] text-amber-500 hover:text-amber-700 disabled:opacity-40 font-bold"
-        >
-          <RefreshCw className={`w-2.5 h-2.5 ${refreshing ? 'animate-spin' : ''}`} />
-          Atualizar
+        <button onClick={handleRefresh} disabled={refreshing} className="flex items-center gap-1 text-[9px] text-amber-500 hover:text-amber-700 disabled:opacity-40 font-bold">
+          <RefreshCw className={`w-2.5 h-2.5 ${refreshing ? 'animate-spin' : ''}`} /> Atualizar
         </button>
       </div>
-      {lead.conversation_summary && (
-        <p className="text-xs text-amber-900 leading-relaxed mb-2">{lead.conversation_summary}</p>
-      )}
+      {lead.conversation_summary && <p className="text-xs text-amber-900 leading-relaxed mb-2">{lead.conversation_summary}</p>}
       {memoryEntries.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {memoryEntries.map(([k, v]) => (
@@ -312,13 +293,8 @@ export default function BorsatoCRM() {
     } catch (e) { localStorage.clear(); }
   }, []);
 
-  useEffect(() => {
-    if (currentView !== 'login') localStorage.setItem('currentView', currentView);
-  }, [currentView]);
-
-  useEffect(() => {
-    if (currentTenant?.id) localStorage.setItem('currentTenantId', currentTenant.id);
-  }, [currentTenant]);
+  useEffect(() => { if (currentView !== 'login') localStorage.setItem('currentView', currentView); }, [currentView]);
+  useEffect(() => { if (currentTenant?.id) localStorage.setItem('currentTenantId', currentTenant.id); }, [currentTenant]);
 
   const loadTenants = async () => {
     setLoading(true);
@@ -420,9 +396,28 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem(`activeTab_${tenant.id}`) || 'kanban');
   const [columns, setColumns] = useState([]);
   const [requestedPhone, setRequestedPhone] = useState(null);
+  // NOVO: monitoramento de conexao WhatsApp
+  const [whatsappConnected, setWhatsappConnected] = useState(true);
+  const [waBannerDismissed, setWaBannerDismissed] = useState(false);
 
   useEffect(() => { localStorage.setItem(`activeTab_${tenant.id}`, activeTab); }, [activeTab, tenant.id]);
   useEffect(() => { loadCols(); }, [tenant.id]);
+
+  // Verifica status do WhatsApp a cada 60 segundos
+  // Banner vermelho aparece automaticamente se desconectado
+  useEffect(() => {
+    const checkWA = async () => {
+      try {
+        const status = await api.getWhatsAppStatus(tenant.id);
+        const connected = status?.connected === true;
+        setWhatsappConnected(connected);
+        if (connected) setWaBannerDismissed(false);
+      } catch {}
+    };
+    checkWA();
+    const i = setInterval(checkWA, 60000);
+    return () => clearInterval(i);
+  }, [tenant.id]);
 
   const loadCols = async () => {
     try { setColumns(await api.getKanbanColumns(tenant.id)); } catch (e) {}
@@ -472,6 +467,25 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
           <button onClick={onLogout} className="px-3 py-1 bg-white/10 rounded text-[10px] font-bold">Sair</button>
         </div>
       </div>
+
+      {/* BANNER: WhatsApp desconectado */}
+      {!whatsappConnected && !waBannerDismissed && (
+        <div className="bg-red-500 text-white px-5 py-2.5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <span className="text-xs font-bold">WhatsApp desconectado — mensagens nao estao sendo recebidas nem enviadas</span>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button onClick={() => setActiveTab('whatsapp')} className="bg-white text-red-600 hover:bg-red-50 px-3 py-1 rounded text-[10px] font-bold transition-all">
+              Reconectar
+            </button>
+            <button onClick={() => setWaBannerDismissed(true)} className="text-white/70 hover:text-white p-0.5">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-[#075e54]/90 px-6 flex gap-0.5 overflow-x-auto">
         {tabs.map(tab => (
           <button
@@ -481,7 +495,12 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
               activeTab === tab.id ? 'border-white text-white' : 'border-transparent text-white/50 hover:text-white/80'
             }`}
           >
-            <tab.icon className="w-3.5 h-3.5" />{tab.label}
+            <tab.icon className="w-3.5 h-3.5" />
+            {tab.label}
+            {/* Ponto vermelho na aba WhatsApp quando desconectado */}
+            {tab.id === 'whatsapp' && !whatsappConnected && (
+              <span className="w-1.5 h-1.5 bg-red-400 rounded-full" />
+            )}
           </button>
         ))}
       </div>
@@ -527,7 +546,6 @@ function KanbanView({ leads, columns, tenant, onRefresh, onOpenChat }) {
           <Plus className="w-3 h-3" /> Etapa
         </button>
       </div>
-
       {columns.length === 0 ? (
         <div className="text-center py-20 text-gray-400">
           <LayoutGrid className="w-12 h-12 mx-auto mb-3 opacity-20" />
@@ -539,16 +557,9 @@ function KanbanView({ leads, columns, tenant, onRefresh, onOpenChat }) {
             const colLeads = getLeadsForColumn(col, colIdx);
             const c = CM[col.color] || CM.zinc;
             return (
-              <div
-                key={col.id}
-                onDragOver={e => { e.preventDefault(); setDragOver(col.id); }}
-                onDragLeave={() => setDragOver(null)}
-                onDrop={async () => {
-                  if (dragged) { await api.updateLead(dragged.id, { stage: col.id }); setDragged(null); onRefresh(); }
-                  setDragOver(null);
-                }}
-                className={`w-72 flex-shrink-0 rounded-xl border bg-white shadow-sm transition-all ${dragOver === col.id ? 'border-2 shadow-lg' : 'border-gray-200'}`}
-              >
+              <div key={col.id} onDragOver={e => { e.preventDefault(); setDragOver(col.id); }} onDragLeave={() => setDragOver(null)}
+                onDrop={async () => { if (dragged) { await api.updateLead(dragged.id, { stage: col.id }); setDragged(null); onRefresh(); } setDragOver(null); }}
+                className={`w-72 flex-shrink-0 rounded-xl border bg-white shadow-sm transition-all ${dragOver === col.id ? 'border-2 shadow-lg' : 'border-gray-200'}`}>
                 <div className="px-3 pt-3 pb-2 border-b border-gray-100">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
@@ -563,60 +574,24 @@ function KanbanView({ leads, columns, tenant, onRefresh, onOpenChat }) {
                 </div>
                 <div className="p-2 space-y-2 min-h-[100px]">
                   {colLeads.map(l => (
-                    <KanbanCard
-                      key={l.id}
-                      lead={l}
-                      col={col}
-                      columns={columns}
-                      onDragStart={() => setDragged(l)}
-                      onDragEnd={() => setDragged(null)}
-                      onOpenChat={onOpenChat}
-                      onStageChange={async (s) => { await api.updateLead(l.id, { stage: s }); onRefresh(); }}
-                      onRefresh={onRefresh}
-                    />
+                    <KanbanCard key={l.id} lead={l} col={col} columns={columns} onDragStart={() => setDragged(l)} onDragEnd={() => setDragged(null)}
+                      onOpenChat={onOpenChat} onStageChange={async (s) => { await api.updateLead(l.id, { stage: s }); onRefresh(); }} onRefresh={onRefresh} />
                   ))}
-                  {colLeads.length === 0 && (
-                    <div className="py-6 text-center">
-                      <p className="text-[10px] text-gray-300">Arraste leads aqui</p>
-                    </div>
-                  )}
+                  {colLeads.length === 0 && <div className="py-6 text-center"><p className="text-[10px] text-gray-300">Arraste leads aqui</p></div>}
                 </div>
               </div>
             );
           })}
         </div>
       )}
-
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
             <h2 className="font-bold mb-4">Nova Etapa</h2>
-            <form
-              onSubmit={async e => {
-                e.preventDefault();
-                await api.createKanbanColumn({ tenantId: tenant.id, name: newCol.name, color: newCol.color, position: columns.length });
-                setNewCol({ name: '', color: 'blue' });
-                setShowModal(false);
-                onRefresh();
-              }}
-              className="space-y-3"
-            >
-              <input
-                placeholder="Nome da etapa"
-                value={newCol.name}
-                onChange={e => setNewCol({ ...newCol, name: e.target.value })}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"
-                required
-              />
+            <form onSubmit={async e => { e.preventDefault(); await api.createKanbanColumn({ tenantId: tenant.id, name: newCol.name, color: newCol.color, position: columns.length }); setNewCol({ name: '', color: 'blue' }); setShowModal(false); onRefresh(); }} className="space-y-3">
+              <input placeholder="Nome da etapa" value={newCol.name} onChange={e => setNewCol({ ...newCol, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
               <div className="flex gap-2 p-2 bg-gray-50 rounded-xl justify-center">
-                {Object.keys(CM).map(c => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setNewCol({ ...newCol, color: c })}
-                    className={`w-7 h-7 rounded-full ${CM[c].bg} ${newCol.color === c ? 'ring-2 ring-gray-800 scale-110' : 'opacity-40'}`}
-                  />
-                ))}
+                {Object.keys(CM).map(c => <button key={c} type="button" onClick={() => setNewCol({ ...newCol, color: c })} className={`w-7 h-7 rounded-full ${CM[c].bg} ${newCol.color === c ? 'ring-2 ring-gray-800 scale-110' : 'opacity-40'}`} />)}
               </div>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button>
@@ -634,85 +609,34 @@ function KanbanCard({ lead, col, columns, onDragStart, onDragEnd, onOpenChat, on
   const [hover, setHover] = useState(false);
   const days = daysAgo(lead.updated_at);
   const c = CM[col.color] || CM.zinc;
-
-  const renderSourceBadge = () => {
-    if (lead.source === 'whatsapp') {
-      return (
-        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-green-700 bg-green-100 rounded px-1.5 py-0.5">
-          <Zap className="w-2.5 h-2.5" /> WhatsApp
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">
-        <Plus className="w-2.5 h-2.5" /> Manual
-      </span>
-    );
-  };
-
-  const renderDaysBadge = () => {
-    if (days > 7) return <span className="text-[9px] font-bold text-red-600 bg-red-50 rounded px-1.5 py-0.5 flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {days}d</span>;
-    if (days > 2) return <span className="text-[9px] font-bold text-amber-600 bg-amber-50 rounded px-1.5 py-0.5 flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {days}d</span>;
-    if (days > 0) return <span className="text-[9px] text-gray-400 flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {days}d</span>;
-    return <span className="text-[9px] text-[#25d366] font-bold">Hoje</span>;
-  };
-
   const otherCols = columns.filter(c2 => c2.id !== col.id);
-
   return (
-    <div
-      draggable
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      className={`bg-white border rounded-lg cursor-grab select-none transition-all ${hover ? 'border-gray-300 shadow-md -translate-y-0.5' : 'border-gray-100 shadow-sm'}`}
-    >
+    <div draggable onDragStart={onDragStart} onDragEnd={onDragEnd} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      className={`bg-white border rounded-lg cursor-grab select-none transition-all ${hover ? 'border-gray-300 shadow-md -translate-y-0.5' : 'border-gray-100 shadow-sm'}`}>
       <div className={`h-0.5 rounded-t-lg ${c.bg} opacity-60`} />
       <div className="p-2.5">
         <div className="flex justify-between items-center mb-1.5">
-          {renderSourceBadge()}
-          {renderDaysBadge()}
+          {lead.source === 'whatsapp'
+            ? <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-green-700 bg-green-100 rounded px-1.5 py-0.5"><Zap className="w-2.5 h-2.5" /> WhatsApp</span>
+            : <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5"><Plus className="w-2.5 h-2.5" /> Manual</span>}
+          {days > 7 ? <span className="text-[9px] font-bold text-red-600 bg-red-50 rounded px-1.5 py-0.5 flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {days}d</span>
+            : days > 2 ? <span className="text-[9px] font-bold text-amber-600 bg-amber-50 rounded px-1.5 py-0.5 flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {days}d</span>
+            : days > 0 ? <span className="text-[9px] text-gray-400 flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {days}d</span>
+            : <span className="text-[9px] text-[#25d366] font-bold">Hoje</span>}
         </div>
         <p className="font-bold text-[13px] text-gray-800 leading-tight mb-0.5 truncate">{lead.name || '\u2014'}</p>
-        {lead.phone && (
-          <p className="text-[10px] text-gray-400 font-mono mb-2 flex items-center gap-1">
-            <Phone className="w-2.5 h-2.5" />{lead.phone}
-          </p>
-        )}
-        {lead.conversation_summary && (
-          <p className="text-[9px] text-amber-700 bg-amber-50 rounded px-1.5 py-1 mb-2 line-clamp-1 italic">{lead.conversation_summary}</p>
-        )}
+        {lead.phone && <p className="text-[10px] text-gray-400 font-mono mb-2 flex items-center gap-1"><Phone className="w-2.5 h-2.5" />{lead.phone}</p>}
+        {lead.conversation_summary && <p className="text-[9px] text-amber-700 bg-amber-50 rounded px-1.5 py-1 mb-2 line-clamp-1 italic">{lead.conversation_summary}</p>}
         {!lead.conversation_summary && lead.notes && <p className="text-[10px] text-gray-500 line-clamp-1 mb-2 italic">{lead.notes}</p>}
         {hover && (
           <div className="flex gap-1 mt-1 pt-2 border-t border-gray-100">
-            {lead.phone && (
-              <button
-                onClick={() => onOpenChat(lead.phone)}
-                className="flex-1 flex items-center justify-center gap-1 py-1 bg-[#25d366]/10 hover:bg-[#25d366]/20 text-[#075e54] rounded text-[10px] font-bold"
-              >
-                <MessageCircle className="w-3 h-3" /> Conversar
-              </button>
-            )}
-            <button
-              onClick={async () => { if (confirm('Deletar?')) { await api.deleteLead(lead.id); onRefresh(); } }}
-              className="p-1 hover:bg-red-50 text-gray-300 hover:text-red-400 rounded"
-            >
-              <Trash2 className="w-3 h-3" />
-            </button>
+            {lead.phone && <button onClick={() => onOpenChat(lead.phone)} className="flex-1 flex items-center justify-center gap-1 py-1 bg-[#25d366]/10 hover:bg-[#25d366]/20 text-[#075e54] rounded text-[10px] font-bold"><MessageCircle className="w-3 h-3" /> Conversar</button>}
+            <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteLead(lead.id); onRefresh(); } }} className="p-1 hover:bg-red-50 text-gray-300 hover:text-red-400 rounded"><Trash2 className="w-3 h-3" /></button>
           </div>
         )}
         {hover && otherCols.length > 0 && (
           <div className="mt-1.5 flex gap-1 flex-wrap">
-            {otherCols.map(c2 => (
-              <button
-                key={c2.id}
-                onClick={() => onStageChange(c2.id)}
-                className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${(CM[c2.color] || CM.zinc).light} ${(CM[c2.color] || CM.zinc).text}`}
-              >
-                {'\u2192'} {c2.name}
-              </button>
-            ))}
+            {otherCols.map(c2 => <button key={c2.id} onClick={() => onStageChange(c2.id)} className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${(CM[c2.color] || CM.zinc).light} ${(CM[c2.color] || CM.zinc).text}`}>{'\u2192'} {c2.name}</button>)}
           </div>
         )}
       </div>
@@ -732,7 +656,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
   const [showEdit, setShowEdit] = useState(false);
-  // Padrao: Contatos (individual). Filtro "Todos" removido.
   const [filter, setFilter] = useState('individual');
   const [file, setFile] = useState(null);
   const [showTrash, setShowTrash] = useState(false);
@@ -741,6 +664,27 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
   const curRef = useRef(cur);
   const endRef = useRef(null);
   const fileRef = useRef(null);
+  // Rastreamento de nao-lidos para notificacoes
+  const prevUnreadRef = useRef(0);
+  const initialLoadRef = useRef(true);
+
+  // Beep de notificacao via Web Audio API — sem arquivo externo
+  const playNotificationSound = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(660, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.35);
+    } catch {}
+  }, []);
 
   useEffect(() => { curRef.current = cur; }, [cur]);
   useEffect(() => {
@@ -767,14 +711,39 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
   }, [requestedPhone, chats]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs]);
 
+  // Limpa badge do titulo quando a aba volta ao foco
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        const total = chats.reduce((sum, c) => sum + (Number(c.unread_count) || 0), 0);
+        document.title = total > 0 ? `(${total}) Borsato CRM` : 'Borsato CRM';
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      document.title = 'Borsato CRM';
+    };
+  }, [chats]);
+
   const load = async () => {
     try {
       const chatList = await api.getChats(tenant.id);
       setChats(chatList);
       const ac = curRef.current;
       if (ac) { const upd = chatList.find(c => c.id === ac.id); if (upd) setCur(upd); }
+
+      // Notificacao: beep + badge no titulo quando chega mensagem nova
+      const totalUnread = chatList.reduce((sum, c) => sum + (Number(c.unread_count) || 0), 0);
+      if (!initialLoadRef.current && totalUnread > prevUnreadRef.current) {
+        playNotificationSound();
+      }
+      document.title = totalUnread > 0 ? `(${totalUnread}) Borsato CRM` : 'Borsato CRM';
+      prevUnreadRef.current = totalUnread;
+      initialLoadRef.current = false;
     } catch (e) {}
   };
+
   const loadMsgs = async (id) => { try { setMsgs(await api.getChatMessages(id, 100, 0)); } catch (e) {} };
   const loadLead = async (c) => {
     if (isGrp(c)) { setLead(null); return; }
@@ -782,30 +751,23 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
     if (!ph) { setLead(null); return; }
     try { setLead(await api.getLeadByPhone(ph, tenant.id)); } catch (e) { setLead(null); }
   };
-
   const loadDeletedChats = async () => {
     setLoadingTrash(true);
     try { setDeletedChats(await api.getDeletedChats(tenant.id)); } catch {}
     finally { setLoadingTrash(false); }
   };
-
   const restoreChat = async (chatId) => {
-    try {
-      await api.restoreChat(chatId);
-      setDeletedChats(prev => prev.filter(c => c.id !== chatId));
-      await load();
-    } catch { alert('Erro ao restaurar conversa'); }
+    try { await api.restoreChat(chatId); setDeletedChats(prev => prev.filter(c => c.id !== chatId)); await load(); }
+    catch { alert('Erro ao restaurar conversa'); }
   };
 
   const isGrp = c => Number(c.is_group) === 1 || c.is_group === true;
-
   const chatDisplayName = c => {
     const name = c.contact_name;
     if (name && !/^\d{10,}$/.test(name)) return name;
     if (!isGrp(c)) return c.contact_phone || c.remote_jid || '';
     return 'Grupo';
   };
-
   const selectChat = c => { setCur(c); setSearch(''); };
 
   const send = async () => {
@@ -916,11 +878,7 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
             onRefresh();
           };
           return (
-            <button
-              key={col.id}
-              onClick={handleClick}
-              className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all ${isActive ? `${cc.bg} text-white shadow-sm` : `${cc.light} ${cc.text} hover:opacity-80`}`}
-            >
+            <button key={col.id} onClick={handleClick} className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all ${isActive ? `${cc.bg} text-white shadow-sm` : `${cc.light} ${cc.text} hover:opacity-80`}`}>
               {col.name}
             </button>
           );
@@ -931,32 +889,21 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
 
   return (
     <div className="flex h-[calc(100vh-120px)] bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-      {/* Sidebar */}
       <div className="w-80 border-r border-gray-200 flex flex-col bg-white">
         <div className="p-3 border-b border-gray-100 space-y-2">
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-xs" />
           </div>
-          {/* Filtros: Contatos (padrao) e Grupos. "Todos" removido. */}
           <div className="flex gap-1">
             {[{ id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }].map(f => (
-              <button
-                key={f.id}
-                onClick={() => setFilter(f.id)}
-                className={`flex-1 py-1 text-[9px] font-bold rounded ${filter === f.id ? 'bg-[#25d366] text-white' : 'bg-gray-100 text-gray-500'}`}
-              >
-                {f.l}
-              </button>
+              <button key={f.id} onClick={() => setFilter(f.id)} className={`flex-1 py-1 text-[9px] font-bold rounded ${filter === f.id ? 'bg-[#25d366] text-white' : 'bg-gray-100 text-gray-500'}`}>{f.l}</button>
             ))}
           </div>
         </div>
         <div className="flex-1 overflow-y-auto">
           {filtered.map(c => (
-            <div
-              key={c.id}
-              className={`flex items-center gap-2.5 px-3 py-3 cursor-pointer hover:bg-gray-50 border-b border-gray-50 ${cur?.id === c.id ? 'bg-[#f0f2f5]' : ''}`}
-            >
+            <div key={c.id} className={`flex items-center gap-2.5 px-3 py-3 cursor-pointer hover:bg-gray-50 border-b border-gray-50 ${cur?.id === c.id ? 'bg-[#f0f2f5]' : ''}`}>
               <div onClick={() => selectChat(c)} className="flex items-center gap-2.5 flex-1 min-w-0">
                 <ProfilePic phone={c.contact_phone || c.remote_jid} tenantId={tenant.id} name={chatDisplayName(c)} isGroup={isGrp(c)} />
                 <div className="flex-1 min-w-0">
@@ -984,17 +931,12 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
           ))}
         </div>
         <div className="p-2 border-t border-gray-100">
-          <button
-            onClick={() => { setShowTrash(true); loadDeletedChats(); }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg text-xs font-bold transition-all"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Lixeira
+          <button onClick={() => { setShowTrash(true); loadDeletedChats(); }} className="w-full flex items-center gap-2 px-3 py-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg text-xs font-bold transition-all">
+            <RotateCcw className="w-3.5 h-3.5" /> Lixeira
           </button>
         </div>
       </div>
 
-      {/* Chat body */}
       <div className="flex-1 flex flex-col">
         {cur ? (
           <>
@@ -1006,39 +948,20 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
                     <p className="font-bold text-sm">{chatDisplayName(cur)}</p>
                     <p className="text-[10px] text-gray-400 font-mono">{cur.contact_phone}</p>
                   </div>
-                  {lead && (
-                    <button onClick={() => setShowEdit(true)} className="ml-2 p-1 bg-blue-50 text-blue-500 rounded hover:bg-blue-100">
-                      <Edit2 className="w-3 h-3" />
-                    </button>
-                  )}
+                  {lead && <button onClick={() => setShowEdit(true)} className="ml-2 p-1 bg-blue-50 text-blue-500 rounded hover:bg-blue-100"><Edit2 className="w-3 h-3" /></button>}
                   {!isGrp(cur) && lead && tenantAIOn && (
-                    <button
-                      onClick={toggleLeadAI}
-                      title={leadAIOn ? 'IA ativa - clique para pausar' : 'IA pausada - clique para ativar'}
-                      className={`ml-1 flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold transition-all ${leadAIOn ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
-                    >
-                      <Bot className={`w-3 h-3 ${leadAIOn ? '' : 'opacity-40'}`} />
-                      {leadAIOn ? 'IA ativa' : 'IA pausada'}
+                    <button onClick={toggleLeadAI} title={leadAIOn ? 'IA ativa - clique para pausar' : 'IA pausada - clique para ativar'} className={`ml-1 flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold transition-all ${leadAIOn ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>
+                      <Bot className={`w-3 h-3 ${leadAIOn ? '' : 'opacity-40'}`} /> {leadAIOn ? 'IA ativa' : 'IA pausada'}
                     </button>
                   )}
                   {!isGrp(cur) && lead && !tenantAIOn && (
-                    <span className="ml-1 flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-400 rounded-lg text-[9px] font-bold">
-                      <Bot className="w-3 h-3 opacity-40" /> IA desligada
-                    </span>
+                    <span className="ml-1 flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-400 rounded-lg text-[9px] font-bold"><Bot className="w-3 h-3 opacity-40" /> IA desligada</span>
                   )}
                 </div>
                 {renderStageButtons()}
               </div>
             </div>
-
-            {!isGrp(cur) && lead && (
-              <LeadSummaryCard
-                lead={lead}
-                onRefresh={handleLeadContextRefresh}
-                compact={true}
-              />
-            )}
-
+            {!isGrp(cur) && lead && <LeadSummaryCard lead={lead} onRefresh={handleLeadContextRefresh} compact={true} />}
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1" style={{ backgroundColor: '#eae6df' }}>
               {msgs.map(m => {
                 const fromMe = Number(m.is_from_me) === 1 || m.is_from_me === true;
@@ -1048,11 +971,7 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
                 return (
                   <div key={m.id} className={`flex ${fromMe ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[65%] rounded-lg px-2.5 py-1.5 shadow-sm ${fromMe ? (isAI ? 'bg-purple-50 border border-purple-100' : 'bg-[#d9fdd3]') : 'bg-white'}`}>
-                      {m.sender_name && (
-                        <p className={`text-[10px] font-bold mb-0.5 flex items-center gap-1 ${isAI ? 'text-purple-600' : fromMe ? 'text-[#075e54]' : 'text-[#6b7280]'}`}>
-                          {isAI && <Bot className="w-2.5 h-2.5" />}{m.sender_name}
-                        </p>
-                      )}
+                      {m.sender_name && <p className={`text-[10px] font-bold mb-0.5 flex items-center gap-1 ${isAI ? 'text-purple-600' : fromMe ? 'text-[#075e54]' : 'text-[#6b7280]'}`}>{isAI && <Bot className="w-2.5 h-2.5" />}{m.sender_name}</p>}
                       {hasMedia && <MediaBubble msg={m} tenantId={tenant.id} />}
                       {m.content && !isPlaceholder && <p className="text-[13px] text-gray-800 whitespace-pre-wrap break-words">{m.content}</p>}
                       {m.content && isPlaceholder && !hasMedia && <p className="text-[13px] text-gray-500 italic">{m.content}</p>}
@@ -1066,68 +985,34 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
               })}
               <div ref={endRef} />
             </div>
-
             {file && (
               <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Paperclip className="w-4 h-4 text-gray-400" />
-                  <span className="text-xs text-gray-600 truncate max-w-[200px]">{file.name}</span>
-                </div>
+                <div className="flex items-center gap-2"><Paperclip className="w-4 h-4 text-gray-400" /><span className="text-xs text-gray-600 truncate max-w-[200px]">{file.name}</span></div>
                 <div className="flex gap-2">
                   <button onClick={() => { setFile(null); if (fileRef.current) fileRef.current.value = ''; }} className="text-xs text-red-500 font-bold">Cancelar</button>
                   <button onClick={sendFile} disabled={sending} className="px-3 py-1 bg-[#25d366] text-white text-xs font-bold rounded-lg disabled:opacity-50">Enviar</button>
                 </div>
               </div>
             )}
-
             <div className="bg-[#f0f2f5] px-3 py-2.5 flex items-center gap-2 border-t border-gray-200">
               <input type="file" ref={fileRef} onChange={handleFile} className="hidden" accept="image/*,video/*,.pdf,.doc,.docx" />
-              <button onClick={() => fileRef.current?.click()} className="p-2 hover:bg-gray-200 rounded-full">
-                <Paperclip className="w-4 h-4 text-gray-500" />
-              </button>
-              <input
-                value={msg}
-                onChange={e => setMsg(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !sending) { e.preventDefault(); send(); } }}
-                disabled={sending}
-                placeholder="Mensagem..."
-                className="flex-1 bg-white border border-gray-200 rounded-full px-4 py-2 text-sm outline-none focus:border-[#25d366]"
-              />
-              <button onClick={send} disabled={sending || !msg.trim()} className="p-2 bg-[#25d366] text-white rounded-full disabled:opacity-40">
-                <Send className="w-4 h-4" />
-              </button>
+              <button onClick={() => fileRef.current?.click()} className="p-2 hover:bg-gray-200 rounded-full"><Paperclip className="w-4 h-4 text-gray-500" /></button>
+              <input value={msg} onChange={e => setMsg(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !sending) { e.preventDefault(); send(); } }} disabled={sending} placeholder="Mensagem..." className="flex-1 bg-white border border-gray-200 rounded-full px-4 py-2 text-sm outline-none focus:border-[#25d366]" />
+              <button onClick={send} disabled={sending || !msg.trim()} className="p-2 bg-[#25d366] text-white rounded-full disabled:opacity-40"><Send className="w-4 h-4" /></button>
             </div>
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center bg-[#f0f2f5]">
-            <div className="text-center">
-              <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p className="text-sm font-bold text-gray-400">Selecione uma conversa</p>
-            </div>
+            <div className="text-center"><MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" /><p className="text-sm font-bold text-gray-400">Selecione uma conversa</p></div>
           </div>
         )}
       </div>
 
       {showEdit && lead && (
-        <EditLeadModal
-          lead={lead}
-          columns={columns}
-          onClose={() => setShowEdit(false)}
-          onSave={async data => { await api.updateLead(lead.id, data); setLead({ ...lead, ...data }); setShowEdit(false); onRefresh(); }}
-          onRefresh={() => loadLead(cur)}
-        />
+        <EditLeadModal lead={lead} columns={columns} onClose={() => setShowEdit(false)} onSave={async data => { await api.updateLead(lead.id, data); setLead({ ...lead, ...data }); setShowEdit(false); onRefresh(); }} onRefresh={() => loadLead(cur)} />
       )}
-
       {showTrash && (
-        <TrashModal
-          chats={deletedChats}
-          loading={loadingTrash}
-          onClose={() => setShowTrash(false)}
-          onRestore={restoreChat}
-          chatDisplayName={chatDisplayName}
-          isGrp={isGrp}
-          fmt={fmt}
-        />
+        <TrashModal chats={deletedChats} loading={loadingTrash} onClose={() => setShowTrash(false)} onRestore={restoreChat} chatDisplayName={chatDisplayName} isGrp={isGrp} fmt={fmt} />
       )}
     </div>
   );
@@ -1157,17 +1042,11 @@ function TrashModal({ chats, loading, onClose, onRestore, chatDisplayName, isGrp
           ) : chats.map(c => (
             <div key={c.id} className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50">
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-xs truncate">
-                  {chatDisplayName(c)}
-                  {isGrp(c) && <span className="ml-1 text-[8px] bg-gray-100 text-gray-400 px-1 rounded">GRUPO</span>}
-                </p>
+                <p className="font-bold text-xs truncate">{chatDisplayName(c)}{isGrp(c) && <span className="ml-1 text-[8px] bg-gray-100 text-gray-400 px-1 rounded">GRUPO</span>}</p>
                 <p className="text-[10px] text-gray-400 truncate">{c.last_message}</p>
                 <p className="text-[9px] text-gray-300 mt-0.5">Excluido em {fmt(c.deleted_at)}</p>
               </div>
-              <button
-                onClick={() => onRestore(c.id)}
-                className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-[#25d366]/10 text-[#075e54] rounded-lg text-[10px] font-bold hover:bg-[#25d366]/20 transition-all"
-              >
+              <button onClick={() => onRestore(c.id)} className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-[#25d366]/10 text-[#075e54] rounded-lg text-[10px] font-bold hover:bg-[#25d366]/20 transition-all">
                 <RotateCcw className="w-3 h-3" /> Restaurar
               </button>
             </div>
@@ -1190,10 +1069,7 @@ function EditLeadModal({ lead, columns, onClose, onSave, onRefresh }) {
   const handleRefreshContext = async () => {
     try {
       const result = await api.refreshLeadContext(lead.id);
-      if (result?.lead) {
-        setLocalLead(prev => ({ ...prev, ...result.lead }));
-        onRefresh?.();
-      }
+      if (result?.lead) { setLocalLead(prev => ({ ...prev, ...result.lead })); onRefresh?.(); }
     } catch {}
   };
 
@@ -1214,9 +1090,7 @@ function EditLeadModal({ lead, columns, onClose, onSave, onRefresh }) {
             </div>
           )}
           <div><label className="text-[10px] font-bold text-gray-400 uppercase">Observacoes</label><textarea value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} rows={2} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /></div>
-
           <LeadSummaryCard lead={localLead} onRefresh={handleRefreshContext} compact={false} />
-
           <div className="border-t border-gray-100 pt-3">
             <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Campos Personalizados</p>
             {Object.entries(custom).map(([k, v]) => (
@@ -1265,22 +1139,12 @@ function LeadsView({ leads, columns, tenant, onRefresh, onOpenChat }) {
             {columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
-        <button onClick={() => setShowCreate(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg">
-          <Plus className="w-3 h-3" /> Lead
-        </button>
+        <button onClick={() => setShowCreate(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Lead</button>
       </div>
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <table className="w-full text-left">
           <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase">
-            <tr>
-              <th className="p-3">Nome</th>
-              <th className="p-3">Telefone</th>
-              <th className="p-3">Contexto IA</th>
-              <th className="p-3">Etapa</th>
-              <th className="p-3">Origem</th>
-              <th className="p-3">Tempo</th>
-              <th className="p-3 text-right">Acoes</th>
-            </tr>
+            <tr><th className="p-3">Nome</th><th className="p-3">Telefone</th><th className="p-3">Contexto IA</th><th className="p-3">Etapa</th><th className="p-3">Origem</th><th className="p-3">Tempo</th><th className="p-3 text-right">Acoes</th></tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filtered.map(l => {
@@ -1291,33 +1155,13 @@ function LeadsView({ leads, columns, tenant, onRefresh, onOpenChat }) {
                 <tr key={l.id} className="hover:bg-gray-50/50">
                   <td className="p-3 font-bold text-xs">{l.name}</td>
                   <td className="p-3 text-xs text-gray-400 font-mono">{l.phone}</td>
-                  <td className="p-3 max-w-[200px]">
-                    {l.conversation_summary ? (
-                      <p className="text-[9px] text-amber-700 bg-amber-50 rounded px-1.5 py-1 line-clamp-2 italic">{l.conversation_summary}</p>
-                    ) : (
-                      <span className="text-[9px] text-gray-300">Sem resumo</span>
-                    )}
-                  </td>
-                  <td className="p-3">
-                    {colInfo
-                      ? <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${c.light} ${c.text}`}>{colInfo.name}</span>
-                      : <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold rounded">{l.stage || '-'}</span>}
-                  </td>
-                  <td className="p-3">
-                    {l.source === 'whatsapp'
-                      ? <span className="text-[9px] font-bold text-green-700 bg-green-50 rounded px-1.5 py-0.5 flex items-center gap-0.5 w-fit"><Zap className="w-2.5 h-2.5" /> WhatsApp</span>
-                      : <span className="text-[9px] text-gray-400 bg-gray-100 rounded px-1.5 py-0.5">{l.source || 'manual'}</span>}
-                  </td>
-                  <td className="p-3">
-                    <span className={`text-[10px] ${days > 7 ? 'text-red-600 font-bold' : days > 2 ? 'text-amber-600' : 'text-gray-400'}`}>{days}d</span>
-                  </td>
+                  <td className="p-3 max-w-[200px]">{l.conversation_summary ? <p className="text-[9px] text-amber-700 bg-amber-50 rounded px-1.5 py-1 line-clamp-2 italic">{l.conversation_summary}</p> : <span className="text-[9px] text-gray-300">Sem resumo</span>}</td>
+                  <td className="p-3">{colInfo ? <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${c.light} ${c.text}`}>{colInfo.name}</span> : <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold rounded">{l.stage || '-'}</span>}</td>
+                  <td className="p-3">{l.source === 'whatsapp' ? <span className="text-[9px] font-bold text-green-700 bg-green-50 rounded px-1.5 py-0.5 flex items-center gap-0.5 w-fit"><Zap className="w-2.5 h-2.5" /> WhatsApp</span> : <span className="text-[9px] text-gray-400 bg-gray-100 rounded px-1.5 py-0.5">{l.source || 'manual'}</span>}</td>
+                  <td className="p-3"><span className={`text-[10px] ${days > 7 ? 'text-red-600 font-bold' : days > 2 ? 'text-amber-600' : 'text-gray-400'}`}>{days}d</span></td>
                   <td className="p-3">
                     <div className="flex gap-1 justify-end items-center">
-                      {l.phone && (
-                        <button onClick={() => onOpenChat(l.phone)} className="flex items-center gap-1 px-2 py-1 bg-[#25d366]/10 hover:bg-[#25d366]/20 text-[#075e54] rounded text-[9px] font-bold">
-                          <MessageCircle className="w-3 h-3" /> Conversar
-                        </button>
-                      )}
+                      {l.phone && <button onClick={() => onOpenChat(l.phone)} className="flex items-center gap-1 px-2 py-1 bg-[#25d366]/10 hover:bg-[#25d366]/20 text-[#075e54] rounded text-[9px] font-bold"><MessageCircle className="w-3 h-3" /> Conversar</button>}
                       <button onClick={() => setEditLead(l)} className="text-blue-400 p-1"><Edit2 className="w-3.5 h-3.5" /></button>
                       <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteLead(l.id); onRefresh(); } }} className="text-gray-300 hover:text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
@@ -1345,11 +1189,7 @@ function LeadCreateModal({ tenant, columns, onClose, onSuccess }) {
           <input placeholder="Nome" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
           <input placeholder="Telefone" value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
           <input type="email" placeholder="E-mail" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" />
-          {columns.length > 0 && (
-            <select value={f.stage} onChange={e => setF({ ...f, stage: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
-              {columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          )}
+          {columns.length > 0 && <select value={f.stage} onChange={e => setF({ ...f, stage: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">{columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>}
           <div className="flex gap-2">
             <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button>
             <button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Criar</button>
@@ -1375,26 +1215,14 @@ function WhatsAppView({ tenant }) {
           <h3 className="font-bold text-sm mb-3">Status</h3>
           {status?.connected ? (
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 bg-[#25d366] rounded-full animate-pulse" />
-                <span className="text-[#25d366] font-bold text-sm">Conectado</span>
-              </div>
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-[#25d366] rounded-full animate-pulse" /><span className="text-[#25d366] font-bold text-sm">Conectado</span></div>
               <button onClick={async () => { await api.disconnectWhatsApp(tenant.id); ck(); }} className="w-full py-2 bg-red-50 text-red-500 rounded-lg text-xs font-bold">Desconectar</button>
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 bg-gray-300 rounded-full" />
-                <span className="text-gray-400 text-sm">Desconectado</span>
-              </div>
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-gray-300 rounded-full" /><span className="text-gray-400 text-sm">Desconectado</span></div>
               <input value={token} onChange={e => setToken(e.target.value)} placeholder="Token..." className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-xs font-mono" />
-              <button
-                onClick={async () => { setLd(true); try { await api.connectWhatsApp(tenant.id, token); setToken(''); ck(); } catch { alert('Erro'); } finally { setLd(false); } }}
-                disabled={ld || !token.trim()}
-                className="w-full py-2 bg-[#25d366] text-white rounded-lg text-xs font-bold disabled:opacity-50"
-              >
-                {ld ? 'Salvando...' : 'Salvar'}
-              </button>
+              <button onClick={async () => { setLd(true); try { await api.connectWhatsApp(tenant.id, token); setToken(''); ck(); } catch { alert('Erro'); } finally { setLd(false); } }} disabled={ld || !token.trim()} className="w-full py-2 bg-[#25d366] text-white rounded-lg text-xs font-bold disabled:opacity-50">{ld ? 'Salvando...' : 'Salvar'}</button>
               <button onClick={ck} className="w-full py-2 bg-gray-50 text-[#075e54] rounded-lg text-xs font-bold border border-gray-200">Verificar</button>
             </div>
           )}
@@ -1445,15 +1273,10 @@ function AnalyticsView({ leads, columns }) {
               return (
                 <div key={col.id}>
                   <div className="flex justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${c.bg}`} />
-                      <span className="text-xs font-bold text-gray-600">{col.name}</span>
-                    </div>
+                    <div className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${c.bg}`} /><span className="text-xs font-bold text-gray-600">{col.name}</span></div>
                     <span className="text-[10px] text-gray-400">{col.count} ({p.toFixed(0)}%)</span>
                   </div>
-                  <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${c.bg}`} style={{ width: `${Math.max(p, 1)}%` }} />
-                  </div>
+                  <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden"><div className={`h-full rounded-full ${c.bg}`} style={{ width: `${Math.max(p, 1)}%` }} /></div>
                 </div>
               );
             })}
@@ -1471,9 +1294,7 @@ function KnowledgeView({ knowledge, tenant, onRefresh }) {
     <div>
       <div className="flex justify-between items-center mb-4">
         <h2 className="font-bold text-lg">Conhecimento</h2>
-        <button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg">
-          <Plus className="w-3 h-3" /> Novo
-        </button>
+        <button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Novo</button>
       </div>
       <div className="grid grid-cols-2 gap-4">
         {cats.map(cat => (
@@ -1482,17 +1303,10 @@ function KnowledgeView({ knowledge, tenant, onRefresh }) {
             {knowledge.filter(k => k.category === cat).map(item => (
               <div key={item.id} className="bg-gray-50 rounded-lg p-3 mb-2 flex justify-between items-start gap-2">
                 <p className="text-xs text-gray-700 leading-relaxed flex-1">{item.answer}</p>
-                <button
-                  onClick={async () => { if (confirm('Deletar?')) { await api.deleteKnowledge(item.id); onRefresh(); } }}
-                  className="flex-shrink-0 mt-0.5"
-                >
-                  <Trash2 className="w-3 h-3 text-gray-300 hover:text-red-400" />
-                </button>
+                <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteKnowledge(item.id); onRefresh(); } }} className="flex-shrink-0 mt-0.5"><Trash2 className="w-3 h-3 text-gray-300 hover:text-red-400" /></button>
               </div>
             ))}
-            {knowledge.filter(k => k.category === cat).length === 0 && (
-              <p className="text-[10px] text-gray-300 text-center py-3">Vazio</p>
-            )}
+            {knowledge.filter(k => k.category === cat).length === 0 && <p className="text-[10px] text-gray-300 text-center py-3">Vazio</p>}
           </div>
         ))}
       </div>
@@ -1512,32 +1326,11 @@ function KnowledgeView({ knowledge, tenant, onRefresh }) {
 function KnowledgeForm({ tenant, onClose, onSuccess }) {
   const [f, setF] = useState({ category: 'FAQ', content: '' });
   return (
-    <form
-      onSubmit={async e => {
-        e.preventDefault();
-        await api.createKnowledge({ category: f.category, question: f.category, answer: f.content, tenantId: tenant.id });
-        onSuccess();
-      }}
-      className="space-y-3"
-    >
-      <select
-        value={f.category}
-        onChange={e => setF({ ...f, category: e.target.value })}
-        className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"
-      >
-        <option>Produtos/Servicos</option>
-        <option>Precos</option>
-        <option>Agendamento</option>
-        <option>FAQ</option>
+    <form onSubmit={async e => { e.preventDefault(); await api.createKnowledge({ category: f.category, question: f.category, answer: f.content, tenantId: tenant.id }); onSuccess(); }} className="space-y-3">
+      <select value={f.category} onChange={e => setF({ ...f, category: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
+        <option>Produtos/Servicos</option><option>Precos</option><option>Agendamento</option><option>FAQ</option>
       </select>
-      <textarea
-        placeholder="Ex: Atendemos de segunda a sexta das 8h as 18h. Agendamentos pelo WhatsApp ou pelo site..."
-        value={f.content}
-        onChange={e => setF({ ...f, content: e.target.value })}
-        rows={5}
-        className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"
-        required
-      />
+      <textarea placeholder="Ex: Atendemos de segunda a sexta das 8h as 18h. Agendamentos pelo WhatsApp ou pelo site..." value={f.content} onChange={e => setF({ ...f, content: e.target.value })} rows={5} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
       <div className="flex gap-2">
         <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button>
         <button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Salvar</button>
@@ -1553,20 +1346,12 @@ function TeamView({ users, tenant, currentUser, onRefresh }) {
     <div>
       <div className="flex justify-between items-center mb-4">
         <h2 className="font-bold text-lg">Equipe</h2>
-        <button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg">
-          <Plus className="w-3 h-3" /> Usuario
-        </button>
+        <button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Usuario</button>
       </div>
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <table className="w-full text-left">
           <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase">
-            <tr>
-              <th className="p-3">Nome</th>
-              <th className="p-3">E-mail</th>
-              <th className="p-3">Funcao</th>
-              <th className="p-3">Permissoes</th>
-              <th className="p-3 text-right">Acoes</th>
-            </tr>
+            <tr><th className="p-3">Nome</th><th className="p-3">E-mail</th><th className="p-3">Funcao</th><th className="p-3">Permissoes</th><th className="p-3 text-right">Acoes</th></tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {users.map(u => {
@@ -1576,24 +1361,15 @@ function TeamView({ users, tenant, currentUser, onRefresh }) {
                   <td className="p-3 font-bold text-xs">{u.name}</td>
                   <td className="p-3 text-xs text-gray-400">{u.email}</td>
                   <td className="p-3">
-                    <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${
-                      u.role === 'super_admin' ? 'bg-purple-50 text-purple-500' :
-                      u.role === 'client_admin' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-500'
-                    }`}>
+                    <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${u.role === 'super_admin' ? 'bg-purple-50 text-purple-500' : u.role === 'client_admin' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-500'}`}>
                       {u.role === 'super_admin' ? 'Mestre' : u.role === 'client_admin' ? 'Admin' : 'Usuario'}
                     </span>
                   </td>
                   <td className="p-3 text-[9px] text-gray-400">{u.role === 'client_user' ? perms.join(', ') || 'Nenhuma' : ''}</td>
                   <td className="p-3 text-right">
                     <div className="flex gap-1 justify-end">
-                      {u.role === 'client_user' && (
-                        <button onClick={() => setEditing(u)} className="text-blue-400"><Edit2 className="w-3.5 h-3.5" /></button>
-                      )}
-                      {u.id !== currentUser.id && (
-                        <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteUser(u.id); onRefresh(); } }} className="text-gray-300 hover:text-red-500">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                      {u.role === 'client_user' && <button onClick={() => setEditing(u)} className="text-blue-400"><Edit2 className="w-3.5 h-3.5" /></button>}
+                      {u.id !== currentUser.id && <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteUser(u.id); onRefresh(); } }} className="text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>}
                     </div>
                   </td>
                 </tr>
@@ -1602,14 +1378,7 @@ function TeamView({ users, tenant, currentUser, onRefresh }) {
           </tbody>
         </table>
       </div>
-      {(show || editing) && (
-        <UserModal
-          user={editing}
-          tenant={tenant}
-          onClose={() => { setShow(false); setEditing(null); }}
-          onSuccess={() => { setShow(false); setEditing(null); onRefresh(); }}
-        />
-      )}
+      {(show || editing) && <UserModal user={editing} tenant={tenant} onClose={() => { setShow(false); setEditing(null); }} onSuccess={() => { setShow(false); setEditing(null); onRefresh(); }} />}
     </div>
   );
 }
@@ -1617,10 +1386,7 @@ function TeamView({ users, tenant, currentUser, onRefresh }) {
 function UserModal({ user, tenant, onClose, onSuccess }) {
   const allT = ['kanban', 'chat', 'leads', 'whatsapp', 'analytics', 'knowledge', 'team', 'settings'];
   const [f, setF] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    password: '',
-    role: user?.role || 'client_user',
+    name: user?.name || '', email: user?.email || '', password: '', role: user?.role || 'client_user',
     permissions: (() => { try { return JSON.parse(user?.permissions || '[]'); } catch { return []; } })(),
   });
   const tp = p => setF({ ...f, permissions: f.permissions.includes(p) ? f.permissions.filter(x => x !== p) : [...f.permissions, p] });
@@ -1628,26 +1394,12 @@ function UserModal({ user, tenant, onClose, onSuccess }) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
         <h2 className="font-bold mb-4">{user ? 'Editar' : 'Novo'} Usuario</h2>
-        <form
-          onSubmit={async e => {
-            e.preventDefault();
-            try {
-              if (user) {
-                await api.updateUser(user.id, { name: f.name, email: f.email, role: f.role, permissions: f.permissions, ...(f.password ? { password: f.password } : {}) });
-              } else {
-                await api.createUser({ ...f, tenantId: tenant.id });
-              }
-              onSuccess();
-            } catch (err) { alert('Erro: ' + err.message); }
-          }}
-          className="space-y-3"
-        >
+        <form onSubmit={async e => { e.preventDefault(); try { if (user) { await api.updateUser(user.id, { name: f.name, email: f.email, role: f.role, permissions: f.permissions, ...(f.password ? { password: f.password } : {}) }); } else { await api.createUser({ ...f, tenantId: tenant.id }); } onSuccess(); } catch (err) { alert('Erro: ' + err.message); } }} className="space-y-3">
           <input placeholder="Nome" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
           <input type="email" placeholder="E-mail" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
           <input type="password" placeholder={user ? 'Nova senha (vazio=manter)' : 'Senha'} value={f.password} onChange={e => setF({ ...f, password: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl text-sm p-2.5" required={!user} />
           <select value={f.role} onChange={e => setF({ ...f, role: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
-            <option value="client_user">Usuario</option>
-            <option value="client_admin">Admin</option>
+            <option value="client_user">Usuario</option><option value="client_admin">Admin</option>
           </select>
           {f.role === 'client_user' && (
             <div className="border border-gray-200 rounded-xl p-3">
@@ -1680,14 +1432,7 @@ function SettingsView({ tenant, onRefresh }) {
   const savePrompt = async () => {
     setSaving(true);
     try {
-      await api.updateTenant(tenant.id, {
-        name: tenant.name,
-        plan: tenant.plan,
-        monthlyValue: tenant.monthly_value,
-        aiPrompt: prompt,
-        customFields: JSON.parse(tenant.custom_fields || '[]'),
-        active: tenant.active,
-      });
+      await api.updateTenant(tenant.id, { name: tenant.name, plan: tenant.plan, monthlyValue: tenant.monthly_value, aiPrompt: prompt, customFields: JSON.parse(tenant.custom_fields || '[]'), active: tenant.active });
       alert('Salvo!');
       onRefresh();
     } catch { alert('Erro'); }
@@ -1704,55 +1449,28 @@ function SettingsView({ tenant, onRefresh }) {
   return (
     <div className="max-w-xl space-y-4">
       <h2 className="font-bold text-lg">Configuracoes</h2>
-
       <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <Bot className="w-4 h-4 text-purple-600" />
               <h3 className="font-bold text-sm">Assistente IA</h3>
-              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${aiEnabled ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-400'}`}>
-                {aiEnabled ? 'ATIVO' : 'DESLIGADO'}
-              </span>
+              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${aiEnabled ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-400'}`}>{aiEnabled ? 'ATIVO' : 'DESLIGADO'}</span>
             </div>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              Quando ativo, a IA responde automaticamente mensagens recebidas de leads usando a base de conhecimento e o historico da conversa.
-              Voce pode pausar individualmente por contato na tela de Conversas.
-            </p>
+            <p className="text-xs text-gray-400 leading-relaxed">Quando ativo, a IA responde automaticamente mensagens recebidas de leads usando a base de conhecimento e o historico da conversa. Voce pode pausar individualmente por contato na tela de Conversas.</p>
           </div>
-          <button
-            onClick={toggleAI}
-            disabled={togglingAI}
-            className={`flex-shrink-0 w-12 h-6 rounded-full transition-all relative ${aiEnabled ? 'bg-purple-500' : 'bg-gray-300'} disabled:opacity-50`}
-          >
+          <button onClick={toggleAI} disabled={togglingAI} className={`flex-shrink-0 w-12 h-6 rounded-full transition-all relative ${aiEnabled ? 'bg-purple-500' : 'bg-gray-300'} disabled:opacity-50`}>
             <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${aiEnabled ? 'left-6' : 'left-0.5'}`} />
           </button>
         </div>
-        {aiEnabled && (
-          <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 text-[10px] text-purple-600 bg-purple-50 rounded-lg px-3 py-2">
-            <Bot className="w-3 h-3 flex-shrink-0" />
-            IA ativa — responde com memoria de sessao, resumo do lead e base de conhecimento
-          </div>
-        )}
+        {aiEnabled && <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 text-[10px] text-purple-600 bg-purple-50 rounded-lg px-3 py-2"><Bot className="w-3 h-3 flex-shrink-0" />IA ativa — responde com memoria de sessao, resumo do lead e base de conhecimento</div>}
       </div>
-
       <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-        <h3 className="font-bold text-sm mb-1 flex items-center gap-2">
-          <Brain className="w-4 h-4 text-gray-400" /> Personalidade da IA
-        </h3>
+        <h3 className="font-bold text-sm mb-1 flex items-center gap-2"><Brain className="w-4 h-4 text-gray-400" /> Personalidade da IA</h3>
         <p className="text-[10px] text-gray-400 mb-3">Defina como a IA deve se apresentar. Se vazio, usa atendimento padrao cordial.</p>
-        <textarea
-          value={prompt}
-          onChange={e => setPrompt(e.target.value)}
-          rows={6}
-          placeholder={"Exemplo:\nVoce e a assistente da Clinica Exemplo.\nSe apresente como Ana e seja sempre educada.\nNao marque consultas sem confirmar disponibilidade."}
-          className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm mb-3 font-mono text-xs leading-relaxed"
-        />
-        <button onClick={savePrompt} disabled={saving} className="px-5 py-2 bg-[#25d366] text-white font-bold rounded-xl text-sm disabled:opacity-50">
-          {saving ? 'Salvando...' : 'Salvar prompt'}
-        </button>
+        <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={6} placeholder={"Exemplo:\nVoce e a assistente da Clinica Exemplo.\nSe apresente como Ana e seja sempre educada.\nNao marque consultas sem confirmar disponibilidade."} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm mb-3 font-mono text-xs leading-relaxed" />
+        <button onClick={savePrompt} disabled={saving} className="px-5 py-2 bg-[#25d366] text-white font-bold rounded-xl text-sm disabled:opacity-50">{saving ? 'Salvando...' : 'Salvar prompt'}</button>
       </div>
-
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
         <p className="text-[10px] font-bold text-amber-700 uppercase mb-2 flex items-center gap-1"><Brain className="w-3 h-3" /> Memoria da IA</p>
         <div className="space-y-1 text-[11px] text-amber-800">
@@ -1763,7 +1481,6 @@ function SettingsView({ tenant, onRefresh }) {
           <p className="mt-1 text-amber-600">O resumo aparece no modal do lead e no header do chat. Use o botao de atualizar para gerar um novo resumo manualmente.</p>
         </div>
       </div>
-
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
         <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">Como funciona</p>
         <div className="space-y-1 text-[11px] text-gray-500">
