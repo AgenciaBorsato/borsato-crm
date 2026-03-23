@@ -1,1 +1,1 @@
-{cat_app_jsx}
+PLACEHOLDER_WILL_BE_REPLACED
