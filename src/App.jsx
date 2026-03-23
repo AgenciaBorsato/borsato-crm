@@ -91,8 +91,7 @@ function MediaBubble({ msg, tenantId, cachedSrc }) {
     if (autoTypes.includes(msg.message_type) && msg.media_url && msg.media_url !== 'undefined') {
       loadMedia();
     }
-  }, [msg.id]);
-
+ }, [msg.id, cachedSrc]);
   const toggleAudio = () => {
     if (!audioRef.current) return;
     playing ? audioRef.current.pause() : audioRef.current.play();
