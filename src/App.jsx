@@ -67,7 +67,7 @@ function MediaBubble({ msg, tenantId, cachedSrc }) {
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef(null);
 
- const loadMedia = async () => {
+  const loadMedia = async () => {
     if (loading || media) return;
     if (!msg.media_url || msg.media_url === 'undefined') return;
     try {
@@ -92,7 +92,8 @@ function MediaBubble({ msg, tenantId, cachedSrc }) {
     if (autoTypes.includes(msg.message_type) && msg.media_url && msg.media_url !== 'undefined') {
       loadMedia();
     }
- }, [msg.id, cachedSrc]);
+  }, [msg.id, cachedSrc]);
+
   const toggleAudio = () => {
     if (!audioRef.current) return;
     playing ? audioRef.current.pause() : audioRef.current.play();
@@ -834,7 +835,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
     try {
       await api.sendWhatsAppMessage(ph, msg, tenant.id, cur.id);
       setMsg('');
-      // Reset altura do textarea
       if (inputRef.current) { inputRef.current.style.height = 'auto'; }
       await loadMsgs(cur.id); await load();
     }
@@ -848,11 +848,10 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
       if (e.key === 'Enter') { e.preventDefault(); selectMention(mentionSuggestions[mentionIdx]); return; }
       if (e.key === 'Escape') { setMentionQuery(null); return; }
     }
-    // Enter envia; Shift+Enter quebra linha (comportamento natural do textarea)
     if (e.key === 'Enter' && !e.shiftKey && !sending) { e.preventDefault(); send(); }
   };
 
-  const handleFile = e => { const f = e.target.files[0]; if (!f) return; if (f.size > 2 * 1024 * 1024) { alert('Max 2MB'); return; } setFile(f); };
+  const handleFile = e => { const f = e.target.files[0]; if (!f) return; if (f.size > 10 * 1024 * 1024) { alert('Max 10MB'); return; } setFile(f); };
 
   const sendFile = async () => {
     if (!file || !cur) return;
@@ -861,16 +860,16 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
     try {
       const reader = new FileReader();
       reader.onload = async () => {
-        const base64 = const dataUrl = reader.result;
-const base64 = dataUrl.split(',')[1];
+        const dataUrl = reader.result;
+        const base64 = dataUrl.split(',')[1];
         const mt = file.type.startsWith('image') ? 'image' : file.type.startsWith('video') ? 'video' : 'document';
         await api.sendWhatsAppMedia({ number: ph, base64, fileName: file.name, mediaType: mt, caption: '', tenantId: tenant.id, chatId: cur.id });
         setFile(null); if (fileRef.current) fileRef.current.value = '';
-        await loadMsgs(cur.id); const newMsgs = await api.getChatMessages(cur.id, 100, 0);
-const lastSent = [...newMsgs].reverse().find(m => Number(m.is_from_me) === 1 && ['image','video','document'].includes(m.message_type));
-if (lastSent) localMediaCache.current[lastSent.id] = dataUrl;
-setMsgs(newMsgs);
- await load(); setSending(false);
+        const newMsgs = await api.getChatMessages(cur.id, 100, 0);
+        const lastSent = [...newMsgs].reverse().find(m => Number(m.is_from_me) === 1 && ['image','video','document'].includes(m.message_type));
+        if (lastSent) localMediaCache.current[lastSent.id] = dataUrl;
+        setMsgs(newMsgs);
+        await load(); setSending(false);
       };
       reader.readAsDataURL(file);
     } catch (e) { alert('Erro: ' + e.message); setSending(false); }
@@ -935,7 +934,6 @@ setMsgs(newMsgs);
     );
   };
 
-  // 6 emojis de reaction comuns
   const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
   return (
@@ -1031,14 +1029,12 @@ setMsgs(newMsgs);
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1" style={{ backgroundColor: '#eae6df' }}>
               {msgs.map(m => {
                 const fromMe = Number(m.is_from_me) === 1 || m.is_from_me === true;
-                const hasMedia = m.media_url && m.message_type !== 'text';
-            const cachedSrc = fromMe ? (localMediaCache.current[m.id] || null) : null;
-  const isMedia = ['image','video','document','audio','sticker'].includes(m.message_type);
-  const hasMedia = isMedia && (m.media_url || cachedSrc);
+                const cachedSrc = fromMe ? (localMediaCache.current[m.id] || null) : null;
+                const isMedia = ['image','video','document','audio','sticker'].includes(m.message_type);
+                const hasMedia = isMedia && (m.media_url || cachedSrc);
                 const isPlaceholder = ['[Imagem]','[Audio]','[Video]','[Documento]','[Sticker]','[Localizacao]','[Contato]','[Mensagem]','[Reacao]'].includes(m.content);
                 const isAI = m.sender_name === 'IA';
                 const isMentionedMsg = !fromMe && mentionsMe(m.content);
-                // Reaction real: emoji armazenado (nao placeholder)
                 const isReaction = m.message_type === 'reaction' && m.content && !m.content.startsWith('[');
                 if (isReaction) return (
                   <div key={m.id} className={`flex ${fromMe ? 'justify-end' : 'justify-start'} my-0.5`}>
@@ -1051,7 +1047,6 @@ setMsgs(newMsgs);
                 );
                 return (
                   <div key={m.id} className={`flex ${fromMe ? 'justify-end' : 'justify-start'} group items-end gap-1`}>
-                    {/* Emoji picker no lado oposto da bolha, visivel no hover */}
                     {fromMe && (
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-white border border-gray-200 rounded-full px-1 py-0.5 shadow-sm mb-1 self-end">
                         {REACTION_EMOJIS.map(emoji => (
@@ -1078,7 +1073,6 @@ setMsgs(newMsgs);
                       )}
                       {m.sender_name && <p className={`text-[10px] font-bold mb-0.5 flex items-center gap-1 ${isAI ? 'text-purple-600' : fromMe ? 'text-[#075e54]' : 'text-[#6b7280]'}`}>{isAI && <Bot className="w-2.5 h-2.5" />}{m.sender_name}</p>}
                       {hasMedia && <MediaBubble msg={m} tenantId={tenant.id} cachedSrc={cachedSrc} />}
-                      
                       {m.content && !isPlaceholder && renderText(m.content, myName)}
                       {m.content && isPlaceholder && !hasMedia && <p className="text-[13px] text-gray-500 italic">{m.content}</p>}
                       <div className="flex items-center justify-end gap-0.5 mt-0.5">
@@ -1104,7 +1098,14 @@ setMsgs(newMsgs);
 
             {file && (
               <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-                <div className="flex items-center gap-2"><Paperclip className="w-4 h-4 text-gray-400" /><span className="text-xs text-gray-600 truncate max-w-[200px]">{file.name}</span></div>
+                <div className="flex items-center gap-2">
+                  {file.type.startsWith('image') ? (
+                    <img src={URL.createObjectURL(file)} alt="" className="w-10 h-10 object-cover rounded-lg border border-gray-200" />
+                  ) : (
+                    <Paperclip className="w-4 h-4 text-gray-400" />
+                  )}
+                  <span className="text-xs text-gray-600 truncate max-w-[200px]">{file.name}</span>
+                </div>
                 <div className="flex gap-2">
                   <button onClick={() => { setFile(null); if (fileRef.current) fileRef.current.value = ''; }} className="text-xs text-red-500 font-bold">Cancelar</button>
                   <button onClick={sendFile} disabled={sending} className="px-3 py-1 bg-[#25d366] text-white text-xs font-bold rounded-lg disabled:opacity-50">Enviar</button>
@@ -1112,7 +1113,6 @@ setMsgs(newMsgs);
               </div>
             )}
 
-            {/* Input area — textarea com Shift+Enter + dropdown @ */}
             <div className="bg-[#f0f2f5] px-3 py-2.5 flex items-end gap-2 border-t border-gray-200 relative">
               {mentionSuggestions.length > 0 && (
                 <div className="absolute bottom-full left-3 right-3 mb-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20 max-h-52 overflow-y-auto">
@@ -1138,7 +1138,6 @@ setMsgs(newMsgs);
               )}
               <input type="file" ref={fileRef} onChange={handleFile} className="hidden" accept="image/*,video/*,.pdf,.doc,.docx" />
               <button onClick={() => fileRef.current?.click()} className="p-2 hover:bg-gray-200 rounded-full flex-shrink-0 mb-0.5"><Paperclip className="w-4 h-4 text-gray-500" /></button>
-              {/* TEXTAREA: Enter envia, Shift+Enter quebra linha */}
               <textarea
                 ref={inputRef}
                 value={msg}
@@ -1154,7 +1153,6 @@ setMsgs(newMsgs);
               <button onClick={send} disabled={sending || !msg.trim()} className="p-2 bg-[#25d366] text-white rounded-full disabled:opacity-40 flex-shrink-0 mb-0.5"><Send className="w-4 h-4" /></button>
             </div>
 
-            {/* Drawer de participantes */}
             {showParticipants && isGrp(cur) && (
               <div className="absolute right-0 top-0 bottom-0 w-64 bg-white border-l border-gray-200 z-10 flex flex-col shadow-2xl">
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-[#f0f2f5]">
@@ -1376,7 +1374,7 @@ function LeadCreateModal({ tenant, columns, onClose, onSuccess }) {
           <input placeholder="Nome" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
           <input placeholder="Telefone" value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
           <input type="email" placeholder="E-mail" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" />
-          {columns.length > 0 && <select value={f.stage} onChange={e => setF({ ...f, stage: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">{columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>}
+          {columns.length > 0 && <select value={f.stage} onChange={e => setF({ ...f, stage: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">{columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</hoz>}
           <div className="flex gap-2">
             <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button>
             <button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Criar</button>
