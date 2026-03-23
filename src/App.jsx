@@ -667,6 +667,7 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, 
   const [showTrash, setShowTrash] = useState(false);
   const [deletedChats, setDeletedChats] = useState([]);
   const [loadingTrash, setLoadingTrash] = useState(false);
+  const localMediaCache = useRef({});
 
   const [participants, setParticipants] = useState([]);
   const [loadingPart, setLoadingPart] = useState(false);
