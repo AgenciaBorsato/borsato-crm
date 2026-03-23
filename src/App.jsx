@@ -67,8 +67,9 @@ function MediaBubble({ msg, tenantId, cachedSrc }) {
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef(null);
 
-  const loadMedia = async () => {
-    if (!msg.media_url || msg.media_url === 'undefined' || loading || media) return;
+ const loadMedia = async () => {
+    if (loading || media) return;
+    if (!msg.media_url || msg.media_url === 'undefined') return;
     try {
       let key; try { key = JSON.parse(msg.media_url); } catch (e) { return; }
       setLoading(true);
