@@ -5,7 +5,7 @@ import {
   MessageSquare, LayoutGrid, Users, Settings, Plus, Search, Send, X, Check,
   Trash2, BarChart3, Brain, Edit2, UserPlus, ArrowLeft, Smartphone, Image,
   Mic, FileText, MapPin, CheckCheck, Paperclip, Users2, Download, Play, Pause,
-  MessageCircle, Phone, Clock, Zap, Bot, RotateCcw
+  MessageCircle, Phone, Clock, Zap, Bot, RotateCcw, RefreshCw, ChevronDown, ChevronUp
 } from 'lucide-react';
 
 const POLL_INTERVAL = 4000;
@@ -130,6 +130,125 @@ function ProfilePic({ phone, tenantId, name, size = 'w-9 h-9', textSize = 'text-
   return (
     <div className={`${size} rounded-full flex items-center justify-center bg-[#dfe5e7] flex-shrink-0`}>
       <span className={`${textSize} font-bold text-[#075e54]`}>{(name || phone || '?').substring(0, 2).toUpperCase()}</span>
+    </div>
+  );
+}
+
+// Card de resumo do lead — exibido no header do chat e na aba leads
+function LeadSummaryCard({ lead, onRefresh, compact = false }) {
+  const [expanded, setExpanded] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  if (!lead?.conversation_summary && !lead?.structured_memory) return null;
+
+  let memoryEntries = [];
+  if (lead.structured_memory) {
+    try {
+      const mem = typeof lead.structured_memory === 'string'
+        ? JSON.parse(lead.structured_memory)
+        : lead.structured_memory;
+      memoryEntries = Object.entries(mem).filter(([, v]) =>
+        v && v !== '' && !(Array.isArray(v) && v.length === 0)
+      );
+    } catch {}
+  }
+
+  const handleRefresh = async (e) => {
+    e.stopPropagation();
+    setRefreshing(true);
+    try {
+      await api.refreshLeadContext(lead.id);
+      onRefresh?.();
+    } catch {}
+    finally { setRefreshing(false); }
+  };
+
+  const labelMap = {
+    tipo_contato: 'Tipo', nome: 'Nome', empresa: 'Empresa', nicho: 'Segmento',
+    objetivo_principal: 'Objetivo', dor_principal: 'Dor', interesse_servicos: 'Interesse',
+    estagio_comercial: 'Estagio', interesse_reuniao: 'Reuniao', ultimo_assunto: 'Ultimo assunto'
+  };
+
+  const stageBadge = () => {
+    try {
+      const mem = typeof lead.structured_memory === 'string' ? JSON.parse(lead.structured_memory) : lead.structured_memory;
+      const e = mem?.estagio_comercial;
+      if (!e) return null;
+      const map = { frio: 'bg-blue-50 text-blue-600', morno: 'bg-amber-50 text-amber-700', quente: 'bg-red-50 text-red-600' };
+      return <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${map[e] || 'bg-gray-50 text-gray-500'}`}>{e.toUpperCase()}</span>;
+    } catch { return null; }
+  };
+
+  if (compact) {
+    // Versao compacta para o header do chat
+    return (
+      <div className="px-4 py-1.5 border-b border-amber-100 bg-amber-50/70">
+        <div className="flex items-start gap-2">
+          <Brain className="w-3 h-3 text-amber-500 mt-0.5 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wide">Contexto da conversa</span>
+              {stageBadge()}
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="ml-auto p-0.5 text-amber-400 hover:text-amber-600 disabled:opacity-40"
+                title="Atualizar resumo"
+              >
+                <RefreshCw className={`w-2.5 h-2.5 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
+              <button onClick={() => setExpanded(!expanded)} className="p-0.5 text-amber-400 hover:text-amber-600">
+                {expanded ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+              </button>
+            </div>
+            <p className={`text-[10px] text-amber-800 leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}>
+              {lead.conversation_summary}
+            </p>
+            {expanded && memoryEntries.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {memoryEntries.map(([k, v]) => (
+                  <span key={k} className="text-[9px] bg-white border border-amber-200 text-amber-700 rounded px-1.5 py-0.5">
+                    <span className="font-bold">{labelMap[k] || k}:</span> {Array.isArray(v) ? v.join(', ') : String(v)}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Versao completa para o modal do lead
+  return (
+    <div className="border border-amber-200 bg-amber-50 rounded-xl p-3">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5">
+          <Brain className="w-3.5 h-3.5 text-amber-500" />
+          <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Historico Estrategico</span>
+          {stageBadge()}
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="flex items-center gap-1 text-[9px] text-amber-500 hover:text-amber-700 disabled:opacity-40 font-bold"
+        >
+          <RefreshCw className={`w-2.5 h-2.5 ${refreshing ? 'animate-spin' : ''}`} />
+          Atualizar
+        </button>
+      </div>
+      {lead.conversation_summary && (
+        <p className="text-xs text-amber-900 leading-relaxed mb-2">{lead.conversation_summary}</p>
+      )}
+      {memoryEntries.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {memoryEntries.map(([k, v]) => (
+            <span key={k} className="text-[9px] bg-white border border-amber-200 text-amber-700 rounded px-1.5 py-0.5">
+              <span className="font-bold">{labelMap[k] || k}:</span> {Array.isArray(v) ? v.join(', ') : String(v)}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -515,7 +634,11 @@ function KanbanCard({ lead, col, columns, onDragStart, onDragEnd, onOpenChat, on
             <Phone className="w-2.5 h-2.5" />{lead.phone}
           </p>
         )}
-        {lead.notes && <p className="text-[10px] text-gray-500 line-clamp-1 mb-2 italic">{lead.notes}</p>}
+        {/* Resumo resumido no card */}
+        {lead.conversation_summary && (
+          <p className="text-[9px] text-amber-700 bg-amber-50 rounded px-1.5 py-1 mb-2 line-clamp-1 italic">{lead.conversation_summary}</p>
+        )}
+        {!lead.conversation_summary && lead.notes && <p className="text-[10px] text-gray-500 line-clamp-1 mb-2 italic">{lead.notes}</p>}
         {hover && (
           <div className="flex gap-1 mt-1 pt-2 border-t border-gray-100">
             {lead.phone && (
@@ -566,7 +689,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
   const [showEdit, setShowEdit] = useState(false);
   const [filter, setFilter] = useState('all');
   const [file, setFile] = useState(null);
-  // Lixeira
   const [showTrash, setShowTrash] = useState(false);
   const [deletedChats, setDeletedChats] = useState([]);
   const [loadingTrash, setLoadingTrash] = useState(false);
@@ -631,7 +753,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
 
   const isGrp = c => Number(c.is_group) === 1 || c.is_group === true;
 
-  // Grupos sem nome resolvido (apenas numeros) mostram 'Grupo' em vez do JID numerico
   const chatDisplayName = c => {
     const name = c.contact_name;
     if (name && !/^\d{10,}$/.test(name)) return name;
@@ -716,6 +837,14 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
     const newVal = !leadAIOn;
     try { await api.setLeadAI(lead.id, newVal); setLead({ ...lead, ai_enabled: newVal ? 1 : 0 }); }
     catch { alert('Erro ao alterar IA'); }
+  };
+
+  const handleLeadContextRefresh = async () => {
+    if (!lead) return;
+    try {
+      const result = await api.refreshLeadContext(lead.id);
+      if (result?.lead) setLead(prev => ({ ...prev, ...result.lead }));
+    } catch {}
   };
 
   const renderStageButtons = () => {
@@ -807,7 +936,6 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
             </div>
           ))}
         </div>
-        {/* Botao lixeira */}
         <div className="p-2 border-t border-gray-100">
           <button
             onClick={() => { setShowTrash(true); loadDeletedChats(); }}
@@ -855,6 +983,15 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
                 {renderStageButtons()}
               </div>
             </div>
+
+            {/* Card de contexto do lead — visivel no chat */}
+            {!isGrp(cur) && lead && (
+              <LeadSummaryCard
+                lead={lead}
+                onRefresh={handleLeadContextRefresh}
+                compact={true}
+              />
+            )}
 
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1" style={{ backgroundColor: '#eae6df' }}>
               {msgs.map(m => {
@@ -931,6 +1068,7 @@ function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled }
           columns={columns}
           onClose={() => setShowEdit(false)}
           onSave={async data => { await api.updateLead(lead.id, data); setLead({ ...lead, ...data }); setShowEdit(false); onRefresh(); }}
+          onRefresh={() => loadLead(cur)}
         />
       )}
 
@@ -997,10 +1135,22 @@ function TrashModal({ chats, loading, onClose, onRestore, chatDisplayName, isGrp
   );
 }
 
-function EditLeadModal({ lead, columns, onClose, onSave }) {
+function EditLeadModal({ lead, columns, onClose, onSave, onRefresh }) {
   const [f, setF] = useState({ name: lead.name || '', phone: lead.phone || '', email: lead.email || '', stage: lead.stage || '', notes: lead.notes || '' });
   const [custom, setCustom] = useState(() => { try { return JSON.parse(lead.custom_data || '{}'); } catch { return {}; } });
   const [nf, setNf] = useState('');
+  const [localLead, setLocalLead] = useState(lead);
+
+  const handleRefreshContext = async () => {
+    try {
+      const result = await api.refreshLeadContext(lead.id);
+      if (result?.lead) {
+        setLocalLead(prev => ({ ...prev, ...result.lead }));
+        onRefresh?.();
+      }
+    } catch {}
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -1018,6 +1168,10 @@ function EditLeadModal({ lead, columns, onClose, onSave }) {
             </div>
           )}
           <div><label className="text-[10px] font-bold text-gray-400 uppercase">Observacoes</label><textarea value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} rows={2} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /></div>
+
+          {/* Historico estrategico da conversa */}
+          <LeadSummaryCard lead={localLead} onRefresh={handleRefreshContext} compact={false} />
+
           <div className="border-t border-gray-100 pt-3">
             <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Campos Personalizados</p>
             {Object.entries(custom).map(([k, v]) => (
@@ -1076,6 +1230,7 @@ function LeadsView({ leads, columns, tenant, onRefresh, onOpenChat }) {
             <tr>
               <th className="p-3">Nome</th>
               <th className="p-3">Telefone</th>
+              <th className="p-3">Contexto IA</th>
               <th className="p-3">Etapa</th>
               <th className="p-3">Origem</th>
               <th className="p-3">Tempo</th>
@@ -1091,6 +1246,13 @@ function LeadsView({ leads, columns, tenant, onRefresh, onOpenChat }) {
                 <tr key={l.id} className="hover:bg-gray-50/50">
                   <td className="p-3 font-bold text-xs">{l.name}</td>
                   <td className="p-3 text-xs text-gray-400 font-mono">{l.phone}</td>
+                  <td className="p-3 max-w-[200px]">
+                    {l.conversation_summary ? (
+                      <p className="text-[9px] text-amber-700 bg-amber-50 rounded px-1.5 py-1 line-clamp-2 italic">{l.conversation_summary}</p>
+                    ) : (
+                      <span className="text-[9px] text-gray-300">Sem resumo</span>
+                    )}
+                  </td>
                   <td className="p-3">
                     {colInfo
                       ? <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${c.light} ${c.text}`}>{colInfo.name}</span>
@@ -1123,7 +1285,7 @@ function LeadsView({ leads, columns, tenant, onRefresh, onOpenChat }) {
         {filtered.length === 0 && <div className="text-center py-8 text-gray-400 text-xs">Nenhum lead</div>}
       </div>
       {showCreate && <LeadCreateModal tenant={tenant} columns={columns} onClose={() => setShowCreate(false)} onSuccess={() => { setShowCreate(false); onRefresh(); }} />}
-      {editLead && <EditLeadModal lead={editLead} columns={columns} onClose={() => setEditLead(null)} onSave={async data => { await api.updateLead(editLead.id, data); setEditLead(null); onRefresh(); }} />}
+      {editLead && <EditLeadModal lead={editLead} columns={columns} onClose={() => setEditLead(null)} onSave={async data => { await api.updateLead(editLead.id, data); setEditLead(null); onRefresh(); }} onRefresh={onRefresh} />}
     </div>
   );
 }
@@ -1210,15 +1372,17 @@ function AnalyticsView({ leads, columns }) {
   const byStage = columns.map(col => ({ ...col, count: leads.filter(l => l.stage === col.id).length }));
   const lostCount = leads.filter(l => { const col = columns.find(c => c.id === l.stage); return col?.color === 'red'; }).length;
   const wonCount = leads.filter(l => { const col = columns.find(c => c.id === l.stage); return col?.color === 'green'; }).length;
+  const withSummary = leads.filter(l => l.conversation_summary).length;
   return (
     <div>
       <h2 className="font-bold text-lg mb-4">Analytics</h2>
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-5 gap-4 mb-6">
         {[
           { l: 'Total', v: t, color: 'text-blue-600', bg: 'bg-blue-50' },
           { l: 'WhatsApp', v: bySource.w, color: 'text-green-600', bg: 'bg-green-50' },
           { l: 'Clientes', v: wonCount, color: 'text-emerald-700', bg: 'bg-emerald-50' },
           { l: 'Perdidos', v: lostCount, color: 'text-red-600', bg: 'bg-red-50' },
+          { l: 'Com Contexto', v: withSummary, color: 'text-amber-700', bg: 'bg-amber-50' },
         ].map((m, i) => (
           <div key={i} className={`${m.bg} border border-gray-100 rounded-xl p-4 shadow-sm`}>
             <p className={`text-[10px] font-bold uppercase mb-1 ${m.color}`}>{m.l}</p>
@@ -1507,7 +1671,7 @@ function SettingsView({ tenant, onRefresh }) {
               </span>
             </div>
             <p className="text-xs text-gray-400 leading-relaxed">
-              Quando ativo, a IA responde automaticamente mensagens recebidas de leads usando a base de conhecimento.
+              Quando ativo, a IA responde automaticamente mensagens recebidas de leads usando a base de conhecimento e o historico da conversa.
               Voce pode pausar individualmente por contato na tela de Conversas.
             </p>
           </div>
@@ -1522,7 +1686,7 @@ function SettingsView({ tenant, onRefresh }) {
         {aiEnabled && (
           <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 text-[10px] text-purple-600 bg-purple-50 rounded-lg px-3 py-2">
             <Bot className="w-3 h-3 flex-shrink-0" />
-            IA ativa - respondendo automaticamente a novos leads via WhatsApp
+            IA ativa — responde com memoria de sessao, resumo do lead e base de conhecimento
           </div>
         )}
       </div>
@@ -1544,6 +1708,17 @@ function SettingsView({ tenant, onRefresh }) {
         </button>
       </div>
 
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <p className="text-[10px] font-bold text-amber-700 uppercase mb-2 flex items-center gap-1"><Brain className="w-3 h-3" /> Memoria da IA</p>
+        <div className="space-y-1 text-[11px] text-amber-800">
+          <p>A IA mantem 3 camadas de contexto por lead:</p>
+          <p>1. <b>Sessao ativa</b> — historico das ultimas mensagens (24h)</p>
+          <p>2. <b>Resumo persistente</b> — contexto estrategico salvo no lead</p>
+          <p>3. <b>Perfil estruturado</b> — objetivo, dor, estagio e interesse detectados automaticamente</p>
+          <p className="mt-1 text-amber-600">O resumo aparece no modal do lead e no header do chat. Use o botao de atualizar para gerar um novo resumo manualmente.</p>
+        </div>
+      </div>
+
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
         <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">Como funciona</p>
         <div className="space-y-1 text-[11px] text-gray-500">
@@ -1551,6 +1726,7 @@ function SettingsView({ tenant, onRefresh }) {
           <p>2. Base de Conhecimento e a fonte das respostas</p>
           <p>3. Em Conversas: botao IA ativa/pausada por contato individual</p>
           <p>4. Mensagens da IA aparecem com badge roxo na conversa</p>
+          <p>5. Resumo atualizado automaticamente na 3a, 7a e 15a mensagem do lead</p>
         </div>
       </div>
     </div>
