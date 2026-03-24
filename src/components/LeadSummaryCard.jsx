@@ -2,6 +2,30 @@ import React, { useState } from 'react';
 import { Brain, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '../api';
 
+// Badge semaforo frio/morno/quente
+export function StageBadge({ structured_memory, className = '' }) {
+  try {
+    const mem = typeof structured_memory === 'string' ? JSON.parse(structured_memory) : structured_memory;
+    const e = mem?.estagio_comercial?.toLowerCase();
+    if (!e) return null;
+    const map = {
+      frio:   { color: '#16a34a', label: 'FRIO' },
+      morno:  { color: '#d97706', label: 'MORNO' },
+      quente: { color: '#dc2626', label: 'QUENTE' },
+    };
+    const s = map[e];
+    if (!s) return null;
+    return (
+      <span
+        className={`text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded ${className}`}
+        style={{ color: s.color, border: `1px solid ${s.color}22`, background: `${s.color}11` }}
+      >
+        {s.label}
+      </span>
+    );
+  } catch { return null; }
+}
+
 export default function LeadSummaryCard({ lead, onRefresh, compact = false }) {
   const [expanded, setExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -12,7 +36,7 @@ export default function LeadSummaryCard({ lead, onRefresh, compact = false }) {
   if (lead.structured_memory) {
     try {
       const mem = typeof lead.structured_memory === 'string' ? JSON.parse(lead.structured_memory) : lead.structured_memory;
-      memoryEntries = Object.entries(mem).filter(([, v]) => v && v !== '' && !(Array.isArray(v) && v.length === 0));
+      memoryEntries = Object.entries(mem).filter(([k, v]) => k !== 'estagio_comercial' && v && v !== '' && !(Array.isArray(v) && v.length === 0));
     } catch {}
   }
 
@@ -26,17 +50,7 @@ export default function LeadSummaryCard({ lead, onRefresh, compact = false }) {
   const labelMap = {
     tipo_contato: 'Tipo', nome: 'Nome', empresa: 'Empresa', nicho: 'Segmento',
     objetivo_principal: 'Objetivo', dor_principal: 'Dor', interesse_servicos: 'Interesse',
-    estagio_comercial: 'Estagio', interesse_reuniao: 'Reuniao', ultimo_assunto: 'Ultimo assunto'
-  };
-
-  const stageBadge = () => {
-    try {
-      const mem = typeof lead.structured_memory === 'string' ? JSON.parse(lead.structured_memory) : lead.structured_memory;
-      const e = mem?.estagio_comercial;
-      if (!e) return null;
-      const map = { frio: 'bg-blue-50 text-blue-600', morno: 'bg-amber-50 text-amber-700', quente: 'bg-red-50 text-red-600' };
-      return <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${map[e] || 'bg-gray-50 text-gray-500'}`}>{e.toUpperCase()}</span>;
-    } catch { return null; }
+    interesse_reuniao: 'Reuniao', ultimo_assunto: 'Ultimo assunto'
   };
 
   if (compact) {
@@ -46,8 +60,8 @@ export default function LeadSummaryCard({ lead, onRefresh, compact = false }) {
           <Brain className="w-3 h-3 text-amber-500 mt-0.5 flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wide">Contexto da conversa</span>
-              {stageBadge()}
+              <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wide">Contexto IA</span>
+              <StageBadge structured_memory={lead.structured_memory} />
               <button onClick={handleRefresh} disabled={refreshing} className="ml-auto p-0.5 text-amber-400 hover:text-amber-600 disabled:opacity-40" title="Atualizar resumo">
                 <RefreshCw className={`w-2.5 h-2.5 ${refreshing ? 'animate-spin' : ''}`} />
               </button>
@@ -77,7 +91,7 @@ export default function LeadSummaryCard({ lead, onRefresh, compact = false }) {
         <div className="flex items-center gap-1.5">
           <Brain className="w-3.5 h-3.5 text-amber-500" />
           <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Historico Estrategico</span>
-          {stageBadge()}
+          <StageBadge structured_memory={lead.structured_memory} />
         </div>
         <button onClick={handleRefresh} disabled={refreshing} className="flex items-center gap-1 text-[9px] text-amber-500 hover:text-amber-700 disabled:opacity-40 font-bold">
           <RefreshCw className={`w-2.5 h-2.5 ${refreshing ? 'animate-spin' : ''}`} /> Atualizar
