@@ -3,7 +3,8 @@ import {
   MessageSquare, Search, Send, X, Check, Trash2, Edit2, Paperclip,
   Users2, CheckCheck, RotateCcw, RefreshCw, AtSign, Crown, Shield, Bot
 } from 'lucide-react';
-import { POLL_INTERVAL, CM, renderText } from '../constants';
+import { POLL_INTERVAL, CM } from '../constants';
+import { renderText } from '../utils/renderText';
 import api from '../api';
 import ProfilePic, { ParticipantAvatar } from './ProfilePic';
 import MediaBubble from './MediaBubble';
@@ -283,7 +284,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
     );
   };
 
-  const REACTION_EMOJIS = ['\uD83D\uDC4D', '\u2764\uFE0F', '\uD83D\uDE02', '\uD83D\uDE2E', '\uD83D\uDE22', '\uD83D\uDE4F'];
+  const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
   return (
     <div className="flex h-[calc(100vh-120px)] bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
