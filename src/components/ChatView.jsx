@@ -310,7 +310,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
             const isMentionedInLast = isGrp(c) && myName && (c.last_message || '').toLowerCase().includes(`@${myName.toLowerCase()}`);
             return (
               <div key={c.id} onClick={() => selectChat(c)} className={`group flex items-center gap-3 px-3 py-3.5 cursor-pointer transition-colors border-b border-gray-50 ${cur?.id === c.id ? 'bg-blue-50/60' : 'hover:bg-gray-50/80'}`}>
-                <ProfilePic phone={c.contact_phone || c.remote_jid} tenantId={tenant.id} name={chatDisplayName(c)} isGroup={isGrp(c)} size="w-10 h-10" />
+                <ProfilePic phone={c.contact_phone || c.remote_jid} tenantId={tenant.id} name={chatDisplayName(c)} isGroup={isGrp(c)} size="w-10 h-10" cachedUrl={c.profile_pic_url} />
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center">
                     <p className="font-semibold text-sm text-gray-900 truncate">{chatDisplayName(c)}{isGrp(c) && <span className="ml-1.5 text-[8px] bg-gray-100 text-gray-400 px-1 py-0.5 rounded font-medium">GRUPO</span>}</p>
@@ -340,7 +340,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
             <div className="bg-white px-4 py-3 border-b border-gray-100">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                  <ProfilePic phone={cur.contact_phone || cur.remote_jid} tenantId={tenant.id} name={chatDisplayName(cur)} size="w-9 h-9" isGroup={isGrp(cur)} />
+                  <ProfilePic phone={cur.contact_phone || cur.remote_jid} tenantId={tenant.id} name={chatDisplayName(cur)} size="w-9 h-9" isGroup={isGrp(cur)} cachedUrl={cur.profile_pic_url} />
                   <div>
                     <p className="font-semibold text-sm text-gray-900">{chatDisplayName(cur)}</p>
                     {isGrp(cur) ? (
