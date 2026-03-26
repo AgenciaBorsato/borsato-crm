@@ -299,7 +299,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-gray-50 rounded-lg overflow-hidden">
+    <div className="flex h-[calc(100vh-80px)] bg-gray-50 overflow-hidden">
       <div className="w-72 border-r border-gray-200 flex flex-col bg-white">
         <div className="p-3 space-y-2">
           <div className="relative"><Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar conversa..." className="w-full bg-gray-100 rounded-xl pl-9 pr-3 py-2 text-xs outline-none focus:bg-white focus:ring-1 focus:ring-blue-200 transition-all" /></div>

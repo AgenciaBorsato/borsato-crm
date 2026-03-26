@@ -198,7 +198,7 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
         ))}
       </div>
 
-      <div className="max-w-[1800px] mx-auto px-4 py-4">
+      <div className={activeTab === 'chat' ? '' : 'max-w-[1800px] mx-auto px-4 py-4'}>
         {activeTab === 'kanban'    && <KanbanView leads={tenant.leads || []} columns={columns} tenant={tenant} onRefresh={refreshAll} onOpenChat={openChatByPhone} />}
         {activeTab === 'chat'      && <ChatView tenant={tenant} columns={columns} onRefresh={refreshAll} requestedPhone={requestedPhone} onPhoneHandled={() => setRequestedPhone(null)} currentUser={user} />}
         {activeTab === 'leads'     && <LeadsView leads={tenant.leads || []} columns={columns} tenant={tenant} onRefresh={refreshAll} onOpenChat={openChatByPhone} />}
