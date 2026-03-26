@@ -55,26 +55,26 @@ export default function LeadSummaryCard({ lead, onRefresh, compact = false }) {
 
   if (compact) {
     return (
-      <div className="px-4 py-1.5 border-b border-gray-100 bg-gray-50/80">
+      <div className="mx-4 mt-2 mb-1 px-3 py-2 rounded-lg bg-violet-50 border border-violet-100">
         <div className="flex items-start gap-2">
-          <Brain className="w-3 h-3 text-gray-400 mt-0.5 flex-shrink-0" />
+          <Brain className="w-3.5 h-3.5 text-violet-500 mt-0.5 flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-[9px] font-semibold text-gray-500 uppercase tracking-wide">Contexto IA</span>
+              <span className="text-[9px] font-bold text-violet-600 uppercase tracking-wide">Contexto IA</span>
               <StageBadge structured_memory={lead.structured_memory} />
-              <button onClick={handleRefresh} disabled={refreshing} className="ml-auto p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-40 transition-colors" title="Atualizar resumo">
+              <button onClick={handleRefresh} disabled={refreshing} className="ml-auto p-0.5 text-violet-400 hover:text-violet-600 disabled:opacity-40 transition-colors" title="Atualizar resumo">
                 <RefreshCw className={`w-2.5 h-2.5 ${refreshing ? 'animate-spin' : ''}`} />
               </button>
-              <button onClick={() => setExpanded(!expanded)} className="p-0.5 text-gray-400 hover:text-gray-600 transition-colors">
+              <button onClick={() => setExpanded(!expanded)} className="p-0.5 text-violet-400 hover:text-violet-600 transition-colors">
                 {expanded ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
               </button>
             </div>
-            <p className={`text-[10px] text-gray-600 leading-relaxed ${expanded ? '' : 'line-clamp-1'}`}>{lead.conversation_summary}</p>
+            <p className={`text-[11px] text-violet-900 leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}>{lead.conversation_summary}</p>
             {expanded && memoryEntries.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {memoryEntries.map(([k, v]) => (
-                  <span key={k} className="text-[9px] bg-white border border-gray-200 text-gray-600 rounded px-1.5 py-0.5">
-                    <span className="font-semibold">{labelMap[k] || k}:</span> {Array.isArray(v) ? v.join(', ') : String(v)}
+                  <span key={k} className="text-[9px] bg-white/80 border border-violet-200 text-violet-700 rounded px-1.5 py-0.5">
+                    <span className="font-bold">{labelMap[k] || k}:</span> {Array.isArray(v) ? v.join(', ') : String(v)}
                   </span>
                 ))}
               </div>

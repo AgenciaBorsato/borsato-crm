@@ -350,19 +350,23 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                     ) : <p className="text-[11px] text-gray-400">{cur.contact_phone}</p>}
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
                   {lead && (() => {
                     const activeCol = columns.find(col => col.id === lead.stage);
                     if (!activeCol) return null;
                     const cc = CM[activeCol.color] || CM.zinc;
-                    return <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${cc.light} ${cc.text}`}>{activeCol.name}</span>;
+                    return <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${cc.light} ${cc.text}`}>{activeCol.name}</span>;
                   })()}
                   {!isGrp(cur) && lead && tenantAIOn && (
-                    <button onClick={toggleLeadAI} title={leadAIOn ? 'IA ativa' : 'IA pausada'} className={`p-1.5 rounded-lg transition-colors ${leadAIOn ? 'text-purple-600 hover:bg-purple-50' : 'text-gray-300 hover:bg-gray-100'}`}>
-                      <Bot className="w-4 h-4" />
+                    <button onClick={toggleLeadAI} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${leadAIOn ? 'bg-purple-50 text-purple-700 hover:bg-purple-100' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>
+                      <Bot className="w-4 h-4" /> {leadAIOn ? 'IA ativa' : 'IA pausada'}
                     </button>
                   )}
-                  {lead && <button onClick={() => setShowEdit(true)} title="Editar lead" className="p-1.5 text-gray-400 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>}
+                  {lead && (
+                    <button onClick={() => setShowEdit(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-semibold transition-colors">
+                      <Edit2 className="w-3.5 h-3.5" /> Editar lead
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
