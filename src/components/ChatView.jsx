@@ -89,6 +89,8 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   const inputRef = useRef(null);
   const curRef = useRef(cur);
   const endRef = useRef(null);
+  const scrollContainerRef = useRef(null);
+  const userScrolledUpRef = useRef(false);
   const fileRef = useRef(null);
   const prevUnreadRef = useRef(0);
   const initialLoadRef = useRef(true);
@@ -124,7 +126,17 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
     const match = chats.find(c => (c.contact_phone || '').replace(/\D/g, '') === clean || (c.remote_jid || '').replace(/[^0-9]/g, '').includes(clean));
     if (match) { selectChat(match); onPhoneHandled?.(); }
   }, [requestedPhone, chats]);
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs]);
+  // Scroll inteligente: so rola para o final se usuario nao estiver lendo mensagens antigas
+  useEffect(() => {
+    if (!userScrolledUpRef.current) {
+      endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [msgs]);
+  // Resetar scroll ao trocar de conversa
+  useEffect(() => {
+    userScrolledUpRef.current = false;
+    endRef.current?.scrollIntoView({ behavior: 'auto' });
+  }, [cur?.id]);
   useEffect(() => {
     const handleVisibility = () => { if (!document.hidden) { const total = chats.reduce((sum, c) => sum + (Number(c.unread_count) || 0), 0); document.title = total > 0 ? `(${total}) Borsato CRM` : 'Borsato CRM'; } };
     document.addEventListener('visibilitychange', handleVisibility);
@@ -353,7 +365,12 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
 
             {!isGrp(cur) && lead && <LeadSummaryCard lead={lead} onRefresh={handleLeadContextRefresh} compact={true} />}
 
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1" style={{ backgroundColor: '#eae6df' }}>
+            <div ref={scrollContainerRef} onScroll={() => {
+              const el = scrollContainerRef.current;
+              if (!el) return;
+              // Se usuario esta a menos de 150px do fundo, considerar "no fundo"
+              userScrolledUpRef.current = el.scrollHeight - el.scrollTop - el.clientHeight > 150;
+            }} className="flex-1 overflow-y-auto px-4 py-3 space-y-1" style={{ backgroundColor: '#eae6df' }}>
               {msgs.map(m => {
                 const fromMe = Number(m.is_from_me) === 1 || m.is_from_me === true;
                 const cachedSrc = fromMe ? (localMediaCache.current[m.id] || null) : null;
