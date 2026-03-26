@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Brain, Bot, Plus, Trash2 } from 'lucide-react';
+import { Brain, Bot, Plus, Trash2, Users2 } from 'lucide-react';
 import { CM } from '../constants';
 import api from '../api';
 
@@ -170,6 +170,15 @@ export function SettingsView({ tenant, onRefresh }) {
   const [aiEnabled, setAiEnabled] = useState(Number(tenant.ai_enabled) === 1 || tenant.ai_enabled === true);
   const [saving, setSaving] = useState(false);
   const [togglingAI, setTogglingAI] = useState(false);
+  const [syncingPics, setSyncingPics] = useState(false);
+  const [syncResult, setSyncResult] = useState(null);
+
+  const syncProfilePics = async () => {
+    setSyncingPics(true); setSyncResult(null);
+    try { const r = await api.syncProfilePics(tenant.id); setSyncResult(r); }
+    catch { alert('Erro ao sincronizar fotos'); }
+    finally { setSyncingPics(false); }
+  };
 
   const savePrompt = async () => {
     setSaving(true);
@@ -211,6 +220,12 @@ export function SettingsView({ tenant, onRefresh }) {
           <p>3. <b>Perfil estruturado</b> — objetivo, dor, estagio e interesse detectados automaticamente</p>
           <p className="mt-1 text-amber-600">O resumo aparece no modal do lead e no header do chat. Use o botao de atualizar para gerar um novo resumo manualmente.</p>
         </div>
+      </div>
+      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <h3 className="font-bold text-sm mb-1 flex items-center gap-2"><Users2 className="w-4 h-4 text-gray-400" /> Fotos de Perfil</h3>
+        <p className="text-[10px] text-gray-400 mb-3">Busca fotos de perfil do WhatsApp para todos os contatos e grupos. Pode levar alguns minutos.</p>
+        <button onClick={syncProfilePics} disabled={syncingPics} className="px-4 py-2 bg-blue-700 text-white font-semibold rounded-xl text-sm disabled:opacity-50 hover:bg-blue-800 transition-colors">{syncingPics ? 'Sincronizando...' : 'Sincronizar fotos'}</button>
+        {syncResult && <p className="text-[10px] text-gray-500 mt-2">{syncResult.updated} fotos atualizadas de {syncResult.total} contatos ({syncResult.failed} sem foto disponivel)</p>}
       </div>
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
         <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">Como funciona</p>
