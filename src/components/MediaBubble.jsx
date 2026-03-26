@@ -45,7 +45,7 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
     <div className="mb-1">
       {loading && !media && (
         <div className="w-[200px] h-[140px] bg-gray-100 rounded-xl flex items-center justify-center">
-          <div className="w-5 h-5 border-2 border-[#25d366] border-t-transparent rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-blue-700 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
       {media ? (
@@ -54,7 +54,7 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
           onError={(e) => { e.currentTarget.style.display='none'; }} />
       ) : (!loading && (
         <button onClick={loadMedia} className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-200">
-          <Image className="w-5 h-5 text-[#25d366]" />
+          <Image className="w-5 h-5 text-blue-700" />
           <span className="text-xs text-gray-600">Ver imagem</span>
         </button>
       ))}
@@ -64,7 +64,7 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
     <div className="mb-1">
       {media ? (
         <div className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-2 min-w-[180px]">
-          <button onClick={toggleAudio} className="w-8 h-8 bg-[#25d366] rounded-full flex items-center justify-center flex-shrink-0">
+          <button onClick={toggleAudio} className="w-8 h-8 bg-blue-700 rounded-full flex items-center justify-center flex-shrink-0">
             {playing ? <Pause className="w-4 h-4 text-white" /> : <Play className="w-4 h-4 text-white ml-0.5" />}
           </button>
           <div className="flex-1 h-1 bg-gray-300 rounded-full" />
@@ -72,7 +72,7 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
         </div>
       ) : (
         <button onClick={loadMedia} disabled={loading} className="bg-gray-100 rounded-full px-3 py-2 flex items-center gap-2 hover:bg-gray-200">
-          <Mic className="w-4 h-4 text-[#25d366]" />
+          <Mic className="w-4 h-4 text-blue-700" />
           <span className="text-xs text-gray-600">{loading ? 'Carregando...' : 'Ouvir audio'}</span>
         </button>
       )}
@@ -81,12 +81,12 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
   if (msg.message_type === 'video') return (
     <div className="mb-1">
       {media ? <video src={media} controls className="max-w-[250px] rounded-lg" />
-        : <button onClick={loadMedia} disabled={loading} className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-200"><Play className="w-5 h-5 text-[#25d366]" /><span className="text-xs">{loading ? 'Carregando...' : 'Ver video'}</span></button>}
+        : <button onClick={loadMedia} disabled={loading} className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-200"><Play className="w-5 h-5 text-blue-700" /><span className="text-xs">{loading ? 'Carregando...' : 'Ver video'}</span></button>}
     </div>
   );
   if (msg.message_type === 'document') return (
     <div className="mb-1">
-      {media ? <a href={media} download={msg.content || 'doc'} className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-200"><Download className="w-5 h-5 text-[#25d366]" /><span className="text-xs">Baixar</span></a>
+      {media ? <a href={media} download={msg.content || 'doc'} className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-200"><Download className="w-5 h-5 text-blue-700" /><span className="text-xs">Baixar</span></a>
         : <button onClick={loadMedia} disabled={loading} className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-200"><FileText className="w-5 h-5 text-gray-400" /><span className="text-xs">{loading ? 'Carregando...' : 'Baixar'}</span></button>}
     </div>
   );
@@ -96,7 +96,7 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
         <img src={media} alt="sticker" className="w-[140px] h-[140px] object-contain" />
       ) : loading ? (
         <div className="w-[80px] h-[80px] bg-gray-50 rounded-lg flex items-center justify-center">
-          <div className="w-4 h-4 border-2 border-[#25d366] border-t-transparent rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-blue-700 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
         <div className="text-2xl">{String.fromCodePoint(0x1F3A8)}</div>

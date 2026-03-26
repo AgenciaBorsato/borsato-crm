@@ -28,7 +28,7 @@ function ParticipantRow({ p, onMention }) {
       </div>
       {hover && (
         <button onClick={onMention} title="Mencionar no chat"
-          className="p-1 text-[#25d366] hover:bg-[#25d366]/10 rounded transition-all flex-shrink-0">
+          className="p-1 text-blue-700 hover:bg-blue-50 rounded transition-all flex-shrink-0">
           <AtSign className="w-3.5 h-3.5" />
         </button>
       )}
@@ -55,7 +55,7 @@ function TrashModal({ chats, loading, onClose, onRestore, chatDisplayName, isGrp
                 <p className="text-[10px] text-gray-400 truncate">{c.last_message}</p>
                 <p className="text-[9px] text-gray-300 mt-0.5">Excluido em {fmt(c.deleted_at)}</p>
               </div>
-              <button onClick={() => onRestore(c.id)} className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-[#25d366]/10 text-[#075e54] rounded-lg text-[10px] font-bold hover:bg-[#25d366]/20 transition-all"><RotateCcw className="w-3 h-3" /> Restaurar</button>
+              <button onClick={() => onRestore(c.id)} className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-[10px] font-semibold hover:bg-blue-100 transition-all"><RotateCcw className="w-3 h-3" /> Restaurar</button>
             </div>
           ))}
         </div>
@@ -299,67 +299,71 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
   return (
-    <div className="flex h-[calc(100vh-120px)] bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-      <div className="w-80 border-r border-gray-200 flex flex-col bg-white">
-        <div className="p-3 border-b border-gray-100 space-y-2">
-          <div className="relative"><Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-xs" /></div>
-          <div className="flex gap-1">{[{ id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }].map(f => (<button key={f.id} onClick={() => setFilter(f.id)} className={`flex-1 py-1 text-[9px] font-bold rounded ${filter === f.id ? 'bg-[#25d366] text-white' : 'bg-gray-100 text-gray-500'}`}>{f.l}</button>))}</div>
+    <div className="flex h-[calc(100vh-64px)] bg-gray-50 rounded-lg overflow-hidden">
+      <div className="w-72 border-r border-gray-200 flex flex-col bg-white">
+        <div className="p-3 space-y-2">
+          <div className="relative"><Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar conversa..." className="w-full bg-gray-100 rounded-xl pl-9 pr-3 py-2 text-xs outline-none focus:bg-white focus:ring-1 focus:ring-blue-200 transition-all" /></div>
+          <div className="flex gap-1">{[{ id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }].map(f => (<button key={f.id} onClick={() => setFilter(f.id)} className={`flex-1 py-1.5 text-[10px] font-semibold rounded-lg transition-colors ${filter === f.id ? 'bg-blue-700 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{f.l}</button>))}</div>
         </div>
         <div className="flex-1 overflow-y-auto">
           {filtered.map(c => {
             const isMentionedInLast = isGrp(c) && myName && (c.last_message || '').toLowerCase().includes(`@${myName.toLowerCase()}`);
             return (
-              <div key={c.id} className={`flex items-center gap-2.5 px-3 py-3 cursor-pointer hover:bg-gray-50 border-b border-gray-50 ${cur?.id === c.id ? 'bg-[#f0f2f5]' : ''}`}>
-                <div onClick={() => selectChat(c)} className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <ProfilePic phone={c.contact_phone || c.remote_jid} tenantId={tenant.id} name={chatDisplayName(c)} isGroup={isGrp(c)} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center">
-                      <p className="font-bold text-xs truncate">{chatDisplayName(c)}{isGrp(c) && <span className="ml-1 text-[8px] bg-gray-100 text-gray-400 px-1 rounded">GRUPO</span>}</p>
-                      <span className="text-[9px] text-gray-400 flex-shrink-0 ml-1">{fmt(c.last_message_time)}</span>
-                    </div>
-                    <div className="flex justify-between mt-0.5 items-center">
-                      <p className="text-[10px] text-gray-400 truncate">{c.last_message}</p>
-                      <div className="flex items-center gap-1 flex-shrink-0 ml-1">
-                        {isMentionedInLast && <span className="bg-teal-500 text-white text-[8px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5"><AtSign className="w-2 h-2" /></span>}
-                        {Number(c.unread_count) > 0 && <span className="bg-[#25d366] text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{Number(c.unread_count) > 9 ? '9+' : c.unread_count}</span>}
-                      </div>
+              <div key={c.id} onClick={() => selectChat(c)} className={`group flex items-center gap-3 px-3 py-3.5 cursor-pointer transition-colors border-b border-gray-50 ${cur?.id === c.id ? 'bg-blue-50/60' : 'hover:bg-gray-50/80'}`}>
+                <ProfilePic phone={c.contact_phone || c.remote_jid} tenantId={tenant.id} name={chatDisplayName(c)} isGroup={isGrp(c)} size="w-10 h-10" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center">
+                    <p className="font-semibold text-sm text-gray-900 truncate">{chatDisplayName(c)}{isGrp(c) && <span className="ml-1.5 text-[8px] bg-gray-100 text-gray-400 px-1 py-0.5 rounded font-medium">GRUPO</span>}</p>
+                    <span className="text-[10px] text-gray-400 flex-shrink-0 ml-2">{fmt(c.last_message_time)}</span>
+                  </div>
+                  <div className="flex justify-between mt-1 items-center">
+                    <p className="text-xs text-gray-500 truncate">{c.last_message}</p>
+                    <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                      {isMentionedInLast && <span className="bg-blue-700 text-white text-[7px] font-bold w-4 h-4 rounded-full flex items-center justify-center"><AtSign className="w-2.5 h-2.5" /></span>}
+                      {Number(c.unread_count) > 0 && <span className="bg-blue-700 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{Number(c.unread_count) > 9 ? '9+' : c.unread_count}</span>}
                     </div>
                   </div>
                 </div>
-                <button onClick={e => { e.stopPropagation(); deleteChat(c.id); }} className="p-1 text-gray-300 hover:text-red-400 flex-shrink-0"><Trash2 className="w-3 h-3" /></button>
+                <button onClick={e => { e.stopPropagation(); deleteChat(c.id); }} className="p-1 text-gray-300 hover:text-red-400 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-3 h-3" /></button>
               </div>
             );
           })}
         </div>
         <div className="p-2 border-t border-gray-100">
-          <button onClick={() => { setShowTrash(true); loadDeletedChats(); }} className="w-full flex items-center gap-2 px-3 py-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg text-xs font-bold transition-all"><RotateCcw className="w-3.5 h-3.5" /> Lixeira</button>
+          <button onClick={() => { setShowTrash(true); loadDeletedChats(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg text-[11px] font-medium transition-all"><RotateCcw className="w-3 h-3" /> Lixeira</button>
         </div>
       </div>
 
       <div className="flex-1 flex flex-col relative overflow-hidden">
         {cur ? (
           <>
-            <div className="bg-[#f0f2f5] px-4 py-2.5 border-b border-gray-200">
+            <div className="bg-white px-4 py-3 border-b border-gray-100">
               <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2.5">
-                  <ProfilePic phone={cur.contact_phone || cur.remote_jid} tenantId={tenant.id} name={chatDisplayName(cur)} size="w-8 h-8" isGroup={isGrp(cur)} />
+                <div className="flex items-center gap-3">
+                  <ProfilePic phone={cur.contact_phone || cur.remote_jid} tenantId={tenant.id} name={chatDisplayName(cur)} size="w-9 h-9" isGroup={isGrp(cur)} />
                   <div>
-                    <p className="font-bold text-sm">{chatDisplayName(cur)}</p>
+                    <p className="font-semibold text-sm text-gray-900">{chatDisplayName(cur)}</p>
                     {isGrp(cur) ? (
-                      <button onClick={() => setShowParticipants(v => !v)} className="text-[9px] text-[#25d366] font-bold hover:underline flex items-center gap-0.5">
+                      <button onClick={() => setShowParticipants(v => !v)} className="text-[10px] text-blue-700 font-medium hover:underline flex items-center gap-0.5">
                         <Users2 className="w-2.5 h-2.5" />{loadingPart ? 'Carregando...' : participants.length > 0 ? `${participants.length} participantes` : 'Ver participantes'}
                       </button>
-                    ) : <p className="text-[10px] text-gray-400 font-mono">{cur.contact_phone}</p>}
+                    ) : <p className="text-[11px] text-gray-400">{cur.contact_phone}</p>}
                   </div>
-                  {lead && <button onClick={() => setShowEdit(true)} className="ml-2 p-1 bg-blue-50 text-blue-500 rounded hover:bg-blue-100"><Edit2 className="w-3 h-3" /></button>}
+                </div>
+                <div className="flex items-center gap-1">
+                  {lead && (() => {
+                    const activeCol = columns.find(col => col.id === lead.stage);
+                    if (!activeCol) return null;
+                    const cc = CM[activeCol.color] || CM.zinc;
+                    return <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${cc.light} ${cc.text}`}>{activeCol.name}</span>;
+                  })()}
                   {!isGrp(cur) && lead && tenantAIOn && (
-                    <button onClick={toggleLeadAI} className={`ml-1 flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold transition-all ${leadAIOn ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>
-                      <Bot className={`w-3 h-3 ${leadAIOn ? '' : 'opacity-40'}`} /> {leadAIOn ? 'IA ativa' : 'IA pausada'}
+                    <button onClick={toggleLeadAI} title={leadAIOn ? 'IA ativa' : 'IA pausada'} className={`p-1.5 rounded-lg transition-colors ${leadAIOn ? 'text-purple-600 hover:bg-purple-50' : 'text-gray-300 hover:bg-gray-100'}`}>
+                      <Bot className="w-4 h-4" />
                     </button>
                   )}
-                  {!isGrp(cur) && lead && !tenantAIOn && <span className="ml-1 flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-400 rounded-lg text-[9px] font-bold"><Bot className="w-3 h-3 opacity-40" /> IA desligada</span>}
+                  {lead && <button onClick={() => setShowEdit(true)} title="Editar lead" className="p-1.5 text-gray-400 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>}
                 </div>
-                {renderStageButtons()}
               </div>
             </div>
 
@@ -368,9 +372,8 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
             <div ref={scrollContainerRef} onScroll={() => {
               const el = scrollContainerRef.current;
               if (!el) return;
-              // Se usuario esta a menos de 150px do fundo, considerar "no fundo"
               userScrolledUpRef.current = el.scrollHeight - el.scrollTop - el.clientHeight > 150;
-            }} className="flex-1 overflow-y-auto px-4 py-3 space-y-1" style={{ backgroundColor: '#eae6df' }}>
+            }} className="flex-1 overflow-y-auto px-4 py-3 space-y-1.5 bg-gray-50">
               {msgs.map(m => {
                 const fromMe = Number(m.is_from_me) === 1 || m.is_from_me === true;
                 const cachedSrc = fromMe ? (localMediaCache.current[m.id] || null) : null;
@@ -382,9 +385,9 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                 const isReaction = m.message_type === 'reaction' && m.content && !m.content.startsWith('[');
                 if (isReaction) return (
                   <div key={m.id} className={`flex ${fromMe ? 'justify-end' : 'justify-start'} my-0.5`}>
-                    <div className="flex items-center gap-1.5 bg-white/80 border border-gray-200 rounded-full px-2.5 py-1 shadow-sm">
+                    <div className="flex items-center gap-1.5 bg-white border border-gray-100 rounded-full px-2.5 py-1">
                       <span className="text-lg leading-none">{m.content}</span>
-                      {m.sender_name && <span className="text-[9px] text-gray-400 font-bold">{m.sender_name}</span>}
+                      {m.sender_name && <span className="text-[9px] text-gray-400 font-medium">{m.sender_name}</span>}
                       <span className="text-[8px] text-gray-300">{fmt(m.timestamp)}</span>
                     </div>
                   </div>
@@ -392,31 +395,31 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                 return (
                   <div key={m.id} className={`flex ${fromMe ? 'justify-end' : 'justify-start'} group items-end gap-1`}>
                     {fromMe && (
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-white border border-gray-200 rounded-full px-1 py-0.5 shadow-sm mb-1 self-end">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-white border border-gray-100 rounded-full px-1.5 py-0.5 mb-1 self-end">
                         {REACTION_EMOJIS.map(emoji => (
                           <button key={emoji} onClick={async () => { try { await api.sendReaction(tenant.id, cur?.id, m.id, m.remote_jid || cur?.remote_jid, emoji); await loadMsgs(cur.id); } catch {} }}
-                            className="text-sm hover:scale-125 transition-transform p-0.5 rounded-full hover:bg-gray-100">{emoji}</button>
+                            className="text-sm hover:scale-125 transition-transform p-0.5 rounded-full hover:bg-gray-50">{emoji}</button>
                         ))}
                       </div>
                     )}
-                    <div className={`max-w-[65%] rounded-lg px-2.5 py-1.5 shadow-sm transition-all ${
-                      fromMe ? (isAI ? 'bg-purple-50 border border-purple-100' : 'bg-[#d9fdd3]') : isMentionedMsg ? 'bg-yellow-50 border border-yellow-200' : 'bg-white'
+                    <div className={`max-w-[70%] rounded-xl px-3 py-2 transition-all ${
+                      fromMe ? (isAI ? 'bg-violet-50/60 border border-violet-100' : 'bg-blue-50 border border-blue-100') : isMentionedMsg ? 'bg-amber-50 border border-amber-200' : 'bg-white border border-gray-100'
                     }`}>
-                      {isMentionedMsg && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-bold text-teal-600 bg-teal-50 border border-teal-200 rounded px-1 py-0.5 flex items-center gap-0.5"><AtSign className="w-2 h-2" /> voce foi mencionado</span></div>}
-                      {m.sender_name && <p className={`text-[10px] font-bold mb-0.5 flex items-center gap-1 ${isAI ? 'text-purple-600' : fromMe ? 'text-[#075e54]' : 'text-[#6b7280]'}`}>{isAI && <Bot className="w-2.5 h-2.5" />}{m.sender_name}</p>}
+                      {isMentionedMsg && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-1 py-0.5 flex items-center gap-0.5"><AtSign className="w-2 h-2" /> mencionado</span></div>}
+                      {m.sender_name && <p className={`text-[10px] font-semibold mb-0.5 flex items-center gap-1 ${isAI ? 'text-violet-600' : fromMe ? 'text-blue-800' : 'text-gray-500'}`}>{isAI && <Bot className="w-2.5 h-2.5" />}{m.sender_name}</p>}
                       {hasMedia && <MediaBubble msg={m} tenantId={tenant.id} cachedSrc={cachedSrc} />}
                       {m.content && !isPlaceholder && renderText(m.content, myName)}
                       {m.content && isPlaceholder && !hasMedia && <p className="text-[13px] text-gray-500 italic">{m.content}</p>}
                       <div className="flex items-center justify-end gap-0.5 mt-0.5">
-                        <span className="text-[9px] text-gray-500">{fmt(m.timestamp)}</span>
+                        <span className="text-[9px] text-gray-400">{fmt(m.timestamp)}</span>
                         {fromMe && getStatus(m.status)}
                       </div>
                     </div>
                     {!fromMe && (
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-white border border-gray-200 rounded-full px-1 py-0.5 shadow-sm mb-1 self-end">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-white border border-gray-100 rounded-full px-1.5 py-0.5 mb-1 self-end">
                         {REACTION_EMOJIS.map(emoji => (
                           <button key={emoji} onClick={async () => { try { await api.sendReaction(tenant.id, cur?.id, m.id, m.remote_jid || cur?.remote_jid, emoji); await loadMsgs(cur.id); } catch {} }}
-                            className="text-sm hover:scale-125 transition-transform p-0.5 rounded-full hover:bg-gray-100">{emoji}</button>
+                            className="text-sm hover:scale-125 transition-transform p-0.5 rounded-full hover:bg-gray-50">{emoji}</button>
                         ))}
                       </div>
                     )}
@@ -427,28 +430,28 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
             </div>
 
             {file && (
-              <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {file.type.startsWith('image') ? <img src={URL.createObjectURL(file)} alt="" className="w-10 h-10 object-cover rounded-lg border border-gray-200" /> : <Paperclip className="w-4 h-4 text-gray-400" />}
+              <div className="px-4 py-2.5 bg-white border-t border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  {file.type.startsWith('image') ? <img src={URL.createObjectURL(file)} alt="" className="w-10 h-10 object-cover rounded-lg border border-gray-100" /> : <Paperclip className="w-4 h-4 text-gray-400" />}
                   <span className="text-xs text-gray-600 truncate max-w-[200px]">{file.name}</span>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => { setFile(null); if (fileRef.current) fileRef.current.value = ''; }} className="text-xs text-red-500 font-bold">Cancelar</button>
-                  <button onClick={sendFile} disabled={sending} className="px-3 py-1 bg-[#25d366] text-white text-xs font-bold rounded-lg disabled:opacity-50">Enviar</button>
+                  <button onClick={() => { setFile(null); if (fileRef.current) fileRef.current.value = ''; }} className="text-xs text-gray-500 font-medium hover:text-red-500 transition-colors">Cancelar</button>
+                  <button onClick={sendFile} disabled={sending} className="px-3 py-1.5 bg-blue-700 text-white text-xs font-semibold rounded-lg disabled:opacity-50 hover:bg-blue-800 transition-colors">Enviar</button>
                 </div>
               </div>
             )}
 
-            <div className="bg-[#f0f2f5] px-3 py-2.5 flex items-end gap-2 border-t border-gray-200 relative">
+            <div className="bg-white px-4 py-3 flex items-end gap-2.5 border-t border-gray-100 relative">
               {mentionSuggestions.length > 0 && (
-                <div className="absolute bottom-full left-3 right-3 mb-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20 max-h-52 overflow-y-auto">
-                  <div className="px-3 py-1.5 border-b border-gray-100 flex items-center gap-1.5"><AtSign className="w-3 h-3 text-[#25d366]" /><span className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Mencionar participante</span></div>
+                <div className="absolute bottom-full left-4 right-4 mb-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-20 max-h-52 overflow-y-auto">
+                  <div className="px-3 py-1.5 border-b border-gray-100 flex items-center gap-1.5"><AtSign className="w-3 h-3 text-blue-700" /><span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">Mencionar participante</span></div>
                   {mentionSuggestions.map((p, i) => (
-                    <button key={p.jid || p.phone || i} onClick={() => selectMention(p)} className={`w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-gray-50 transition-colors ${i === mentionIdx ? 'bg-[#f0f2f5]' : ''}`}>
+                    <button key={p.jid || p.phone || i} onClick={() => selectMention(p)} className={`w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-gray-50 transition-colors ${i === mentionIdx ? 'bg-blue-50' : ''}`}>
                       <ParticipantAvatar name={p.name} phone={p.phone} size="w-7 h-7" textSize="text-[9px]" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <p className="text-xs font-bold text-gray-800 truncate">{p.name || p.phone || 'Contato'}</p>
+                          <p className="text-xs font-semibold text-gray-800 truncate">{p.name || p.phone || 'Contato'}</p>
                           {p.admin === 'superadmin' && <span className="text-[7px] bg-red-50 text-red-500 font-bold px-1 rounded flex items-center gap-0.5"><Crown className="w-1.5 h-1.5" />dono</span>}
                           {p.admin === 'admin' && <span className="text-[7px] bg-amber-50 text-amber-600 font-bold px-1 rounded flex items-center gap-0.5"><Shield className="w-1.5 h-1.5" />admin</span>}
                         </div>
@@ -459,36 +462,36 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                 </div>
               )}
               <input type="file" ref={fileRef} onChange={handleFile} className="hidden" accept="image/*,video/*,.pdf,.doc,.docx" />
-              <button onClick={() => fileRef.current?.click()} className="p-2 hover:bg-gray-200 rounded-full flex-shrink-0 mb-0.5"><Paperclip className="w-4 h-4 text-gray-500" /></button>
+              <button onClick={() => fileRef.current?.click()} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg flex-shrink-0 mb-0.5 transition-colors"><Paperclip className="w-4 h-4" /></button>
               <textarea ref={inputRef} value={msg} onChange={handleMsgChange} onKeyDown={handleKeyDown} disabled={sending} rows={1}
-                placeholder={isGrp(cur) ? 'Mensagem... (@ para mencionar)' : 'Mensagem...'}
-                className="flex-1 bg-white border border-gray-200 rounded-2xl px-4 py-2 text-sm outline-none focus:border-[#25d366] resize-none overflow-y-auto leading-relaxed"
+                placeholder={isGrp(cur) ? 'Mensagem... (@ para mencionar)' : 'Escreva uma mensagem...'}
+                className="flex-1 bg-gray-100 rounded-2xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-1 focus:ring-blue-200 resize-none overflow-y-auto leading-relaxed transition-all"
                 style={{ maxHeight: '120px' }} onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
-              <button onClick={send} disabled={sending || !msg.trim()} className="p-2 bg-[#25d366] text-white rounded-full disabled:opacity-40 flex-shrink-0 mb-0.5"><Send className="w-4 h-4" /></button>
+              <button onClick={send} disabled={sending || !msg.trim()} className="p-2.5 bg-blue-700 text-white rounded-xl disabled:opacity-30 flex-shrink-0 mb-0.5 hover:bg-blue-800 transition-colors"><Send className="w-4 h-4" /></button>
             </div>
 
             {showParticipants && isGrp(cur) && (
-              <div className="absolute right-0 top-0 bottom-0 w-64 bg-white border-l border-gray-200 z-10 flex flex-col shadow-2xl">
-                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-[#f0f2f5]">
-                  <div><p className="font-bold text-sm flex items-center gap-1.5"><Users2 className="w-3.5 h-3.5 text-[#128c7e]" /> Participantes</p><p className="text-[9px] text-gray-400 mt-0.5">{participants.length} {participants.length === 1 ? 'pessoa' : 'pessoas'} no grupo</p></div>
-                  <button onClick={() => setShowParticipants(false)} className="p-1 hover:bg-gray-200 rounded-full"><X className="w-4 h-4 text-gray-400" /></button>
+              <div className="absolute right-0 top-0 bottom-0 w-72 bg-white border-l border-gray-200 z-10 flex flex-col">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                  <div><p className="font-semibold text-sm flex items-center gap-1.5"><Users2 className="w-3.5 h-3.5 text-blue-700" /> Participantes</p><p className="text-[10px] text-gray-400 mt-0.5">{participants.length} {participants.length === 1 ? 'pessoa' : 'pessoas'} no grupo</p></div>
+                  <button onClick={() => setShowParticipants(false)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"><X className="w-4 h-4 text-gray-400" /></button>
                 </div>
-                {loadingPart ? <div className="flex items-center justify-center py-10"><div className="w-6 h-6 border-2 border-[#25d366] border-t-transparent rounded-full animate-spin" /></div>
-                : participants.length === 0 ? <div className="py-10 text-center text-gray-400"><Users2 className="w-8 h-8 mx-auto mb-2 opacity-20" /><p className="text-xs font-bold">Sem participantes</p></div>
+                {loadingPart ? <div className="flex items-center justify-center py-10"><div className="w-5 h-5 border-2 border-blue-700 border-t-transparent rounded-full animate-spin" /></div>
+                : participants.length === 0 ? <div className="py-10 text-center text-gray-400"><Users2 className="w-8 h-8 mx-auto mb-2 opacity-20" /><p className="text-xs font-medium">Sem participantes</p></div>
                 : (
                   <div className="flex-1 overflow-y-auto">
-                    {participants.filter(p => p.admin).length > 0 && <div className="px-3 pt-3 pb-1"><span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Administradores</span></div>}
+                    {participants.filter(p => p.admin).length > 0 && <div className="px-3 pt-3 pb-1"><span className="text-[8px] font-semibold text-gray-400 uppercase tracking-wider">Administradores</span></div>}
                     {participants.filter(p => p.admin).map((p, i) => <ParticipantRow key={p.jid || i} p={p} onMention={() => { setMsg(prev => prev + `@${p.name || p.phone || 'Contato'} `); setShowParticipants(false); setTimeout(() => inputRef.current?.focus(), 10); }} />)}
-                    {participants.filter(p => p.admin).length > 0 && participants.filter(p => !p.admin).length > 0 && <div className="px-3 pt-3 pb-1 border-t border-gray-100"><span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Membros</span></div>}
+                    {participants.filter(p => p.admin).length > 0 && participants.filter(p => !p.admin).length > 0 && <div className="px-3 pt-3 pb-1 border-t border-gray-100"><span className="text-[8px] font-semibold text-gray-400 uppercase tracking-wider">Membros</span></div>}
                     {participants.filter(p => !p.admin).map((p, i) => <ParticipantRow key={p.jid || i} p={p} onMention={() => { setMsg(prev => prev + `@${p.name || p.phone || 'Contato'} `); setShowParticipants(false); setTimeout(() => inputRef.current?.focus(), 10); }} />)}
                   </div>
                 )}
-                <div className="p-2 border-t border-gray-100"><button onClick={() => loadParticipants(cur.remote_jid)} disabled={loadingPart} className="w-full flex items-center justify-center gap-1.5 py-1.5 text-[10px] text-gray-400 hover:text-[#075e54] hover:bg-gray-50 rounded-lg font-bold disabled:opacity-40"><RefreshCw className={`w-3 h-3 ${loadingPart ? 'animate-spin' : ''}`} /> Atualizar lista</button></div>
+                <div className="p-2 border-t border-gray-100"><button onClick={() => loadParticipants(cur.remote_jid)} disabled={loadingPart} className="w-full flex items-center justify-center gap-1.5 py-1.5 text-[10px] text-gray-400 hover:text-blue-700 hover:bg-gray-50 rounded-lg font-medium disabled:opacity-40 transition-colors"><RefreshCw className={`w-3 h-3 ${loadingPart ? 'animate-spin' : ''}`} /> Atualizar lista</button></div>
               </div>
             )}
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-[#f0f2f5]"><div className="text-center"><MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" /><p className="text-sm font-bold text-gray-400">Selecione uma conversa</p></div></div>
+          <div className="flex-1 flex items-center justify-center bg-gray-50"><div className="text-center"><MessageSquare className="w-10 h-10 mx-auto mb-3 text-gray-300" /><p className="text-sm font-medium text-gray-400">Selecione uma conversa</p><p className="text-xs text-gray-300 mt-1">Escolha um contato na lista ao lado</p></div></div>
         )}
       </div>
 

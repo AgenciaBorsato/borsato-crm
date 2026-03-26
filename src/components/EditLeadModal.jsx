@@ -36,7 +36,7 @@ export default function EditLeadModal({ lead, columns, onClose, onSave, onRefres
           </div>
           <div className="flex gap-2 pt-2">
             <button onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button>
-            <button onClick={() => onSave({ ...f, customData: custom })} className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Salvar</button>
+            <button onClick={() => onSave({ ...f, customData: custom })} className="flex-1 py-2.5 bg-blue-700 text-white rounded-xl text-sm font-semibold hover:bg-blue-800 transition-colors">Salvar</button>
           </div>
         </div>
       </div>
