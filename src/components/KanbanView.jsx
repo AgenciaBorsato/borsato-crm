@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, X, MessageCircle, Phone, Clock, Zap, Trash2, GripVertical } from 'lucide-react';
+import { Search, Plus, X, MessageCircle, Phone, Clock, Zap, Trash2, GripVertical, Pencil } from 'lucide-react';
 import { CM, daysAgo } from '../constants';
 import api from '../api';
 
@@ -120,6 +120,7 @@ export default function KanbanView({ leads, columns, tenant, onRefresh, onOpenCh
   const [dragOver, setDragOver] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [newCol, setNewCol] = useState({ name: '', color: 'blue', is_won: false, is_lost: false });
+  const [editCol, setEditCol] = useState(null);
   const [filter, setFilter] = useState('');
 
   const getLeadsForColumn = (col, colIdx) => {
@@ -203,15 +204,24 @@ export default function KanbanView({ leads, columns, tenant, onRefresh, onOpenCh
                         {colLeads.length}
                       </span>
                     </div>
-                    <button
-                      onClick={async () => { if (confirm('Excluir etapa "' + col.name + '"?')) { await api.deleteKanbanColumn(col.id); onRefresh(); } }}
-                      className="opacity-0 group-hover:opacity-100 hover:opacity-100 focus:opacity-100 p-0.5 rounded hover:bg-white/50 transition-all"
-                      style={{ opacity: undefined }}
-                      onMouseEnter={e => e.currentTarget.style.opacity = 1}
-                      onMouseLeave={e => e.currentTarget.style.opacity = 0.3}
-                    >
-                      <X className="w-3 h-3 text-gray-400 hover:text-red-400" />
-                    </button>
+                    <div className="flex items-center gap-0.5">
+                      <button
+                        onClick={() => setEditCol({ id: col.id, name: col.name, color: col.color, position: col.position, is_won: !!Number(col.is_won), is_lost: !!Number(col.is_lost) })}
+                        className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-white/50 transition-all"
+                        onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                        onMouseLeave={e => e.currentTarget.style.opacity = 0.3}
+                      >
+                        <Pencil className="w-3 h-3 text-gray-400 hover:text-blue-500" />
+                      </button>
+                      <button
+                        onClick={async () => { if (confirm('Excluir etapa "' + col.name + '"?')) { await api.deleteKanbanColumn(col.id); onRefresh(); } }}
+                        className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-white/50 transition-all"
+                        onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                        onMouseLeave={e => e.currentTarget.style.opacity = 0.3}
+                      >
+                        <X className="w-3 h-3 text-gray-400 hover:text-red-400" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -330,6 +340,77 @@ export default function KanbanView({ leads, columns, tenant, onRefresh, onOpenCh
                 </button>
                 <button type="submit" className="flex-1 py-2.5 bg-gray-800 hover:bg-gray-900 text-white rounded-xl text-sm font-semibold transition-colors">
                   Criar Etapa
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Etapa */}
+      {editCol && (
+        <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setEditCol(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-base mb-4">Editar Etapa</h3>
+            <form
+              onSubmit={async e => {
+                e.preventDefault();
+                await api.updateKanbanColumn(editCol.id, { name: editCol.name, color: editCol.color, position: editCol.position, is_won: editCol.is_won, is_lost: editCol.is_lost });
+                setEditCol(null);
+                onRefresh();
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1.5 block">Nome da etapa</label>
+                <input
+                  value={editCol.name}
+                  onChange={e => setEditCol({ ...editCol, name: e.target.value })}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm focus:bg-white focus:ring-1 focus:ring-gray-300 outline-none transition-all"
+                  required
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-2 block">Cor da etapa</label>
+                <div className="flex gap-2 flex-wrap">
+                  {Object.keys(CM).map(colorKey => (
+                    <button
+                      key={colorKey}
+                      type="button"
+                      onClick={() => setEditCol({ ...editCol, color: colorKey })}
+                      className={`w-8 h-8 rounded-full transition-all ${CM[colorKey].bg} ${
+                        editCol.color === colorKey ? 'ring-2 ring-offset-2 ring-gray-800 scale-110' : 'opacity-50 hover:opacity-80'
+                      }`}
+                      title={colorKey}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-2 block">Marcador do Analytics</label>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setEditCol({ ...editCol, is_won: !editCol.is_won, is_lost: false })}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold border-2 transition-all ${
+                      editCol.is_won ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 bg-gray-50 text-gray-400 hover:border-gray-300'
+                    }`}>
+                    <span>{editCol.is_won ? '✅' : '○'}</span> Conversao
+                  </button>
+                  <button type="button" onClick={() => setEditCol({ ...editCol, is_lost: !editCol.is_lost, is_won: false })}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold border-2 transition-all ${
+                      editCol.is_lost ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-gray-50 text-gray-400 hover:border-gray-300'
+                    }`}>
+                    <span>{editCol.is_lost ? '❌' : '○'}</span> Perda
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">Define como essa etapa conta no Analytics</p>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={() => setEditCol(null)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-sm font-semibold transition-colors">
+                  Cancelar
+                </button>
+                <button type="submit" className="flex-1 py-2.5 bg-gray-800 hover:bg-gray-900 text-white rounded-xl text-sm font-semibold transition-colors">
+                  Salvar
                 </button>
               </div>
             </form>
