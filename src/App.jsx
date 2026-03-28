@@ -203,7 +203,7 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
         {activeTab === 'chat'      && <ChatView tenant={tenant} columns={columns} onRefresh={refreshAll} requestedPhone={requestedPhone} onPhoneHandled={() => setRequestedPhone(null)} currentUser={user} />}
         {activeTab === 'leads'     && <LeadsView leads={tenant.leads || []} columns={columns} tenant={tenant} onRefresh={refreshAll} onOpenChat={openChatByPhone} />}
         {activeTab === 'whatsapp'  && <WhatsAppView tenant={tenant} />}
-        {activeTab === 'analytics' && <AnalyticsView leads={tenant.leads || []} columns={columns} />}
+        {activeTab === 'analytics' && <AnalyticsView leads={tenant.leads || []} columns={columns} tenant={tenant} />}
         {activeTab === 'knowledge' && <KnowledgeView knowledge={tenant.knowledgeBase || []} tenant={tenant} onRefresh={refreshAll} />}
         {activeTab === 'team'      && <TeamView users={tenant.users || []} tenant={tenant} currentUser={user} onRefresh={refreshAll} />}
         {activeTab === 'settings'  && <SettingsView tenant={tenant} onRefresh={refreshAll} />}

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Brain, Bot, Plus, Trash2, Users2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Brain, Bot, Plus, Trash2, Users2, TrendingUp, TrendingDown, BarChart3, Target, Sparkles, RefreshCw, Filter, ArrowRight, Zap, Users, MessageSquare, Eye } from 'lucide-react';
 import { CM } from '../constants';
 import api from '../api';
 
@@ -42,38 +42,218 @@ export function WhatsAppView({ tenant }) {
   );
 }
 
-export function AnalyticsView({ leads, columns }) {
-  const t = leads.length;
-  const bySource = { w: leads.filter(l => l.source === 'whatsapp').length };
-  const byStage = columns.map(col => ({ ...col, count: leads.filter(l => l.stage === col.id).length }));
-  const lostCount = leads.filter(l => { const col = columns.find(c => c.id === l.stage); return col?.color === 'red'; }).length;
-  const wonCount = leads.filter(l => { const col = columns.find(c => c.id === l.stage); return col?.color === 'green'; }).length;
-  const withSummary = leads.filter(l => l.conversation_summary).length;
+function MiniChart({ data, color = '#3b82f6', height = 48 }) {
+  if (!data || data.length === 0) return <div className="h-12 flex items-center justify-center text-[9px] text-gray-300">Sem dados</div>;
+  const max = Math.max(...data.map(d => d.count), 1);
+  const w = 100 / data.length;
   return (
-    <div>
-      <h2 className="font-bold text-lg mb-4">Analytics</h2>
-      <div className="grid grid-cols-5 gap-4 mb-6">
-        {[{l:'Total',v:t,color:'text-blue-600',bg:'bg-blue-50'},{l:'WhatsApp',v:bySource.w,color:'text-green-600',bg:'bg-green-50'},{l:'Clientes',v:wonCount,color:'text-emerald-700',bg:'bg-emerald-50'},{l:'Perdidos',v:lostCount,color:'text-red-600',bg:'bg-red-50'},{l:'Com Contexto',v:withSummary,color:'text-amber-700',bg:'bg-amber-50'}].map((m,i) => (
-          <div key={i} className={`${m.bg} border border-gray-100 rounded-xl p-4 shadow-sm`}><p className={`text-[10px] font-bold uppercase mb-1 ${m.color}`}>{m.l}</p><p className={`text-3xl font-black ${m.color}`}>{m.v}</p></div>
-        ))}
+    <svg viewBox={`0 0 ${data.length * 10} ${height}`} className="w-full" style={{ height }}>
+      {data.map((d, i) => (
+        <rect key={i} x={i * 10 + 1} y={height - (d.count / max) * (height - 4)} width={8} height={Math.max((d.count / max) * (height - 4), 1)} rx={2} fill={color} opacity={0.8} />
+      ))}
+    </svg>
+  );
+}
+
+function FunnelBar({ stages, total }) {
+  if (!stages || stages.length === 0) return null;
+  const nonZero = stages.filter(s => s.count > 0);
+  if (nonZero.length === 0) return <p className="text-xs text-gray-300 text-center py-4">Nenhum lead nas etapas</p>;
+  return (
+    <div className="space-y-2">
+      {stages.map((s, i) => {
+        const pct = total > 0 ? (s.count / total) * 100 : 0;
+        const c = CM[s.color] || CM.zinc;
+        if (s.count === 0) return null;
+        return (
+          <div key={s.id} className="flex items-center gap-3">
+            <div className="w-28 text-right"><span className="text-[11px] font-bold text-gray-600 truncate">{s.name}</span></div>
+            <div className="flex-1 h-7 bg-gray-100 rounded-lg overflow-hidden relative">
+              <div className={`h-full rounded-lg ${c.bg} transition-all duration-500`} style={{ width: `${Math.max(pct, 2)}%` }} />
+              <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-gray-700">{s.count} ({pct.toFixed(0)}%)</span>
+            </div>
+            {i < stages.length - 1 && stages[i + 1]?.count > 0 && (
+              <span className="text-[9px] text-gray-400 w-10 text-center">{s.count > 0 ? ((stages[i + 1].count / s.count) * 100).toFixed(0) : 0}%</span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export function AnalyticsView({ leads, columns, tenant }) {
+  const [data, setData] = useState(null);
+  const [insights, setInsights] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [days, setDays] = useState(30);
+  const tid = tenant?.id;
+
+  const loadData = useCallback(async () => {
+    if (!tid) return;
+    setLoading(true);
+    try { setData(await api.getAnalytics(tid, days)); } catch { setData(null); }
+    finally { setLoading(false); }
+  }, [tid, days]);
+
+  const loadInsights = async () => {
+    if (!tid) return;
+    setInsightsLoading(true);
+    try { const r = await api.getAnalyticsInsights(tid); setInsights(r); } catch { setInsights({ insights: 'Erro ao gerar insights.' }); }
+    finally { setInsightsLoading(false); }
+  };
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  if (loading && !data) return <div className="flex items-center justify-center py-20 text-gray-400 text-sm">Carregando analytics...</div>;
+
+  const d = data || {};
+  const leadsData = d.leads || {};
+  const conv = d.conversion || {};
+  const trendPositive = (leadsData.trend || 0) >= 0;
+
+  return (
+    <div className="space-y-5">
+      {/* Header com filtro */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-bold text-lg flex items-center gap-2"><BarChart3 className="w-5 h-5 text-blue-600" /> Analytics</h2>
+          <p className="text-[11px] text-gray-400">Metricas de conversao, funil e insights da operacao</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex bg-gray-100 rounded-lg p-0.5">
+            {[7, 30, 90].map(p => (
+              <button key={p} onClick={() => setDays(p)} className={`px-3 py-1.5 text-[10px] font-bold rounded-md transition-all ${days === p ? 'bg-white shadow-sm text-blue-700' : 'text-gray-400 hover:text-gray-600'}`}>{p}d</button>
+            ))}
+          </div>
+          <button onClick={loadData} className="p-1.5 text-gray-400 hover:text-gray-600"><RefreshCw className="w-3.5 h-3.5" /></button>
+        </div>
       </div>
-      {columns.length > 0 && (
+
+      {/* KPI Cards - Linha 1 */}
+      <div className="grid grid-cols-4 gap-3">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[10px] font-bold uppercase text-gray-400">Leads no periodo</p>
+            {trendPositive ? <TrendingUp className="w-3.5 h-3.5 text-green-500" /> : <TrendingDown className="w-3.5 h-3.5 text-red-500" />}
+          </div>
+          <p className="text-3xl font-black text-gray-800">{leadsData.period || 0}</p>
+          <p className={`text-[10px] font-bold ${trendPositive ? 'text-green-600' : 'text-red-500'}`}>
+            {trendPositive ? '+' : ''}{leadsData.trend || 0} vs periodo anterior
+          </p>
+        </div>
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[10px] font-bold uppercase text-green-600">Taxa de Conversao</p>
+            <Target className="w-3.5 h-3.5 text-green-600" />
+          </div>
+          <p className="text-3xl font-black text-green-700">{conv.rate || 0}%</p>
+          <p className="text-[10px] text-green-600">{conv.won || 0} convertidos de {leadsData.total || 0}</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+          <p className="text-[10px] font-bold uppercase text-gray-400 mb-1">Perdidos</p>
+          <p className="text-3xl font-black text-red-600">{conv.lost || 0}</p>
+          <p className="text-[10px] text-red-400">{conv.lossRate || 0}% de perda</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[10px] font-bold uppercase text-gray-400">Mensagens</p>
+            <MessageSquare className="w-3.5 h-3.5 text-gray-400" />
+          </div>
+          <p className="text-3xl font-black text-gray-800">{d.messages?.total || 0}</p>
+          <p className="text-[10px] text-purple-500">{d.messages?.ai || 0} pela IA</p>
+        </div>
+      </div>
+
+      {/* Linha 2 — Funil + Timeline */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <h3 className="font-bold text-sm mb-4 flex items-center gap-2"><Filter className="w-3.5 h-3.5 text-gray-400" /> Funil de Conversao</h3>
+          <FunnelBar stages={d.stages || []} total={leadsData.total || 0} />
+        </div>
         <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-          <h3 className="font-bold text-sm mb-4">Por Etapa</h3>
-          <div className="space-y-3">
-            {byStage.map(col => {
-              const p = t > 0 ? (col.count / t) * 100 : 0;
-              const c = CM[col.color] || CM.zinc;
-              return (
-                <div key={col.id}>
-                  <div className="flex justify-between mb-1"><div className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${c.bg}`} /><span className="text-xs font-bold text-gray-600">{col.name}</span></div><span className="text-[10px] text-gray-400">{col.count} ({p.toFixed(0)}%)</span></div>
-                  <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden"><div className={`h-full rounded-full ${c.bg}`} style={{ width: `${Math.max(p, 1)}%` }} /></div>
-                </div>
-              );
-            })}
+          <h3 className="font-bold text-sm mb-3">Novos Leads ({days}d)</h3>
+          <MiniChart data={d.timeline || []} color="#3b82f6" height={80} />
+          <div className="flex justify-between text-[8px] text-gray-300 mt-1">
+            <span>{d.timeline?.[0]?.day?.slice(5) || ''}</span>
+            <span>{d.timeline?.[d.timeline.length - 1]?.day?.slice(5) || ''}</span>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Linha 3 — Origem + Interesses + Estagio Comercial */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <h3 className="font-bold text-sm mb-3">Por Origem</h3>
+          {(d.bySource || []).length > 0 ? (
+            <div className="space-y-2">
+              {d.bySource.map((s, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <span className="text-xs text-gray-600 capitalize">{s.source}</span>
+                  <span className="text-xs font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded-full">{s.count}</span>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-[10px] text-gray-300 text-center py-4">Sem dados</p>}
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <h3 className="font-bold text-sm mb-3 flex items-center gap-2"><Eye className="w-3.5 h-3.5 text-blue-400" /> Mais Buscados</h3>
+          {(d.topInterests || []).length > 0 ? (
+            <div className="space-y-2">
+              {d.topInterests.slice(0, 6).map((item, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <span className="text-xs text-gray-600 capitalize truncate flex-1">{item.name}</span>
+                  <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">{item.count}</span>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-[10px] text-gray-300 text-center py-4">Leads ainda sem perfil</p>}
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <h3 className="font-bold text-sm mb-3 flex items-center gap-2"><Zap className="w-3.5 h-3.5 text-amber-500" /> Temperatura</h3>
+          {d.stagesComercial ? (
+            <div className="space-y-3">
+              {[{k:'quente',l:'Quente',color:'bg-red-500',text:'text-red-700'},{k:'morno',l:'Morno',color:'bg-amber-400',text:'text-amber-700'},{k:'frio',l:'Frio',color:'bg-blue-400',text:'text-blue-700'}].map(({k,l,color,text}) => {
+                const count = d.stagesComercial[k] || 0;
+                const total = Object.values(d.stagesComercial).reduce((a, b) => a + b, 0) || 1;
+                return (
+                  <div key={k}>
+                    <div className="flex justify-between mb-0.5"><span className={`text-[11px] font-bold ${text}`}>{l}</span><span className="text-[10px] text-gray-400">{count}</span></div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden"><div className={`h-full rounded-full ${color}`} style={{ width: `${(count / total) * 100}%` }} /></div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : <p className="text-[10px] text-gray-300 text-center py-4">Sem dados</p>}
+        </div>
+      </div>
+
+      {/* Linha 4 — Insights da IA */}
+      <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-sm flex items-center gap-2 text-purple-800"><Sparkles className="w-4 h-4 text-purple-500" /> Insights da IA</h3>
+          <button onClick={loadInsights} disabled={insightsLoading} className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white text-[10px] font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors">
+            {insightsLoading ? <><RefreshCw className="w-3 h-3 animate-spin" /> Analisando...</> : <><Sparkles className="w-3 h-3" /> Gerar Insights</>}
+          </button>
+        </div>
+        {insights ? (
+          <div className="bg-white/70 rounded-lg p-4 text-[12px] text-gray-700 leading-relaxed whitespace-pre-wrap">{insights.insights}</div>
+        ) : (
+          <div className="text-center py-6">
+            <Sparkles className="w-8 h-8 text-purple-300 mx-auto mb-2" />
+            <p className="text-[11px] text-purple-400">Clique em "Gerar Insights" para a IA analisar seus dados e sugerir acoes para melhorar a conversao</p>
+          </div>
+        )}
+        {insights?.generatedAt && <p className="text-[9px] text-purple-400 mt-2 text-right">Gerado em {new Date(insights.generatedAt).toLocaleString('pt-BR')}</p>}
+      </div>
+
+      {/* Info rodape */}
+      <div className="flex items-center gap-4 text-[9px] text-gray-300">
+        <span>Total geral: {leadsData.total || 0} leads</span>
+        <span>Com contexto IA: {d.context?.withSummary || 0}</span>
+        <span>IA ativa em: {d.context?.aiEnabled || 0} leads</span>
+      </div>
     </div>
   );
 }

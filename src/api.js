@@ -82,6 +82,10 @@ class ApiService {
   async updateKnowledge(id, data) { return await this.request(`/api/knowledge/${id}`, { method: 'PUT', body: JSON.stringify(data) }); }
   async deleteKnowledge(id) { return await this.request(`/api/knowledge/${id}`, { method: 'DELETE' }); }
 
+  // ANALYTICS
+  async getAnalytics(tid, days = 30) { return await this.request(`/api/analytics?tenantId=${encodeURIComponent(tid)}&days=${days}`); }
+  async getAnalyticsInsights(tid) { return await this.request(`/api/analytics/insights?tenantId=${encodeURIComponent(tid)}`); }
+
   // USERS
   async getUsers(tid) { return await this.request(`/api/users?tenantId=${encodeURIComponent(tid)}`); }
   async createUser(data) { return await this.request('/api/users', { method: 'POST', body: JSON.stringify(data) }); }
