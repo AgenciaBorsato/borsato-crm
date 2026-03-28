@@ -119,7 +119,7 @@ export default function KanbanView({ leads, columns, tenant, onRefresh, onOpenCh
   const [dragged, setDragged] = useState(null);
   const [dragOver, setDragOver] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [newCol, setNewCol] = useState({ name: '', color: 'blue' });
+  const [newCol, setNewCol] = useState({ name: '', color: 'blue', is_won: false, is_lost: false });
   const [filter, setFilter] = useState('');
 
   const getLeadsForColumn = (col, colIdx) => {
@@ -197,6 +197,8 @@ export default function KanbanView({ leads, columns, tenant, onRefresh, onOpenCh
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <span className={`font-bold text-[11px] uppercase tracking-wider ${c.text}`}>{col.name}</span>
+                      {Number(col.is_won) === 1 && <span className="text-[8px] bg-green-100 text-green-600 px-1.5 py-0.5 rounded-full font-bold">CONVERSAO</span>}
+                      {Number(col.is_lost) === 1 && <span className="text-[8px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold">PERDA</span>}
                       <span className={`text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center ${c.bg} text-white`}>
                         {colLeads.length}
                       </span>
@@ -253,8 +255,8 @@ export default function KanbanView({ leads, columns, tenant, onRefresh, onOpenCh
             <form
               onSubmit={async e => {
                 e.preventDefault();
-                await api.createKanbanColumn({ tenantId: tenant.id, name: newCol.name, color: newCol.color, position: columns.length });
-                setNewCol({ name: '', color: 'blue' });
+                await api.createKanbanColumn({ tenantId: tenant.id, name: newCol.name, color: newCol.color, position: columns.length, is_won: newCol.is_won, is_lost: newCol.is_lost });
+                setNewCol({ name: '', color: 'blue', is_won: false, is_lost: false });
                 setShowModal(false);
                 onRefresh();
               }}
@@ -288,6 +290,26 @@ export default function KanbanView({ leads, columns, tenant, onRefresh, onOpenCh
                     />
                   ))}
                 </div>
+              </div>
+
+              {/* Marcadores de conversao */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-2 block">Marcador do Analytics</label>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setNewCol({ ...newCol, is_won: !newCol.is_won, is_lost: false })}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold border-2 transition-all ${
+                      newCol.is_won ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 bg-gray-50 text-gray-400 hover:border-gray-300'
+                    }`}>
+                    <span>{newCol.is_won ? '✅' : '○'}</span> Conversao
+                  </button>
+                  <button type="button" onClick={() => setNewCol({ ...newCol, is_lost: !newCol.is_lost, is_won: false })}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold border-2 transition-all ${
+                      newCol.is_lost ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-gray-50 text-gray-400 hover:border-gray-300'
+                    }`}>
+                    <span>{newCol.is_lost ? '❌' : '○'}</span> Perda
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">Define como essa etapa conta no Analytics</p>
               </div>
 
               {/* Preview */}
