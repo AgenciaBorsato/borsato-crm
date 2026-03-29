@@ -56,16 +56,16 @@ export default function LeadsView({ leads, columns, tenant, onRefresh, onOpenCha
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-        <table className="w-full text-left">
+        <table className="w-full text-left table-fixed">
           <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase">
             <tr>
-              <th className="p-3">Nome</th>
-              <th className="p-3">Telefone</th>
-              <th className="p-3">Contexto IA</th>
-              <th className="p-3">Etapa</th>
-              <th className="p-3">Origem</th>
-              <th className="p-3">Tempo</th>
-              <th className="p-3 text-right">Acoes</th>
+              <th className="p-3 w-[14%]">Nome</th>
+              <th className="p-3 w-[12%]">Telefone</th>
+              <th className="p-3 w-[32%]">Contexto IA</th>
+              <th className="p-3 w-[10%]">Etapa</th>
+              <th className="p-3 w-[8%]">Origem</th>
+              <th className="p-3 w-[5%]">Tempo</th>
+              <th className="p-3 w-[19%] text-right">Acoes</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -75,9 +75,9 @@ export default function LeadsView({ leads, columns, tenant, onRefresh, onOpenCha
               const days = daysAgo(l.updated_at);
               return (
                 <tr key={l.id} className="hover:bg-gray-50/50">
-                  <td className="p-3 font-bold text-xs">{l.name}</td>
-                  <td className="p-3 text-xs text-gray-400 font-mono">{l.phone}</td>
-                  <td className="p-3 max-w-[240px]">
+                  <td className="px-3 py-2.5 font-bold text-xs truncate">{l.name}</td>
+                  <td className="px-3 py-2.5 text-[11px] text-gray-400 font-mono truncate">{l.phone}</td>
+                  <td className="px-3 py-2.5">
                     {l.conversation_summary ? (
                       <div className="space-y-1">
                         <StageBadge structured_memory={l.structured_memory} />
@@ -89,22 +89,22 @@ export default function LeadsView({ leads, columns, tenant, onRefresh, onOpenCha
                       <span className="text-[9px] text-gray-300">Sem resumo</span>
                     )}
                   </td>
-                  <td className="p-3">
+                  <td className="px-3 py-2.5">
                     {colInfo
                       ? <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${c.light} ${c.text}`}>{colInfo.name}</span>
                       : <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold rounded">{l.stage || '-'}</span>
                     }
                   </td>
-                  <td className="p-3">
+                  <td className="px-3 py-2.5">
                     {l.source === 'whatsapp'
-                      ? <span className="text-[9px] font-bold text-green-700 bg-green-50 rounded px-1.5 py-0.5 flex items-center gap-0.5 w-fit"><Zap className="w-2.5 h-2.5" /> WhatsApp</span>
+                      ? <span className="text-[9px] font-bold text-green-700 bg-green-50 rounded px-1.5 py-0.5 inline-flex items-center gap-0.5"><Zap className="w-2.5 h-2.5" /> WA</span>
                       : <span className="text-[9px] text-gray-400 bg-gray-100 rounded px-1.5 py-0.5">{l.source || 'manual'}</span>
                     }
                   </td>
-                  <td className="p-3">
+                  <td className="px-3 py-2.5 text-center">
                     <span className={`text-[10px] ${days > 7 ? 'text-red-600 font-bold' : days > 2 ? 'text-amber-600' : 'text-gray-400'}`}>{days}d</span>
                   </td>
-                  <td className="p-3">
+                  <td className="px-3 py-2.5">
                     <div className="flex gap-1 justify-end items-center">
                       {l.phone && (
                         <button onClick={() => onOpenChat(l.phone)} className="flex items-center gap-1 px-2 py-1 bg-[#25d366]/10 hover:bg-[#25d366]/20 text-[#075e54] rounded text-[9px] font-bold">
