@@ -18,14 +18,14 @@ function KanbanCard({ lead, col, columns, onDragStart, onDragEnd, onOpenChat, on
       onDragEnd={onDragEnd}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      className={`bg-white rounded-lg cursor-grab select-none transition-all border ${
-        hover ? 'border-gray-300 shadow-md -translate-y-0.5' : 'border-gray-100 shadow-sm'
+      className={`bg-white rounded-md cursor-grab select-none transition-all border ${
+        hover ? 'border-gray-200 shadow-md -translate-y-0.5' : 'border-gray-100/80 shadow-sm'
       }`}
     >
-      <div className="p-3">
+      <div className="p-2.5">
         {/* Header: avatar + nome + tempo */}
-        <div className="flex items-center gap-2.5 mb-2">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 ${(CM[col.color] || CM.zinc).bg}`}>
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0 ${(CM[col.color] || CM.zinc).bg}`}>
             {initials}
           </div>
           <div className="flex-1 min-w-0">
@@ -166,7 +166,7 @@ export default function KanbanView({ leads, columns, tenant, onRefresh, onOpenCh
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex gap-3 overflow-x-auto pb-2 items-stretch min-h-0">
+        <div className="flex-1 flex gap-1.5 overflow-x-auto pb-2 items-stretch min-h-0">
           {columns.map((col, colIdx) => {
             const colLeads = getLeadsForColumn(col, colIdx);
             const c = CM[col.color] || CM.zinc;
@@ -185,16 +185,16 @@ export default function KanbanView({ leads, columns, tenant, onRefresh, onOpenCh
                   }
                   setDragOver(null);
                 }}
-                className={`flex flex-col rounded-xl transition-all flex-1 min-w-[220px] max-w-[300px] ${
+                className={`flex flex-col rounded-lg transition-all flex-1 min-w-[200px] max-w-[320px] ${
                   isDragTarget ? 'ring-2 ring-offset-1 shadow-lg ' + c.ring : ''
                 }`}
                 style={{ minHeight: 0 }}
               >
                 {/* Barra de cor no topo */}
-                <div className={`h-1 rounded-t-xl ${c.bg}`} />
+                <div className={`h-0.5 rounded-t-lg ${c.bg}`} />
 
                 {/* Header da coluna */}
-                <div className={`px-3 py-2.5 ${c.light} border-x border-gray-100`}>
+                <div className={`px-2.5 py-2 ${c.light} border-x border-gray-100/60`}>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <span className={`font-bold text-[11px] uppercase tracking-wider ${c.text}`}>{col.name}</span>
@@ -226,7 +226,7 @@ export default function KanbanView({ leads, columns, tenant, onRefresh, onOpenCh
                 </div>
 
                 {/* Cards */}
-                <div className="flex-1 bg-gray-50/50 border-x border-b border-gray-100 rounded-b-xl p-2 space-y-2 overflow-y-auto">
+                <div className="flex-1 bg-gray-50/30 border-x border-b border-gray-100/60 rounded-b-lg p-1.5 space-y-1.5 overflow-y-auto">
                   {colLeads.map(l => (
                     <KanbanCard
                       key={l.id}
