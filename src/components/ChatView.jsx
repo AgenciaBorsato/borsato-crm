@@ -481,14 +481,21 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                 return (
                   <div key={m.id} className={`flex ${fromMe ? 'justify-end' : 'justify-start'} group items-end gap-1`}>
                     {fromMe && (
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-white border border-gray-100 rounded-full px-1.5 py-0.5 mb-1 self-end">
-                        <button onClick={() => { setReplyTo(m); setTimeout(() => inputRef.current?.focus(), 50); }} title="Responder" className="p-1 hover:bg-gray-100 rounded-full transition-colors"><Reply className="w-3 h-3 text-gray-500" /></button>
-                        <button onClick={() => setForwardMsg(m)} title="Encaminhar" className="p-1 hover:bg-gray-100 rounded-full transition-colors"><Forward className="w-3 h-3 text-gray-500" /></button>
-                        <span className="w-px h-3 bg-gray-200 mx-0.5" />
-                        {REACTION_EMOJIS.map(emoji => (
-                          <button key={emoji} onClick={async () => { try { await api.sendReaction(tenant.id, cur?.id, m.id, m.remote_jid || cur?.remote_jid, emoji); await loadMsgs(cur.id); } catch {} }}
-                            className="text-sm hover:scale-125 transition-transform p-0.5 rounded-full hover:bg-gray-50">{emoji}</button>
-                        ))}
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mb-1 self-end">
+                        <div className="bg-white border border-gray-100 rounded-lg shadow-sm py-0.5 flex flex-col min-w-[110px]">
+                          <button onClick={() => { setReplyTo(m); setTimeout(() => inputRef.current?.focus(), 50); }} className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 transition-colors text-left">
+                            <Reply className="w-3 h-3 text-gray-400" /><span className="text-[10px] font-medium text-gray-600">Responder</span>
+                          </button>
+                          <button onClick={() => setForwardMsg(m)} className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 transition-colors text-left">
+                            <Forward className="w-3 h-3 text-gray-400" /><span className="text-[10px] font-medium text-gray-600">Encaminhar</span>
+                          </button>
+                        </div>
+                        <div className="bg-white border border-gray-100 rounded-full px-1.5 py-0.5 flex items-center gap-0.5">
+                          {REACTION_EMOJIS.map(emoji => (
+                            <button key={emoji} onClick={async () => { try { await api.sendReaction(tenant.id, cur?.id, m.id, m.remote_jid || cur?.remote_jid, emoji); await loadMsgs(cur.id); } catch {} }}
+                              className="text-sm hover:scale-125 transition-transform p-0.5 rounded-full hover:bg-gray-50">{emoji}</button>
+                          ))}
+                        </div>
                       </div>
                     )}
                     <div id={`msg-${m.id}`} className={`max-w-[70%] rounded-xl px-3 py-2 transition-all ${
@@ -540,14 +547,21 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                       </div>
                     </div>
                     {!fromMe && (
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-white border border-gray-100 rounded-full px-1.5 py-0.5 mb-1 self-end">
-                        <button onClick={() => { setReplyTo(m); setTimeout(() => inputRef.current?.focus(), 50); }} title="Responder" className="p-1 hover:bg-gray-100 rounded-full transition-colors"><Reply className="w-3 h-3 text-gray-500" /></button>
-                        <button onClick={() => setForwardMsg(m)} title="Encaminhar" className="p-1 hover:bg-gray-100 rounded-full transition-colors"><Forward className="w-3 h-3 text-gray-500" /></button>
-                        <span className="w-px h-3 bg-gray-200 mx-0.5" />
-                        {REACTION_EMOJIS.map(emoji => (
-                          <button key={emoji} onClick={async () => { try { await api.sendReaction(tenant.id, cur?.id, m.id, m.remote_jid || cur?.remote_jid, emoji); await loadMsgs(cur.id); } catch {} }}
-                            className="text-sm hover:scale-125 transition-transform p-0.5 rounded-full hover:bg-gray-50">{emoji}</button>
-                        ))}
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mb-1 self-end">
+                        <div className="bg-white border border-gray-100 rounded-full px-1.5 py-0.5 flex items-center gap-0.5">
+                          {REACTION_EMOJIS.map(emoji => (
+                            <button key={emoji} onClick={async () => { try { await api.sendReaction(tenant.id, cur?.id, m.id, m.remote_jid || cur?.remote_jid, emoji); await loadMsgs(cur.id); } catch {} }}
+                              className="text-sm hover:scale-125 transition-transform p-0.5 rounded-full hover:bg-gray-50">{emoji}</button>
+                          ))}
+                        </div>
+                        <div className="bg-white border border-gray-100 rounded-lg shadow-sm py-0.5 flex flex-col min-w-[110px]">
+                          <button onClick={() => { setReplyTo(m); setTimeout(() => inputRef.current?.focus(), 50); }} className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 transition-colors text-left">
+                            <Reply className="w-3 h-3 text-gray-400" /><span className="text-[10px] font-medium text-gray-600">Responder</span>
+                          </button>
+                          <button onClick={() => setForwardMsg(m)} className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 transition-colors text-left">
+                            <Forward className="w-3 h-3 text-gray-400" /><span className="text-[10px] font-medium text-gray-600">Encaminhar</span>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
