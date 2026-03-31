@@ -378,12 +378,75 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
               if (!el) return;
               userScrolledUpRef.current = el.scrollHeight - el.scrollTop - el.clientHeight > 150;
             }} className="flex-1 overflow-y-auto px-4 py-3 space-y-1.5 bg-gray-50">
-              {msgs.map(m => {
+              {(() => {
+                // Pre-process: marcar imagens agrupáveis (mesma direção, consecutivas, tipo image, sem caption real)
+                const grouped = new Set();
+                const imageGroups = [];
+                for (let i = 0; i < msgs.length; i++) {
+                  if (grouped.has(i)) continue;
+                  const m = msgs[i];
+                  const fromMe = Number(m.is_from_me) === 1;
+                  const isImg = m.message_type === 'image' && (m.media_url || (fromMe && localMediaCache.current[m.id]));
+                  const isPlaceholderContent = !m.content || m.content === '[image]' || m.content === '[Imagem]';
+                  if (!isImg || !isPlaceholderContent) continue;
+                  const group = [i];
+                  for (let j = i + 1; j < msgs.length; j++) {
+                    const n = msgs[j];
+                    const nFromMe = Number(n.is_from_me) === 1;
+                    if (nFromMe !== fromMe) break;
+                    const nIsImg = n.message_type === 'image' && (n.media_url || (nFromMe && localMediaCache.current[n.id]));
+                    const nIsPlaceholder = !n.content || n.content === '[image]' || n.content === '[Imagem]';
+                    if (!nIsImg || !nIsPlaceholder) break;
+                    // Dentro de 5 minutos
+                    const timeDiff = Math.abs(new Date(n.timestamp) - new Date(m.timestamp));
+                    if (timeDiff > 5 * 60 * 1000) break;
+                    group.push(j);
+                  }
+                  if (group.length >= 2) {
+                    group.forEach(idx => grouped.add(idx));
+                    imageGroups.push({ startIdx: group[0], indices: group });
+                  }
+                }
+                const groupStartMap = {};
+                imageGroups.forEach(g => { groupStartMap[g.startIdx] = g; });
+
+                return msgs.map((m, idx) => {
+                  if (grouped.has(idx) && !groupStartMap[idx]) return null; // parte de grupo, renderizado pelo líder
+                  if (groupStartMap[idx]) {
+                    const g = groupStartMap[idx];
+                    const gMsgs = g.indices.map(i => msgs[i]);
+                    const fromMe = Number(gMsgs[0].is_from_me) === 1;
+                    const lastMsg = gMsgs[gMsgs.length - 1];
+                    return (
+                      <div key={`group-${gMsgs[0].id}`} className={`flex ${fromMe ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[70%] rounded-xl px-2 py-2 ${fromMe ? 'bg-blue-50 border border-blue-100' : 'bg-white border border-gray-100'}`}>
+                          {gMsgs[0].sender_name && <p className="text-[10px] font-bold mb-1 text-gray-500">{gMsgs[0].sender_name}</p>}
+                          <div className={`grid gap-1 ${gMsgs.length === 2 ? 'grid-cols-2' : gMsgs.length === 3 ? 'grid-cols-2' : 'grid-cols-2'}`}>
+                            {gMsgs.slice(0, 4).map((gm, gi) => (
+                              <div key={gm.id} id={`msg-${gm.id}`} className={`relative overflow-hidden rounded-lg ${gMsgs.length === 3 && gi === 0 ? 'col-span-2' : ''}`}>
+                                <MediaBubble msg={gm} tenantId={tenant.id} cachedSrc={fromMe ? (localMediaCache.current[gm.id] || null) : null} />
+                                {gi === 3 && gMsgs.length > 4 && (
+                                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
+                                    <span className="text-white text-2xl font-bold">+{gMsgs.length - 4}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex items-center justify-end gap-0.5 mt-1">
+                            <span className="text-[9px] text-gray-400">{fmt(lastMsg.timestamp)}</span>
+                            {fromMe && getStatus(lastMsg.status)}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  // Mensagem normal (não agrupada)
                 const fromMe = Number(m.is_from_me) === 1 || m.is_from_me === true;
                 const cachedSrc = fromMe ? (localMediaCache.current[m.id] || null) : null;
                 const isMedia = ['image','video','document','audio','sticker'].includes(m.message_type);
                 const hasMedia = isMedia && (m.media_url || cachedSrc);
-                const isPlaceholder = ['[Imagem]','[Audio]','[Video]','[Documento]','[Sticker]','[Localizacao]','[Contato]','[Mensagem]','[Reacao]'].includes(m.content);
+                const isPlaceholder = ['[Imagem]','[Audio]','[Video]','[Documento]','[Sticker]','[Localizacao]','[Contato]','[Mensagem]','[Reacao]','[image]','[audio]','[video]','[document]','[sticker]','[location]','[contact]'].includes(m.content);
                 const isAI = m.sender_name === 'IA';
                 const isMentionedMsg = !fromMe && mentionsMe(m.content);
                 const isReaction = m.message_type === 'reaction' && m.content && !m.content.startsWith('[');
@@ -406,7 +469,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                         ))}
                       </div>
                     )}
-                    <div className={`max-w-[70%] rounded-xl px-3 py-2 transition-all ${
+                    <div id={`msg-${m.id}`} className={`max-w-[70%] rounded-xl px-3 py-2 transition-all ${
                       fromMe ? (isAI ? 'bg-violet-50/60 border border-violet-100' : 'bg-blue-50 border border-blue-100') : isMentionedMsg ? 'bg-amber-50 border border-amber-200' : 'bg-white border border-gray-100'
                     }`}>
                       {isMentionedMsg && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-1 py-0.5 flex items-center gap-0.5"><AtSign className="w-2 h-2" /> mencionado</span></div>}
@@ -423,6 +486,18 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                           </p>
                         );
                       })()}
+                      {m.quoted_content || m.quoted_type ? (
+                        <div className="mb-1.5 bg-black/5 border-l-2 border-gray-400 rounded-r-md px-2.5 py-1.5 cursor-pointer hover:bg-black/10 transition-colors"
+                          onClick={() => { const el = document.getElementById(`msg-${m.quoted_message_id}`); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('ring-2','ring-blue-300'); setTimeout(() => el.classList.remove('ring-2','ring-blue-300'), 2000); } }}>
+                          {m.quoted_sender && <p className="text-[9px] font-bold text-gray-600 mb-0.5">{m.quoted_sender}</p>}
+                          {m.quoted_type && m.quoted_type !== 'text' && !m.quoted_content && (
+                            <p className="text-[10px] text-gray-500 italic flex items-center gap-1">
+                              {m.quoted_type === 'image' ? '📷 Foto' : m.quoted_type === 'video' ? '🎥 Vídeo' : m.quoted_type === 'audio' ? '🎵 Áudio' : m.quoted_type === 'document' ? '📄 Documento' : m.quoted_type}
+                            </p>
+                          )}
+                          {m.quoted_content && <p className="text-[10px] text-gray-500 line-clamp-2 leading-relaxed">{m.quoted_content}</p>}
+                        </div>
+                      ) : null}
                       {hasMedia && <MediaBubble msg={m} tenantId={tenant.id} cachedSrc={cachedSrc} />}
                       {m.content && !isPlaceholder && renderText(m.content, myName)}
                       {m.content && isPlaceholder && !hasMedia && <p className="text-[13px] text-gray-500 italic">{m.content}</p>}
@@ -441,7 +516,8 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                     )}
                   </div>
                 );
-              })}
+              }).filter(Boolean);
+              })()}
               <div ref={endRef} />
             </div>
 
