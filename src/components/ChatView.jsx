@@ -410,7 +410,19 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                       fromMe ? (isAI ? 'bg-violet-50/60 border border-violet-100' : 'bg-blue-50 border border-blue-100') : isMentionedMsg ? 'bg-amber-50 border border-amber-200' : 'bg-white border border-gray-100'
                     }`}>
                       {isMentionedMsg && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-1 py-0.5 flex items-center gap-0.5"><AtSign className="w-2 h-2" /> mencionado</span></div>}
-                      {m.sender_name && <p className={`text-[10px] font-semibold mb-0.5 flex items-center gap-1 ${isAI ? 'text-violet-600' : fromMe ? 'text-blue-800' : 'text-gray-500'}`}>{isAI && <Bot className="w-2.5 h-2.5" />}{m.sender_name}</p>}
+                      {m.sender_name && (() => {
+                        const senderColors = ['text-blue-700', 'text-teal-700', 'text-indigo-700', 'text-orange-700', 'text-pink-700', 'text-cyan-700'];
+                        const senderColor = isAI ? 'text-violet-600' : fromMe
+                          ? senderColors[Math.abs([...m.sender_name].reduce((a, c) => a + c.charCodeAt(0), 0)) % senderColors.length]
+                          : 'text-gray-500';
+                        return (
+                          <p className={`text-[10px] font-bold mb-0.5 flex items-center gap-1 ${senderColor}`}>
+                            {isAI && <Bot className="w-2.5 h-2.5" />}
+                            {fromMe && !isAI && <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 flex-shrink-0" />}
+                            {m.sender_name}
+                          </p>
+                        );
+                      })()}
                       {hasMedia && <MediaBubble msg={m} tenantId={tenant.id} cachedSrc={cachedSrc} />}
                       {m.content && !isPlaceholder && renderText(m.content, myName)}
                       {m.content && isPlaceholder && !hasMedia && <p className="text-[13px] text-gray-500 italic">{m.content}</p>}

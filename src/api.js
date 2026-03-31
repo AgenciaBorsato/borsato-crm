@@ -2,12 +2,19 @@ class ApiService {
   constructor() {
     this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
     this._onAuthError = null;
+    this._sessionId = sessionStorage.getItem('borsato_session_id') || null;
   }
 
   onAuthError(cb) { this._onAuthError = cb; }
 
+  _tokenKey() { return this._sessionId ? `token_${this._sessionId}` : 'token'; }
+  _userDataKey() { return this._sessionId ? `userData_${this._sessionId}` : 'userData'; }
+
+  getToken() { return localStorage.getItem(this._tokenKey()); }
+  getUserData() { try { return JSON.parse(localStorage.getItem(this._userDataKey())); } catch { return null; } }
+
   async request(endpoint, options = {}) {
-    const token = localStorage.getItem('token');
+    const token = this.getToken();
     const headers = {
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -26,11 +33,22 @@ class ApiService {
 
   async login(email, password) {
     const d = await this.request('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
-    if (d.token) localStorage.setItem('token', d.token);
+    if (d.token && d.user) {
+      // Cada aba/sessão do navegador recebe um ID isolado
+      this._sessionId = `${d.user.id}_${Date.now()}`;
+      sessionStorage.setItem('borsato_session_id', this._sessionId);
+      localStorage.setItem(this._tokenKey(), d.token);
+      localStorage.setItem(this._userDataKey(), JSON.stringify(d.user));
+    }
     return d;
   }
 
-  logout() { localStorage.removeItem('token'); }
+  logout() {
+    localStorage.removeItem(this._tokenKey());
+    localStorage.removeItem(this._userDataKey());
+    sessionStorage.removeItem('borsato_session_id');
+    this._sessionId = null;
+  }
 
   // TENANTS
   async getTenants() { return await this.request('/api/tenants'); }

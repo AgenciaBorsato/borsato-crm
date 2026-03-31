@@ -19,18 +19,17 @@ export default function BorsatoCRM() {
   const [error, setError] = useState(null);
 
   const doLogout = useCallback(() => {
-    api.logout(); localStorage.clear();
+    api.logout();
     setCurrentUser(null); setCurrentView('login'); setCurrentTenant(null); setTenants([]);
   }, []);
 
   useEffect(() => { api.onAuthError(doLogout); }, [doLogout]);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const ud = localStorage.getItem('userData');
-    if (!token || !ud) return;
+    const token = api.getToken();
+    const u = api.getUserData();
+    if (!token || !u) return;
     try {
-      const u = JSON.parse(ud);
       setCurrentUser(u);
       const savedView = localStorage.getItem('currentView') || null;
       const savedTenantId = localStorage.getItem('currentTenantId') || null;
@@ -41,7 +40,7 @@ export default function BorsatoCRM() {
       } else {
         loadTenantData(u.tenantId).then(() => setCurrentView('clientDashboard'));
       }
-    } catch (e) { localStorage.clear(); }
+    } catch (e) { api.logout(); }
   }, []);
 
   useEffect(() => { if (currentView !== 'login') localStorage.setItem('currentView', currentView); }, [currentView]);
@@ -66,7 +65,6 @@ export default function BorsatoCRM() {
     try {
       const { user } = await api.login(c.email, c.password);
       setCurrentUser(user);
-      localStorage.setItem('userData', JSON.stringify(user));
       if (user.role === 'super_admin') {
         setCurrentView('superAdmin'); localStorage.setItem('currentView', 'superAdmin'); localStorage.removeItem('currentTenantId');
         await loadTenants();
