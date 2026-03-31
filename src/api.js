@@ -80,7 +80,8 @@ class ApiService {
   async getWhatsAppStatus(tid) { return await this.request(`/api/whatsapp/status?tenantId=${encodeURIComponent(tid)}`); }
   async connectWhatsApp(tid, token) { return await this.request('/api/whatsapp/connect', { method: 'POST', body: JSON.stringify({ tenantId: tid, instanceToken: token }) }); }
   async disconnectWhatsApp(tid) { return await this.request('/api/whatsapp/disconnect', { method: 'POST', body: JSON.stringify({ tenantId: tid }) }); }
-  async sendWhatsAppMessage(number, message, tid, chatId) { return await this.request('/api/whatsapp/send', { method: 'POST', body: JSON.stringify({ number, message, tenantId: tid, chatId }) }); }
+  async sendWhatsAppMessage(number, message, tid, chatId, quotedMessageId = null) { return await this.request('/api/whatsapp/send', { method: 'POST', body: JSON.stringify({ number, message, tenantId: tid, chatId, quotedMessageId }) }); }
+  async forwardMessage(messageId, targetChatId, tid) { return await this.request('/api/whatsapp/forward', { method: 'POST', body: JSON.stringify({ messageId, targetChatId, tenantId: tid }) }); }
   async sendWhatsAppMedia(data) { return await this.request('/api/whatsapp/send-media', { method: 'POST', body: JSON.stringify(data) }); }
   async fetchMedia(tenantId, messageKey) { return await this.request('/api/whatsapp/media', { method: 'POST', body: JSON.stringify({ tenantId, messageKey }) }); }
   async fetchProfilePic(phone, tenantId) { return await this.request(`/api/whatsapp/profile-pic/${encodeURIComponent(phone)}?tenantId=${encodeURIComponent(tenantId)}`); }

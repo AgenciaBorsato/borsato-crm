@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MessageSquare, Search, Send, X, Check, Trash2, Edit2, Paperclip,
-  Users2, CheckCheck, RotateCcw, RefreshCw, AtSign, Crown, Shield, Bot
+  Users2, CheckCheck, RotateCcw, RefreshCw, AtSign, Crown, Shield, Bot,
+  Reply, Forward, CornerUpRight
 } from 'lucide-react';
 import { POLL_INTERVAL, CM } from '../constants';
 import { renderText } from '../utils/renderText';
@@ -85,6 +86,9 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   const [showParticipants, setShowParticipants] = useState(false);
   const [mentionQuery, setMentionQuery] = useState(null);
   const [mentionIdx, setMentionIdx] = useState(0);
+  const [replyTo, setReplyTo] = useState(null);
+  const [forwardMsg, setForwardMsg] = useState(null);
+  const [forwardSearch, setForwardSearch] = useState('');
   const mentionStartRef = useRef(-1);
   const inputRef = useRef(null);
   const curRef = useRef(cur);
@@ -201,8 +205,22 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
     if (!msg.trim() || !cur) return;
     const ph = cur.remote_jid && (isGrp(cur) || cur.remote_jid.includes('@lid')) ? cur.remote_jid : cur.contact_phone || cur.remote_jid?.split('@')[0];
     setSending(true); setMentionQuery(null);
-    try { await api.sendWhatsAppMessage(ph, msg, tenant.id, cur.id); setMsg(''); if (inputRef.current) inputRef.current.style.height = 'auto'; await loadMsgs(cur.id); await load(); }
+    try {
+      await api.sendWhatsAppMessage(ph, msg, tenant.id, cur.id, replyTo?.id || null);
+      setMsg(''); setReplyTo(null); if (inputRef.current) inputRef.current.style.height = 'auto';
+      await loadMsgs(cur.id); await load();
+    }
     catch (e) { alert(e.message || 'Erro ao enviar'); } finally { setSending(false); }
+  };
+
+  const handleForward = async (targetChat) => {
+    if (!forwardMsg || !targetChat) return;
+    try {
+      await api.forwardMessage(forwardMsg.id, targetChat.id, tenant.id);
+      setForwardMsg(null); setForwardSearch('');
+      if (targetChat.id === cur?.id) await loadMsgs(cur.id);
+      await load();
+    } catch (e) { alert(e.message || 'Erro ao encaminhar'); }
   };
 
   const handleKeyDown = (e) => {
@@ -459,10 +477,14 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                     </div>
                   </div>
                 );
+                const isForwarded = m.content && m.content.startsWith('[Encaminhada]');
                 return (
                   <div key={m.id} className={`flex ${fromMe ? 'justify-end' : 'justify-start'} group items-end gap-1`}>
                     {fromMe && (
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-white border border-gray-100 rounded-full px-1.5 py-0.5 mb-1 self-end">
+                        <button onClick={() => { setReplyTo(m); setTimeout(() => inputRef.current?.focus(), 50); }} title="Responder" className="p-1 hover:bg-gray-100 rounded-full transition-colors"><Reply className="w-3 h-3 text-gray-500" /></button>
+                        <button onClick={() => setForwardMsg(m)} title="Encaminhar" className="p-1 hover:bg-gray-100 rounded-full transition-colors"><Forward className="w-3 h-3 text-gray-500" /></button>
+                        <span className="w-px h-3 bg-gray-200 mx-0.5" />
                         {REACTION_EMOJIS.map(emoji => (
                           <button key={emoji} onClick={async () => { try { await api.sendReaction(tenant.id, cur?.id, m.id, m.remote_jid || cur?.remote_jid, emoji); await loadMsgs(cur.id); } catch {} }}
                             className="text-sm hover:scale-125 transition-transform p-0.5 rounded-full hover:bg-gray-50">{emoji}</button>
@@ -472,6 +494,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                     <div id={`msg-${m.id}`} className={`max-w-[70%] rounded-xl px-3 py-2 transition-all ${
                       fromMe ? (isAI ? 'bg-violet-50/60 border border-violet-100' : 'bg-blue-50 border border-blue-100') : isMentionedMsg ? 'bg-amber-50 border border-amber-200' : 'bg-white border border-gray-100'
                     }`}>
+                      {isForwarded && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-medium text-gray-400 flex items-center gap-0.5"><CornerUpRight className="w-2 h-2" /> Encaminhada</span></div>}
                       {isMentionedMsg && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-1 py-0.5 flex items-center gap-0.5"><AtSign className="w-2 h-2" /> mencionado</span></div>}
                       {m.sender_name && (() => {
                         const senderColors = ['text-blue-700', 'text-teal-700', 'text-indigo-700', 'text-orange-700', 'text-pink-700', 'text-cyan-700'];
@@ -508,6 +531,9 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                     </div>
                     {!fromMe && (
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-white border border-gray-100 rounded-full px-1.5 py-0.5 mb-1 self-end">
+                        <button onClick={() => { setReplyTo(m); setTimeout(() => inputRef.current?.focus(), 50); }} title="Responder" className="p-1 hover:bg-gray-100 rounded-full transition-colors"><Reply className="w-3 h-3 text-gray-500" /></button>
+                        <button onClick={() => setForwardMsg(m)} title="Encaminhar" className="p-1 hover:bg-gray-100 rounded-full transition-colors"><Forward className="w-3 h-3 text-gray-500" /></button>
+                        <span className="w-px h-3 bg-gray-200 mx-0.5" />
                         {REACTION_EMOJIS.map(emoji => (
                           <button key={emoji} onClick={async () => { try { await api.sendReaction(tenant.id, cur?.id, m.id, m.remote_jid || cur?.remote_jid, emoji); await loadMsgs(cur.id); } catch {} }}
                             className="text-sm hover:scale-125 transition-transform p-0.5 rounded-full hover:bg-gray-50">{emoji}</button>
@@ -531,6 +557,18 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                   <button onClick={() => { setFile(null); if (fileRef.current) fileRef.current.value = ''; }} className="text-xs text-gray-500 font-medium hover:text-red-500 transition-colors">Cancelar</button>
                   <button onClick={sendFile} disabled={sending} className="px-3 py-1.5 bg-blue-700 text-white text-xs font-semibold rounded-lg disabled:opacity-50 hover:bg-blue-800 transition-colors">Enviar</button>
                 </div>
+              </div>
+            )}
+
+            {replyTo && (
+              <div className="bg-white px-4 py-2 border-t border-gray-100 flex items-center gap-2">
+                <div className="flex-1 bg-gray-50 border-l-3 border-blue-500 rounded-r-lg px-3 py-2 min-w-0" style={{ borderLeftWidth: '3px' }}>
+                  <p className="text-[10px] font-bold text-blue-700 mb-0.5">{replyTo.sender_name || (Number(replyTo.is_from_me) === 1 ? 'Você' : 'Contato')}</p>
+                  <p className="text-[11px] text-gray-600 truncate">{replyTo.content || (replyTo.message_type !== 'text' ? `[${replyTo.message_type}]` : '')}</p>
+                </div>
+                <button onClick={() => setReplyTo(null)} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0">
+                  <X className="w-3.5 h-3.5 text-gray-400" />
+                </button>
               </div>
             )}
 
@@ -589,6 +627,41 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
 
       {showEdit && lead && <EditLeadModal lead={lead} columns={columns} onClose={() => setShowEdit(false)} onSave={async data => { await api.updateLead(lead.id, data); setLead({ ...lead, ...data }); setShowEdit(false); onRefresh(); }} onRefresh={() => loadLead(cur)} />}
       {showTrash && <TrashModal chats={deletedChats} loading={loadingTrash} onClose={() => setShowTrash(false)} onRestore={restoreChat} chatDisplayName={chatDisplayName} isGrp={isGrp} fmt={fmt} />}
+
+      {forwardMsg && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-bold text-sm">Encaminhar mensagem</h3>
+              <button onClick={() => { setForwardMsg(null); setForwardSearch(''); }} className="p-1 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4 text-gray-400" /></button>
+            </div>
+            <div className="bg-gray-50 border-b border-gray-100 px-3 py-2 mx-3 mt-2 mb-1 rounded-lg">
+              <p className="text-[10px] text-gray-400 mb-0.5">Mensagem:</p>
+              <p className="text-[11px] text-gray-600 truncate">{forwardMsg.content || `[${forwardMsg.message_type}]`}</p>
+            </div>
+            <div className="px-3 py-2">
+              <input value={forwardSearch} onChange={e => setForwardSearch(e.target.value)} placeholder="Buscar conversa..." autoFocus
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-blue-200" />
+            </div>
+            <div className="max-h-64 overflow-y-auto px-1 pb-2">
+              {chats.filter(c => c.id !== cur?.id && chatDisplayName(c).toLowerCase().includes(forwardSearch.toLowerCase())).slice(0, 15).map(c => (
+                <button key={c.id} onClick={() => handleForward(c)}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50 rounded-lg transition-colors text-left">
+                  <ProfilePic phone={c.contact_phone || c.remote_jid} tenantId={tenant.id} name={chatDisplayName(c)} size="w-8 h-8" textSize="text-[9px]" isGroup={isGrp(c)} cachedUrl={c.profile_pic_url} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-gray-800 truncate">{chatDisplayName(c)}</p>
+                    {isGrp(c) && <span className="text-[9px] text-blue-600 font-medium">Grupo</span>}
+                  </div>
+                  <Forward className="w-3.5 h-3.5 text-gray-300" />
+                </button>
+              ))}
+              {chats.filter(c => c.id !== cur?.id && chatDisplayName(c).toLowerCase().includes(forwardSearch.toLowerCase())).length === 0 && (
+                <p className="text-center text-[11px] text-gray-400 py-6">Nenhuma conversa encontrada</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
