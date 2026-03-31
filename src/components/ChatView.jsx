@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  MessageSquare, Search, Send, X, Check, Trash2, Edit2, Paperclip,
+  MessageSquare, Search, Send, X, Check, Trash2, Edit2, Paperclip, Plus,
   Users2, CheckCheck, RotateCcw, RefreshCw, AtSign, Crown, Shield, Bot,
-  Reply, Forward, CornerUpRight
+  Reply, Forward, CornerUpRight, Phone
 } from 'lucide-react';
 import { POLL_INTERVAL, CM } from '../constants';
 import { renderText } from '../utils/renderText';
@@ -89,6 +89,11 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   const [replyTo, setReplyTo] = useState(null);
   const [forwardMsg, setForwardMsg] = useState(null);
   const [forwardSearch, setForwardSearch] = useState('');
+  const [contactResults, setContactResults] = useState([]);
+  const [searchingContacts, setSearchingContacts] = useState(false);
+  const [showNewChat, setShowNewChat] = useState(false);
+  const [newChatPhone, setNewChatPhone] = useState('');
+  const [newChatName, setNewChatName] = useState('');
   const mentionStartRef = useRef(-1);
   const inputRef = useRef(null);
   const curRef = useRef(cur);
@@ -275,6 +280,35 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
     return chatDisplayName(c).toLowerCase().includes(search.toLowerCase());
   });
 
+  // Buscar contatos WhatsApp quando search tem 2+ chars e não encontra nos chats
+  useEffect(() => {
+    if (!search || search.length < 2 || filter === 'group') { setContactResults([]); return; }
+    const timer = setTimeout(async () => {
+      try {
+        setSearchingContacts(true);
+        const results = await api.searchContacts(tenant.id, search);
+        setContactResults(results || []);
+      } catch { setContactResults([]); }
+      finally { setSearchingContacts(false); }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search, tenant.id, filter]);
+
+  const startNewChat = async (phone, name) => {
+    try {
+      const result = await api.startChat(phone, name, tenant.id);
+      if (result?.chatId) {
+        await load();
+        setSearch(''); setContactResults([]); setShowNewChat(false); setNewChatPhone(''); setNewChatName('');
+        // Selecionar o chat recém-criado
+        setTimeout(() => {
+          const newChat = chats.find(c => c.id === result.chatId) || { id: result.chatId, contact_phone: phone, contact_name: name, remote_jid: `${phone}@s.whatsapp.net`, is_group: 0 };
+          selectChat(newChat);
+        }, 500);
+      }
+    } catch (e) { alert(e.message || 'Erro ao criar conversa'); }
+  };
+
   const getStatus = s => {
     if (s === 'read') return <CheckCheck className="w-3 h-3 text-blue-500" />;
     if (s === 'delivered') return <CheckCheck className="w-3 h-3 text-gray-400" />;
@@ -346,8 +380,31 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
               </div>
             );
           })}
+          {/* Contatos WhatsApp (resultados de busca) */}
+          {search && contactResults.length > 0 && (
+            <div className="border-t border-gray-200">
+              <div className="px-3 py-2 bg-gray-50"><span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Contatos WhatsApp</span></div>
+              {contactResults.map(c => (
+                <div key={c.id} onClick={() => startNewChat(c.phone, c.name || c.push_name || c.phone)}
+                  className="flex items-center gap-3 px-3 py-3 cursor-pointer hover:bg-blue-50/50 transition-colors border-b border-gray-50">
+                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <span className="text-[10px] font-bold text-green-700">{(c.name || c.push_name || c.phone || '?').substring(0, 2).toUpperCase()}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-gray-900 truncate">{c.name || c.push_name || c.phone}</p>
+                    <p className="text-[10px] text-gray-400 font-mono">{c.phone}</p>
+                  </div>
+                  <span className="text-[9px] text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full">Nova conversa</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {search && search.length >= 2 && searchingContacts && (
+            <div className="px-3 py-4 text-center text-[10px] text-gray-400">Buscando contatos...</div>
+          )}
         </div>
-        <div className="p-2 border-t border-gray-100">
+        <div className="p-2 border-t border-gray-100 space-y-1">
+          <button onClick={() => setShowNewChat(true)} className="w-full flex items-center gap-2 px-3 py-1.5 text-blue-700 hover:bg-blue-50 rounded-lg text-[11px] font-medium transition-all"><Plus className="w-3 h-3" /> Nova conversa</button>
           <button onClick={() => { setShowTrash(true); loadDeletedChats(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg text-[11px] font-medium transition-all"><RotateCcw className="w-3 h-3" /> Lixeira</button>
         </div>
       </div>
@@ -683,6 +740,39 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                 <p className="text-center text-[11px] text-gray-400 py-6">Nenhuma conversa encontrada</p>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {showNewChat && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-bold text-sm">Nova conversa</h3>
+              <button onClick={() => { setShowNewChat(false); setNewChatPhone(''); setNewChatName(''); }} className="p-1 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4 text-gray-400" /></button>
+            </div>
+            <form onSubmit={e => { e.preventDefault(); if (newChatPhone.replace(/\D/g, '').length >= 10) startNewChat(newChatPhone.replace(/\D/g, ''), newChatName || newChatPhone); }}
+              className="p-4 space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1.5 block">Telefone com DDD</label>
+                <div className="relative">
+                  <Phone className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input value={newChatPhone} onChange={e => setNewChatPhone(e.target.value)} placeholder="5514999999999"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-blue-200" autoFocus required />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1.5 block">Nome (opcional)</label>
+                <input value={newChatName} onChange={e => setNewChatName(e.target.value)} placeholder="Nome do contato"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-blue-200" />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={() => { setShowNewChat(false); setNewChatPhone(''); setNewChatName(''); }}
+                  className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-sm font-semibold transition-colors">Cancelar</button>
+                <button type="submit" disabled={newChatPhone.replace(/\D/g, '').length < 10}
+                  className="flex-1 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-40">Iniciar conversa</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
