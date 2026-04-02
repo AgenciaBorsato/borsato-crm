@@ -51,7 +51,11 @@ function KanbanCard({ lead, col, columns, onDragStart, onDragEnd, onOpenChat, on
 
         {/* Source badge */}
         <div className="flex items-center gap-1.5 mb-1.5">
-          {lead.source === 'whatsapp' ? (
+          {lead.source === 'meta_ads' ? (
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-blue-700 bg-blue-50 rounded-full px-2 py-0.5">
+              📣 Meta Ads
+            </span>
+          ) : lead.source === 'whatsapp' ? (
             <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-green-700 bg-green-50 rounded-full px-2 py-0.5">
               <Zap className="w-2.5 h-2.5" /> WhatsApp
             </span>

@@ -96,7 +96,9 @@ export default function LeadsView({ leads, columns, tenant, onRefresh, onOpenCha
                     }
                   </td>
                   <td className="px-3 py-2.5">
-                    {l.source === 'whatsapp'
+                    {l.source === 'meta_ads'
+                      ? <span className="text-[9px] font-bold text-blue-700 bg-blue-50 rounded px-1.5 py-0.5 inline-flex items-center gap-0.5">📣 Ads</span>
+                      : l.source === 'whatsapp'
                       ? <span className="text-[9px] font-bold text-green-700 bg-green-50 rounded px-1.5 py-0.5 inline-flex items-center gap-0.5"><Zap className="w-2.5 h-2.5" /> WA</span>
                       : <span className="text-[9px] text-gray-400 bg-gray-100 rounded px-1.5 py-0.5">{l.source || 'manual'}</span>
                     }
