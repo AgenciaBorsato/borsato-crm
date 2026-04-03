@@ -330,14 +330,56 @@ function KnowledgeForm({ tenant, onClose, onSuccess, existingCategories }) {
   );
 }
 
+function KnowledgeItem({ item, onRefresh }) {
+  const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(item.answer);
+  const [saving, setSaving] = useState(false);
+  const isLong = (item.answer || '').length > 200;
+  const save = async () => {
+    setSaving(true);
+    try { await api.updateKnowledge(item.id, { answer: text }); setEditing(false); onRefresh(); }
+    catch { alert('Erro ao salvar'); } finally { setSaving(false); }
+  };
+  if (editing) return (
+    <div className="bg-blue-50/50 border border-blue-200 rounded-lg p-3 mb-2">
+      <textarea value={text} onChange={e => setText(e.target.value)} rows={6} className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-xs leading-relaxed resize-y mb-2" />
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] text-gray-400">{text.length} caracteres</span>
+        <div className="flex gap-1.5">
+          <button onClick={() => { setEditing(false); setText(item.answer); }} className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold">Cancelar</button>
+          <button onClick={save} disabled={saving} className="px-3 py-1 bg-blue-600 text-white rounded-lg text-[10px] font-bold disabled:opacity-50">{saving ? 'Salvando...' : 'Salvar'}</button>
+        </div>
+      </div>
+    </div>
+  );
+  return (
+    <div className="bg-gray-50 rounded-lg p-3 mb-2 group">
+      <div className="flex justify-between items-start gap-2">
+        <p className={`text-xs text-gray-700 leading-relaxed flex-1 ${!expanded && isLong ? 'line-clamp-3' : ''}`}>{item.answer}</p>
+        <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button onClick={() => setEditing(true)} className="p-1 hover:bg-blue-50 rounded"><Edit2 className="w-3 h-3 text-gray-400 hover:text-blue-500" /></button>
+          <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteKnowledge(item.id); onRefresh(); } }} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-3 h-3 text-gray-300 hover:text-red-400" /></button>
+        </div>
+      </div>
+      {isLong && (
+        <button onClick={() => setExpanded(!expanded)} className="text-[9px] text-blue-600 hover:text-blue-800 font-medium mt-1">
+          {expanded ? 'Ver menos' : 'Ver mais...'}
+        </button>
+      )}
+      <span className="text-[8px] text-gray-300 mt-1 block">{(item.answer || '').length} chars</span>
+    </div>
+  );
+}
+
 export function KnowledgeView({ knowledge, tenant, onRefresh }) {
   const [show, setShow] = useState(false);
-  // Categorias dinamicas: extrai do que ja existe + defaults
+  const [search, setSearch] = useState('');
   const defaultCats = ['Produtos/Servicos', 'Precos', 'Agendamento', 'FAQ'];
   const existingCats = [...new Set(knowledge.map(k => k.category).filter(Boolean))];
   const allCats = [...new Set([...defaultCats, ...existingCats])];
-  // Só mostra categorias que têm conteúdo ou são default
   const visibleCats = allCats.filter(cat => defaultCats.includes(cat) || knowledge.some(k => k.category === cat));
+  const filtered = search ? knowledge.filter(k => (k.answer || '').toLowerCase().includes(search.toLowerCase()) || (k.category || '').toLowerCase().includes(search.toLowerCase())) : knowledge;
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
@@ -345,12 +387,20 @@ export function KnowledgeView({ knowledge, tenant, onRefresh }) {
           <h2 className="font-bold text-lg">Conhecimento</h2>
           <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">{knowledge.length} itens em {visibleCats.length} categorias</span>
         </div>
-        <button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Novo</button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="bg-white border border-gray-200 rounded-lg pl-8 pr-3 py-1.5 text-xs w-48 shadow-sm" />
+          </div>
+          <button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Novo</button>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         {visibleCats.map(cat => {
-          const items = knowledge.filter(k => k.category === cat);
+          const items = filtered.filter(k => k.category === cat);
+          const totalItems = knowledge.filter(k => k.category === cat).length;
           const isCustom = !defaultCats.includes(cat);
+          if (search && items.length === 0) return null;
           return (
             <div key={cat} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
@@ -358,15 +408,11 @@ export function KnowledgeView({ knowledge, tenant, onRefresh }) {
                   <h3 className="font-bold text-sm">{cat}</h3>
                   {isCustom && <span className="text-[8px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">CUSTOM</span>}
                 </div>
-                <span className="text-[9px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full">{items.length}</span>
+                <span className="text-[9px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full">{search ? `${items.length}/${totalItems}` : totalItems}</span>
               </div>
-              {items.map(item => (
-                <div key={item.id} className="bg-gray-50 rounded-lg p-3 mb-2 flex justify-between items-start gap-2">
-                  <p className="text-xs text-gray-700 leading-relaxed flex-1">{item.answer}</p>
-                  <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteKnowledge(item.id); onRefresh(); } }} className="flex-shrink-0 mt-0.5"><Trash2 className="w-3 h-3 text-gray-300 hover:text-red-400" /></button>
-                </div>
-              ))}
-              {items.length === 0 && <p className="text-[10px] text-gray-300 text-center py-3">Vazio</p>}
+              {items.map(item => <KnowledgeItem key={item.id} item={item} onRefresh={onRefresh} />)}
+              {items.length === 0 && !search && <p className="text-[10px] text-gray-300 text-center py-3">Vazio</p>}
+              {items.length === 0 && search && <p className="text-[10px] text-gray-300 text-center py-3">Nenhum resultado</p>}
             </div>
           );
         })}
