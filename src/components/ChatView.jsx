@@ -354,6 +354,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
     <div className="flex h-[calc(100vh-80px)] bg-gray-50 overflow-hidden">
       <div className="w-72 border-r border-gray-200 flex flex-col bg-white">
         <div className="p-3 space-y-2">
+          <button onClick={() => setShowNewChat(true)} className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-[#25d366] hover:bg-[#20bd5a] text-white rounded-lg text-xs font-bold transition-colors shadow-sm"><Plus className="w-3.5 h-3.5" /> Nova conversa</button>
           <div className="relative"><Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar conversa..." className="w-full bg-gray-100 rounded-xl pl-9 pr-3 py-2 text-xs outline-none focus:bg-white focus:ring-1 focus:ring-blue-200 transition-all" /></div>
           <div className="flex gap-1">{[{ id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }].map(f => (<button key={f.id} onClick={() => setFilter(f.id)} className={`flex-1 py-1.5 text-[10px] font-semibold rounded-lg transition-colors ${filter === f.id ? 'bg-blue-700 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{f.l}</button>))}</div>
         </div>
@@ -361,7 +362,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
           {filtered.map(c => {
             const isMentionedInLast = isGrp(c) && myName && (c.last_message || '').toLowerCase().includes(`@${myName.toLowerCase()}`);
             return (
-              <div key={c.id} onClick={() => selectChat(c)} className={`group flex items-center gap-3 px-3 py-3.5 cursor-pointer transition-colors border-b border-gray-50 ${cur?.id === c.id ? 'bg-blue-50/60' : 'hover:bg-gray-50/80'}`}>
+              <div key={c.id} onClick={() => selectChat(c)} className={`group flex items-center gap-3 px-3 py-3.5 cursor-pointer transition-colors border-b border-gray-50 ${cur?.id === c.id ? 'bg-blue-50' : 'hover:bg-gray-100'}`}>
                 <ProfilePic phone={c.contact_phone || c.remote_jid} tenantId={tenant.id} name={chatDisplayName(c)} isGroup={isGrp(c)} size="w-10 h-10" cachedUrl={c.profile_pic_url} />
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center">
@@ -403,8 +404,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
             <div className="px-3 py-4 text-center text-[10px] text-gray-400">Buscando contatos...</div>
           )}
         </div>
-        <div className="p-2 border-t border-gray-100 space-y-1">
-          <button onClick={() => setShowNewChat(true)} className="w-full flex items-center gap-2 px-3 py-1.5 text-blue-700 hover:bg-blue-50 rounded-lg text-[11px] font-medium transition-all"><Plus className="w-3 h-3" /> Nova conversa</button>
+        <div className="p-2 border-t border-gray-100">
           <button onClick={() => { setShowTrash(true); loadDeletedChats(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg text-[11px] font-medium transition-all"><RotateCcw className="w-3 h-3" /> Lixeira</button>
         </div>
       </div>
@@ -556,7 +556,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                       </div>
                     )}
                     <div id={`msg-${m.id}`} className={`max-w-[70%] rounded-xl px-3 py-2 transition-all ${
-                      fromMe ? (isAI ? 'bg-violet-50/60 border border-violet-100' : 'bg-blue-50 border border-blue-100') : isMentionedMsg ? 'bg-amber-50 border border-amber-200' : 'bg-white border border-gray-100'
+                      fromMe ? (isAI ? 'bg-purple-100/80 border border-purple-200' : 'bg-[#d9fdd3] border border-[#c5e8b7]') : isMentionedMsg ? 'bg-amber-50 border border-amber-200' : 'bg-white border border-gray-100'
                     }`}>
                       {isForwarded && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-medium text-gray-400 flex items-center gap-0.5"><CornerUpRight className="w-2 h-2" /> Encaminhada</span></div>}
                       {isMentionedMsg && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-1 py-0.5 flex items-center gap-0.5"><AtSign className="w-2 h-2" /> mencionado</span></div>}
@@ -674,10 +674,10 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
               )}
               <input type="file" ref={fileRef} onChange={handleFile} className="hidden" accept="image/*,video/*,.pdf,.doc,.docx" />
               <button onClick={() => fileRef.current?.click()} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg flex-shrink-0 mb-0.5 transition-colors"><Paperclip className="w-4 h-4" /></button>
-              <textarea ref={inputRef} value={msg} onChange={handleMsgChange} onKeyDown={handleKeyDown} disabled={sending} rows={1}
+              <textarea ref={inputRef} value={msg} onChange={handleMsgChange} onKeyDown={handleKeyDown} disabled={sending} rows={2}
                 placeholder={isGrp(cur) ? 'Mensagem... (@ para mencionar)' : 'Escreva uma mensagem...'}
                 className="flex-1 bg-gray-100 rounded-2xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-1 focus:ring-blue-200 resize-none overflow-y-auto leading-relaxed transition-all"
-                style={{ maxHeight: '120px' }} onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
+                style={{ minHeight: '52px', maxHeight: '120px' }} onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
               <button onClick={send} disabled={sending || !msg.trim()} className="p-2.5 bg-blue-700 text-white rounded-xl disabled:opacity-30 flex-shrink-0 mb-0.5 hover:bg-blue-800 transition-colors"><Send className="w-4 h-4" /></button>
             </div>
 
