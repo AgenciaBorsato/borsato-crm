@@ -435,48 +435,58 @@ export function SettingsView({ tenant, onRefresh }) {
   };
 
   return (
-    <div className="max-w-xl space-y-4">
+    <div className="space-y-5">
       <h2 className="font-bold text-lg">Configuracoes</h2>
-      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1"><Bot className="w-4 h-4 text-purple-600" /><h3 className="font-bold text-sm">Assistente IA</h3><span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${aiEnabled?'bg-purple-100 text-purple-700':'bg-gray-100 text-gray-400'}`}>{aiEnabled?'ATIVO':'DESLIGADO'}</span></div>
-            <p className="text-xs text-gray-400 leading-relaxed">Quando ativo, a IA responde automaticamente mensagens recebidas de leads usando a base de conhecimento e o historico da conversa. Voce pode pausar individualmente por contato na tela de Conversas.</p>
+
+      {/* Linha 1 — IA toggle + Personalidade */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-4">
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1"><Bot className="w-4 h-4 text-purple-600" /><h3 className="font-bold text-sm">Assistente IA</h3><span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${aiEnabled?'bg-purple-100 text-purple-700':'bg-gray-100 text-gray-400'}`}>{aiEnabled?'ATIVO':'DESLIGADO'}</span></div>
+                <p className="text-xs text-gray-400 leading-relaxed">Quando ativo, a IA responde automaticamente mensagens recebidas de leads usando a base de conhecimento e o historico da conversa.</p>
+              </div>
+              <button onClick={toggleAI} disabled={togglingAI} className={`flex-shrink-0 w-12 h-6 rounded-full transition-all relative ${aiEnabled?'bg-purple-500':'bg-gray-300'} disabled:opacity-50`}><div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${aiEnabled?'left-6':'left-0.5'}`} /></button>
+            </div>
+            {aiEnabled&&<div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 text-[10px] text-purple-600 bg-purple-50 rounded-lg px-3 py-2"><Bot className="w-3 h-3 flex-shrink-0" />IA ativa — responde com memoria de sessao, resumo do lead e base de conhecimento</div>}
           </div>
-          <button onClick={toggleAI} disabled={togglingAI} className={`flex-shrink-0 w-12 h-6 rounded-full transition-all relative ${aiEnabled?'bg-purple-500':'bg-gray-300'} disabled:opacity-50`}><div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${aiEnabled?'left-6':'left-0.5'}`} /></button>
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <h3 className="font-bold text-sm mb-1 flex items-center gap-2"><Users2 className="w-4 h-4 text-gray-400" /> Fotos de Perfil</h3>
+            <p className="text-[10px] text-gray-400 mb-3">Busca fotos de perfil do WhatsApp para todos os contatos e grupos.</p>
+            <button onClick={syncProfilePics} disabled={syncingPics} className="px-4 py-2 bg-blue-700 text-white font-semibold rounded-xl text-sm disabled:opacity-50 hover:bg-blue-800 transition-colors">{syncingPics ? 'Sincronizando...' : 'Sincronizar fotos'}</button>
+            {syncResult && <p className="text-[10px] text-gray-500 mt-2">{syncResult.updated} fotos atualizadas de {syncResult.total} contatos ({syncResult.failed} sem foto disponivel)</p>}
+          </div>
         </div>
-        {aiEnabled&&<div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 text-[10px] text-purple-600 bg-purple-50 rounded-lg px-3 py-2"><Bot className="w-3 h-3 flex-shrink-0" />IA ativa — responde com memoria de sessao, resumo do lead e base de conhecimento</div>}
-      </div>
-      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-        <h3 className="font-bold text-sm mb-1 flex items-center gap-2"><Brain className="w-4 h-4 text-gray-400" /> Personalidade da IA</h3>
-        <p className="text-[10px] text-gray-400 mb-3">Defina como a IA deve se apresentar. Se vazio, usa atendimento padrao cordial.</p>
-        <textarea value={prompt} onChange={e=>setPrompt(e.target.value)} rows={6} placeholder={"Exemplo:\nVoce e a assistente da Clinica Exemplo.\nSe apresente como Ana e seja sempre educada.\nNao marque consultas sem confirmar disponibilidade."} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm mb-3 font-mono text-xs leading-relaxed" />
-        <button onClick={savePrompt} disabled={saving} className="px-5 py-2 bg-[#25d366] text-white font-bold rounded-xl text-sm disabled:opacity-50">{saving?'Salvando...':'Salvar prompt'}</button>
-      </div>
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-        <p className="text-[10px] font-bold text-amber-700 uppercase mb-2 flex items-center gap-1"><Brain className="w-3 h-3" /> Memoria da IA</p>
-        <div className="space-y-1 text-[11px] text-amber-800">
-          <p>A IA mantem 3 camadas de contexto por lead:</p>
-          <p>1. <b>Sessao ativa</b> — historico das ultimas mensagens (24h)</p>
-          <p>2. <b>Resumo persistente</b> — contexto estrategico salvo no lead</p>
-          <p>3. <b>Perfil estruturado</b> — objetivo, dor, estagio e interesse detectados automaticamente</p>
-          <p className="mt-1 text-amber-600">O resumo aparece no modal do lead e no header do chat. Use o botao de atualizar para gerar um novo resumo manualmente.</p>
+        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col">
+          <h3 className="font-bold text-sm mb-1 flex items-center gap-2"><Brain className="w-4 h-4 text-gray-400" /> Personalidade da IA</h3>
+          <p className="text-[10px] text-gray-400 mb-3">Defina como a IA deve se apresentar. Se vazio, usa atendimento padrao cordial.</p>
+          <textarea value={prompt} onChange={e=>setPrompt(e.target.value)} rows={8} placeholder={"Exemplo:\nVoce e a assistente da Clinica Exemplo.\nSe apresente como Ana e seja sempre educada.\nNao marque consultas sem confirmar disponibilidade."} className="w-full flex-1 bg-gray-50 border border-gray-200 rounded-xl p-3 mb-3 font-mono text-xs leading-relaxed resize-none" />
+          <button onClick={savePrompt} disabled={saving} className="px-5 py-2 bg-[#25d366] text-white font-bold rounded-xl text-sm disabled:opacity-50 self-start">{saving?'Salvando...':'Salvar prompt'}</button>
         </div>
       </div>
-      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-        <h3 className="font-bold text-sm mb-1 flex items-center gap-2"><Users2 className="w-4 h-4 text-gray-400" /> Fotos de Perfil</h3>
-        <p className="text-[10px] text-gray-400 mb-3">Busca fotos de perfil do WhatsApp para todos os contatos e grupos. Pode levar alguns minutos.</p>
-        <button onClick={syncProfilePics} disabled={syncingPics} className="px-4 py-2 bg-blue-700 text-white font-semibold rounded-xl text-sm disabled:opacity-50 hover:bg-blue-800 transition-colors">{syncingPics ? 'Sincronizando...' : 'Sincronizar fotos'}</button>
-        {syncResult && <p className="text-[10px] text-gray-500 mt-2">{syncResult.updated} fotos atualizadas de {syncResult.total} contatos ({syncResult.failed} sem foto disponivel)</p>}
-      </div>
-      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-        <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">Como funciona</p>
-        <div className="space-y-1 text-[11px] text-gray-500">
-          <p>1. IA ligada aqui responde todos os leads automaticamente</p>
-          <p>2. Base de Conhecimento e a fonte das respostas</p>
-          <p>3. Em Conversas: botao IA ativa/pausada por contato individual</p>
-          <p>4. Mensagens da IA aparecem com badge roxo na conversa</p>
-          <p>5. Resumo atualizado automaticamente na 3a, 7a e 15a mensagem do lead</p>
+
+      {/* Linha 2 — Memoria da IA + Como funciona */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+          <p className="text-[10px] font-bold text-amber-700 uppercase mb-2 flex items-center gap-1"><Brain className="w-3 h-3" /> Memoria da IA</p>
+          <div className="space-y-1.5 text-[11px] text-amber-800">
+            <p>A IA mantem 3 camadas de contexto por lead:</p>
+            <p>1. <b>Sessao ativa</b> — historico das ultimas mensagens (24h)</p>
+            <p>2. <b>Resumo persistente</b> — contexto estrategico salvo no lead</p>
+            <p>3. <b>Perfil estruturado</b> — objetivo, dor, estagio e interesse detectados automaticamente</p>
+            <p className="mt-2 text-amber-600">O resumo aparece no modal do lead e no header do chat. Use o botao de atualizar para gerar um novo resumo manualmente.</p>
+          </div>
+        </div>
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+          <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">Como funciona</p>
+          <div className="space-y-1.5 text-[11px] text-gray-500">
+            <p>1. IA ligada aqui responde todos os leads automaticamente</p>
+            <p>2. Base de Conhecimento e a fonte das respostas</p>
+            <p>3. Em Conversas: botao IA ativa/pausada por contato individual</p>
+            <p>4. Mensagens da IA aparecem com badge roxo na conversa</p>
+            <p>5. Resumo atualizado automaticamente na 3a, 7a e 15a mensagem do lead</p>
+          </div>
         </div>
       </div>
     </div>
