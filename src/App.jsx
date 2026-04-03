@@ -144,6 +144,16 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
     checkWA(); const i = setInterval(checkWA, 60000); return () => clearInterval(i);
   }, [tenant.id]);
 
+  // Heartbeat - status online do operador
+  useEffect(() => {
+    const beat = () => api.sendHeartbeat('online').catch(() => {});
+    beat();
+    const i = setInterval(beat, 30000);
+    const onVis = () => api.sendHeartbeat(document.hidden ? 'offline' : 'online').catch(() => {});
+    document.addEventListener('visibilitychange', onVis);
+    return () => { clearInterval(i); document.removeEventListener('visibilitychange', onVis); api.sendHeartbeat('offline').catch(() => {}); };
+  }, [tenant.id]);
+
   const loadCols = async () => { try { setColumns(await api.getKanbanColumns(tenant.id)); } catch {} };
   const refreshAll = useCallback(async () => { await onRefresh(); await loadCols(); }, [onRefresh, tenant.id]);
   const openChatByPhone = useCallback((phone) => { setRequestedPhone(phone); setActiveTab('chat'); }, []);

@@ -110,6 +110,8 @@ class ApiService {
 
   // USERS
   async getUsers(tid) { return await this.request(`/api/users?tenantId=${encodeURIComponent(tid)}`); }
+  async sendHeartbeat(status = 'online') { return await this.request('/api/users/heartbeat', { method: 'POST', body: JSON.stringify({ status }) }); }
+  async getOnlineUsers(tid) { return await this.request(`/api/users/online?tenantId=${encodeURIComponent(tid)}`); }
   async createUser(data) { return await this.request('/api/users', { method: 'POST', body: JSON.stringify(data) }); }
   async updateUser(id, data) { return await this.request(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }); }
   async deleteUser(id) { return await this.request(`/api/users/${id}`, { method: 'DELETE' }); }

@@ -229,7 +229,53 @@ export function AnalyticsView({ leads, columns, tenant }) {
         </div>
       </div>
 
-      {/* Linha 4 — Insights da IA */}
+      {/* Linha 4 — Performance da Equipe */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <h3 className="font-bold text-sm mb-3 flex items-center gap-2">👤 Mensagens por Operador</h3>
+          {(d.userPerformance || []).length > 0 ? (
+            <div className="space-y-2">
+              {d.userPerformance.map((u, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white ${['bg-blue-500','bg-emerald-500','bg-orange-500','bg-pink-500','bg-indigo-500'][i % 5]}`}>{(u.name||'?')[0]}</span>
+                    <span className="text-xs text-gray-700 truncate">{u.name || 'Desconhecido'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-[10px] text-gray-400">{u.chats} chats</span>
+                    <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">{u.sent}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-[10px] text-gray-300 text-center py-4">Sem dados no periodo</p>}
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <h3 className="font-bold text-sm mb-3 flex items-center gap-2">⏱️ Tempo de Resposta</h3>
+          {(d.responseTime || []).length > 0 ? (
+            <div className="space-y-2">
+              {d.responseTime.map((u, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <span className="text-xs text-gray-700 truncate flex-1">{u.responder || 'Desconhecido'}</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-[10px] text-gray-400">{u.responses} respostas</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${Number(u.avg_minutes) <= 5 ? 'bg-green-50 text-green-700' : Number(u.avg_minutes) <= 30 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>{u.avg_minutes} min</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-[10px] text-gray-300 text-center py-4">Sem dados no periodo</p>}
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <h3 className="font-bold text-sm mb-3 flex items-center gap-2">🔴 Fila de Atendimento</h3>
+          <div className="text-center py-3">
+            <p className={`text-4xl font-black ${(d.pendingChats || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>{d.pendingChats || 0}</p>
+            <p className="text-[10px] text-gray-400 mt-1">{(d.pendingChats || 0) > 0 ? 'leads aguardando resposta' : 'nenhum lead esperando'}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Linha 5 — Insights da IA */}
       <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-5 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-bold text-sm flex items-center gap-2 text-purple-800"><Sparkles className="w-4 h-4 text-purple-500" /> Insights da IA</h3>
@@ -318,18 +364,34 @@ function UserModal({ user, tenant, onClose, onSuccess }) {
 export function TeamView({ users, tenant, currentUser, onRefresh }) {
   const [show, setShow] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [onlineIds, setOnlineIds] = useState([]);
+  React.useEffect(() => {
+    const load = async () => { try { const r = await api.getOnlineUsers(tenant.id); setOnlineIds(r.map(u => u.id)); } catch {} };
+    load(); const i = setInterval(load, 10000); return () => clearInterval(i);
+  }, [tenant.id]);
+  const onlineCount = onlineIds.length;
   return (
     <div>
-      <div className="flex justify-between items-center mb-4"><h2 className="font-bold text-lg">Equipe</h2><button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Usuario</button></div>
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-3">
+          <h2 className="font-bold text-lg">Equipe</h2>
+          <span className="flex items-center gap-1.5 px-2.5 py-1 bg-green-50 border border-green-200 rounded-full text-[10px] font-bold text-green-700">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> {onlineCount} online
+          </span>
+        </div>
+        <button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Usuario</button>
+      </div>
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <table className="w-full text-left">
-          <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase"><tr><th className="p-3">Nome</th><th className="p-3">E-mail</th><th className="p-3">Funcao</th><th className="p-3">Permissoes</th><th className="p-3 text-right">Acoes</th></tr></thead>
+          <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase"><tr><th className="p-3">Nome</th><th className="p-3">Status</th><th className="p-3">E-mail</th><th className="p-3">Funcao</th><th className="p-3">Permissoes</th><th className="p-3 text-right">Acoes</th></tr></thead>
           <tbody className="divide-y divide-gray-100">
             {users.map(u => {
               const perms = (() => { try { return JSON.parse(u.permissions || '[]'); } catch { return []; } })();
+              const isOn = onlineIds.includes(u.id);
               return (
                 <tr key={u.id}>
                   <td className="p-3 font-bold text-xs">{u.name}</td>
+                  <td className="p-3"><span className={`inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full ${isOn ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'}`}><span className={`w-1.5 h-1.5 rounded-full ${isOn ? 'bg-green-500' : 'bg-gray-300'}`} />{isOn ? 'Online' : 'Offline'}</span></td>
                   <td className="p-3 text-xs text-gray-400">{u.email}</td>
                   <td className="p-3"><span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${u.role==='super_admin'?'bg-purple-50 text-purple-500':u.role==='client_admin'?'bg-amber-50 text-amber-600':'bg-blue-50 text-blue-500'}`}>{u.role==='super_admin'?'Mestre':u.role==='client_admin'?'Admin':'Usuario'}</span></td>
                   <td className="p-3 text-[9px] text-gray-400">{u.role==='client_user'?perms.join(', ')||'Nenhuma':''}</td>

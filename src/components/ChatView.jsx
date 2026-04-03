@@ -372,6 +372,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                   <div className="flex justify-between mt-1 items-center">
                     <p className="text-xs text-gray-500 truncate">{c.last_message}</p>
                     <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                      {Number(c.awaiting_response) === 1 && Number(c.unread_count) > 0 && <span className="bg-red-500 text-white text-[7px] font-bold w-4 h-4 rounded-full flex items-center justify-center" title="Aguardando resposta">!</span>}
                       {isMentionedInLast && <span className="bg-blue-700 text-white text-[7px] font-bold w-4 h-4 rounded-full flex items-center justify-center"><AtSign className="w-2.5 h-2.5" /></span>}
                       {Number(c.unread_count) > 0 && <span className="bg-blue-700 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{Number(c.unread_count) > 9 ? '9+' : c.unread_count}</span>}
                     </div>
