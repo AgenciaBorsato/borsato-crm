@@ -304,11 +304,26 @@ export function AnalyticsView({ leads, columns, tenant }) {
   );
 }
 
-function KnowledgeForm({ tenant, onClose, onSuccess }) {
-  const [f, setF] = useState({ category: 'FAQ', content: '' });
+function KnowledgeForm({ tenant, onClose, onSuccess, existingCategories }) {
+  const [f, setF] = useState({ category: '', content: '', customCat: '' });
+  const [useCustom, setUseCustom] = useState(false);
+  const finalCat = useCustom ? f.customCat.trim() : f.category;
   return (
-    <form onSubmit={async e => { e.preventDefault(); await api.createKnowledge({ category: f.category, question: f.category, answer: f.content, tenantId: tenant.id }); onSuccess(); }} className="space-y-3">
-      <select value={f.category} onChange={e => setF({ ...f, category: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm"><option>Produtos/Servicos</option><option>Precos</option><option>Agendamento</option><option>FAQ</option></select>
+    <form onSubmit={async e => { e.preventDefault(); if (!finalCat) return alert('Selecione ou crie uma categoria'); await api.createKnowledge({ category: finalCat, question: finalCat, answer: f.content, tenantId: tenant.id }); onSuccess(); }} className="space-y-3">
+      {!useCustom ? (
+        <div className="space-y-2">
+          <select value={f.category} onChange={e => setF({ ...f, category: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
+            <option value="">Selecione a categoria...</option>
+            {existingCategories.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <button type="button" onClick={() => setUseCustom(true)} className="text-[10px] text-blue-600 hover:text-blue-800 font-medium">+ Criar nova categoria</button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <input value={f.customCat} onChange={e => setF({ ...f, customCat: e.target.value })} placeholder="Ex: Ofertas da Semana, Horarios, Promocoes..." className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" autoFocus />
+          <button type="button" onClick={() => setUseCustom(false)} className="text-[10px] text-gray-400 hover:text-gray-600 font-medium">Voltar para categorias existentes</button>
+        </div>
+      )}
       <textarea placeholder="Ex: Atendemos de segunda a sexta das 8h as 18h..." value={f.content} onChange={e => setF({ ...f, content: e.target.value })} rows={5} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
       <div className="flex gap-2"><button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button><button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Salvar</button></div>
     </form>
@@ -317,25 +332,46 @@ function KnowledgeForm({ tenant, onClose, onSuccess }) {
 
 export function KnowledgeView({ knowledge, tenant, onRefresh }) {
   const [show, setShow] = useState(false);
-  const cats = ['Produtos/Servicos', 'Precos', 'Agendamento', 'FAQ'];
+  // Categorias dinamicas: extrai do que ja existe + defaults
+  const defaultCats = ['Produtos/Servicos', 'Precos', 'Agendamento', 'FAQ'];
+  const existingCats = [...new Set(knowledge.map(k => k.category).filter(Boolean))];
+  const allCats = [...new Set([...defaultCats, ...existingCats])];
+  // Só mostra categorias que têm conteúdo ou são default
+  const visibleCats = allCats.filter(cat => defaultCats.includes(cat) || knowledge.some(k => k.category === cat));
   return (
     <div>
-      <div className="flex justify-between items-center mb-4"><h2 className="font-bold text-lg">Conhecimento</h2><button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Novo</button></div>
-      <div className="grid grid-cols-2 gap-4">
-        {cats.map(cat => (
-          <div key={cat} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-            <h3 className="font-bold text-sm mb-3">{cat}</h3>
-            {knowledge.filter(k => k.category === cat).map(item => (
-              <div key={item.id} className="bg-gray-50 rounded-lg p-3 mb-2 flex justify-between items-start gap-2">
-                <p className="text-xs text-gray-700 leading-relaxed flex-1">{item.answer}</p>
-                <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteKnowledge(item.id); onRefresh(); } }} className="flex-shrink-0 mt-0.5"><Trash2 className="w-3 h-3 text-gray-300 hover:text-red-400" /></button>
-              </div>
-            ))}
-            {knowledge.filter(k => k.category === cat).length === 0 && <p className="text-[10px] text-gray-300 text-center py-3">Vazio</p>}
-          </div>
-        ))}
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-3">
+          <h2 className="font-bold text-lg">Conhecimento</h2>
+          <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">{knowledge.length} itens em {visibleCats.length} categorias</span>
+        </div>
+        <button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Novo</button>
       </div>
-      {show && (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl"><h2 className="font-bold mb-1">Novo conteudo</h2><p className="text-[11px] text-gray-400 mb-4">Escreva qualquer informacao sobre o seu negocio. A IA decide o que usar em cada conversa.</p><KnowledgeForm tenant={tenant} onClose={() => setShow(false)} onSuccess={() => { setShow(false); onRefresh(); }} /></div></div>)}
+      <div className="grid grid-cols-2 gap-4">
+        {visibleCats.map(cat => {
+          const items = knowledge.filter(k => k.category === cat);
+          const isCustom = !defaultCats.includes(cat);
+          return (
+            <div key={cat} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm">{cat}</h3>
+                  {isCustom && <span className="text-[8px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">CUSTOM</span>}
+                </div>
+                <span className="text-[9px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full">{items.length}</span>
+              </div>
+              {items.map(item => (
+                <div key={item.id} className="bg-gray-50 rounded-lg p-3 mb-2 flex justify-between items-start gap-2">
+                  <p className="text-xs text-gray-700 leading-relaxed flex-1">{item.answer}</p>
+                  <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteKnowledge(item.id); onRefresh(); } }} className="flex-shrink-0 mt-0.5"><Trash2 className="w-3 h-3 text-gray-300 hover:text-red-400" /></button>
+                </div>
+              ))}
+              {items.length === 0 && <p className="text-[10px] text-gray-300 text-center py-3">Vazio</p>}
+            </div>
+          );
+        })}
+      </div>
+      {show && (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"><h2 className="font-bold mb-1">Novo conteudo</h2><p className="text-[11px] text-gray-400 mb-4">Escolha uma categoria existente ou crie uma nova. A IA decide o que usar em cada conversa.</p><KnowledgeForm tenant={tenant} existingCategories={allCats} onClose={() => setShow(false)} onSuccess={() => { setShow(false); onRefresh(); }} /></div></div>)}
     </div>
   );
 }
