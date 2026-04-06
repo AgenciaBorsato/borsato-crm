@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import {
   TrendingUp, Plus, Search,
   LogIn, Edit2, ChevronUp, ChevronDown,
-  BarChart2, AlertCircle, CheckCircle, Users, X
+  BarChart2, AlertCircle, CheckCircle, Users, X,
+  LogOut, LayoutDashboard, Building2, RefreshCw
 } from 'lucide-react';
 import CreateCrmModal from '../components/modals/CreateCrmModal.jsx';
 import EditCrmModal from '../components/modals/EditCrmModal.jsx';
@@ -73,23 +74,67 @@ export default function SuperAdminPanel({ user, tenants = [], onLogout, onRefres
 
   const topByRev = [...tenants].sort((a, b) => (b.monthly_value || 0) - (a.monthly_value || 0)).slice(0, 5);
 
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+
+  const sidebarItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'clients',   label: 'Clientes',  icon: Building2 },
+  ];
+
+  const [activeSection, setActiveSection] = useState('dashboard');
+
   return (
-    <div className="min-h-screen bg-[#f0f2f5]">
-      {/* Top bar */}
-      <div className="bg-[#075e54] text-white px-6 py-3 flex justify-between items-center shadow">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center font-black text-base">BR</div>
-          <div>
-            <h1 className="font-bold text-sm tracking-wide">Painel Mestre</h1>
-            <p className="text-[10px] text-white/60">{user?.name} · Super Admin</p>
-          </div>
+    <div className="h-screen flex bg-[#f0f2f5] overflow-hidden">
+      {/* Sidebar */}
+      <div
+        onMouseEnter={() => setSidebarExpanded(true)}
+        onMouseLeave={() => setSidebarExpanded(false)}
+        className={`flex flex-col bg-[#075e54] transition-all duration-200 ease-in-out flex-shrink-0 ${sidebarExpanded ? 'w-48' : 'w-14'}`}
+      >
+        <div className="flex items-center gap-2.5 px-3 py-4 border-b border-white/10">
+          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center font-black text-xs text-white flex-shrink-0">BR</div>
+          {sidebarExpanded && (
+            <div className="overflow-hidden">
+              <p className="font-bold text-white text-xs truncate">Painel Mestre</p>
+              <p className="text-[9px] text-white/40 truncate">{user?.name}</p>
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-white/50">{new Date().toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}</span>
-          <button onClick={onLogout} className="px-3 py-1.5 bg-white/10 rounded-lg text-xs hover:bg-white/20 transition">Sair</button>
+
+        <nav className="flex-1 py-2 space-y-0.5">
+          {sidebarItems.map(item => {
+            const isActive = activeSection === item.id;
+            return (
+              <button key={item.id} onClick={() => setActiveSection(item.id)}
+                title={!sidebarExpanded ? item.label : undefined}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 transition-all duration-150 relative
+                  ${isActive ? 'bg-white/15 text-white' : 'text-white/50 hover:text-white hover:bg-white/5'}`}>
+                {isActive && <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-[#25d366] rounded-r" />}
+                <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+                {sidebarExpanded && <span className="text-[11px] font-semibold truncate">{item.label}</span>}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="border-t border-white/10 py-2">
+          <button onClick={onRefresh}
+            title={!sidebarExpanded ? 'Atualizar' : undefined}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-white/50 hover:text-white hover:bg-white/5 transition-all">
+            <RefreshCw className="w-[18px] h-[18px] flex-shrink-0" />
+            {sidebarExpanded && <span className="text-[11px] font-semibold">Atualizar</span>}
+          </button>
+          <button onClick={onLogout}
+            title={!sidebarExpanded ? 'Sair' : undefined}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-white/50 hover:text-red-300 hover:bg-white/5 transition-all">
+            <LogOut className="w-[18px] h-[18px] flex-shrink-0" />
+            {sidebarExpanded && <span className="text-[11px] font-semibold">Sair</span>}
+          </button>
         </div>
       </div>
 
+      {/* Main content */}
+      <div className="flex-1 overflow-auto">
       <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
 
         {/* KPI grid */}
@@ -240,6 +285,7 @@ export default function SuperAdminPanel({ user, tenants = [], onLogout, onRefres
         <div className="text-center text-[10px] text-gray-400">
           Borsato CRM · Painel exclusivo · {tenants.length} CRM{tenants.length !== 1 ? 's' : ''} ativos · MRR {fmt(mrr)}
         </div>
+      </div>
       </div>
 
       {showCreate && (

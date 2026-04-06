@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { X, Building2, User, Shield, Settings2, FileText, CreditCard, Eye, EyeOff, Loader } from 'lucide-react';
+import { X, Building2, User, Shield, Settings2, FileText, CreditCard, Eye, EyeOff, Loader, LayoutGrid, MessageSquare, Users, Smartphone, BarChart3, Brain, UserPlus, Settings } from 'lucide-react';
 import api from '../../api';
 
 const MODULE_OPTIONS = [
-  { id: 'kanban',    label: 'Kanban' },
-  { id: 'chat',      label: 'Conversas' },
-  { id: 'leads',     label: 'Leads' },
-  { id: 'whatsapp',  label: 'WhatsApp' },
-  { id: 'analytics', label: 'Analytics' },
-  { id: 'knowledge', label: 'Conhecimento' },
-  { id: 'team',      label: 'Equipe' },
-  { id: 'settings',  label: 'Configuracoes' },
+  { id: 'kanban',    label: 'Kanban',         icon: LayoutGrid },
+  { id: 'chat',      label: 'Conversas',      icon: MessageSquare },
+  { id: 'leads',     label: 'Leads',          icon: Users },
+  { id: 'whatsapp',  label: 'WhatsApp',       icon: Smartphone },
+  { id: 'analytics', label: 'Analytics',      icon: BarChart3 },
+  { id: 'knowledge', label: 'Base de Conhecimento', icon: Brain },
+  { id: 'team',      label: 'Equipe',         icon: UserPlus },
+  { id: 'settings',  label: 'Configuracoes',  icon: Settings },
 ];
 
 export default function EditCrmModal({ tenant, onClose, onSuccess }) {
@@ -225,23 +225,28 @@ export default function EditCrmModal({ tenant, onClose, onSuccess }) {
                 </Field>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Modulos liberados</label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Modulos liberados</label>
+                <p className="text-xs text-gray-400 mb-3">Ative ou desative os modulos disponiveis para este CRM</p>
+                <div className="bg-gray-50 rounded-xl border border-gray-200 divide-y divide-gray-200">
                   {MODULE_OPTIONS.map(module => {
                     const active = form.enabledModules.includes(module.id);
+                    const Icon = module.icon;
                     return (
-                      <button
-                        key={module.id}
-                        type="button"
-                        onClick={() => toggleModule(module.id)}
-                        className={`px-3 py-2 rounded-xl border text-sm font-medium transition ${
-                          active
-                            ? 'bg-[#25d366]/10 border-[#25d366] text-[#075e54]'
-                            : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
-                        }`}
-                      >
-                        {module.label}
-                      </button>
+                      <div key={module.id} className="flex items-center justify-between px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${active ? 'bg-[#075e54]/10 text-[#075e54]' : 'bg-gray-200/60 text-gray-400'}`}>
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <span className={`text-sm font-medium ${active ? 'text-gray-900' : 'text-gray-400'}`}>{module.label}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => toggleModule(module.id)}
+                          className={`relative w-10 h-[22px] rounded-full transition-colors duration-200 ${active ? 'bg-[#25d366]' : 'bg-gray-300'}`}
+                        >
+                          <span className={`absolute top-[2px] w-[18px] h-[18px] bg-white rounded-full shadow transition-transform duration-200 ${active ? 'left-[20px]' : 'left-[2px]'}`} />
+                        </button>
+                      </div>
                     );
                   })}
                 </div>

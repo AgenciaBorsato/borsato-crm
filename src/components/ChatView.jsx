@@ -276,6 +276,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   const filtered = chats.filter(c => {
     if (filter === 'individual' && isGrp(c)) return false;
     if (filter === 'group' && !isGrp(c)) return false;
+    if (filter === 'unread' && !(Number(c.unread_count) > 0)) return false;
     if (!search) return true;
     return chatDisplayName(c).toLowerCase().includes(search.toLowerCase());
   });
@@ -351,30 +352,49 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
   return (
-    <div className="flex h-[calc(100vh-80px)] bg-gray-50 overflow-hidden">
-      <div className="w-72 border-r border-gray-200 flex flex-col bg-white">
-        <div className="p-3 space-y-2">
-          <button onClick={() => setShowNewChat(true)} className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-[#25d366] hover:bg-[#20bd5a] text-white rounded-lg text-xs font-bold transition-colors shadow-sm"><Plus className="w-3.5 h-3.5" /> Nova conversa</button>
-          <div className="relative"><Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar conversa..." className="w-full bg-gray-100 rounded-xl pl-9 pr-3 py-2 text-xs outline-none focus:bg-white focus:ring-1 focus:ring-blue-200 transition-all" /></div>
-          <div className="flex gap-1">{[{ id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }].map(f => (<button key={f.id} onClick={() => setFilter(f.id)} className={`flex-1 py-1.5 text-[10px] font-semibold rounded-lg transition-colors ${filter === f.id ? 'bg-blue-700 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{f.l}</button>))}</div>
+    <div className="flex h-full bg-gray-50 overflow-hidden">
+      <div className="w-80 border-r border-gray-200 flex flex-col bg-white">
+        {/* Header da lista de chats */}
+        <div className="bg-[#075e54] px-3 py-3 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-white font-bold text-sm">Conversas</h2>
+            <button onClick={() => setShowNewChat(true)} className="w-8 h-8 bg-white/15 hover:bg-white/25 text-white rounded-lg flex items-center justify-center transition-colors" title="Nova conversa"><Plus className="w-4 h-4" /></button>
+          </div>
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar conversa..." className="w-full bg-white/10 text-white placeholder-white/40 rounded-lg pl-9 pr-3 py-2 text-xs outline-none focus:bg-white/15 transition-all" />
+          </div>
+          <div className="flex gap-1">
+            {[{ id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }, { id: 'unread', l: 'Nao lidas' }].map(f => {
+              const count = f.id === 'unread' ? chats.filter(c => Number(c.unread_count) > 0).length : null;
+              return (
+                <button key={f.id} onClick={() => setFilter(f.id)} className={`flex-1 py-1.5 text-[10px] font-semibold rounded-full transition-all flex items-center justify-center gap-1 ${filter === f.id ? 'bg-[#25d366] text-white shadow-sm' : 'bg-white/10 text-white/60 hover:bg-white/15 hover:text-white'}`}>
+                  {f.l}
+                  {count > 0 && <span className={`min-w-[14px] h-[14px] rounded-full text-[8px] font-bold flex items-center justify-center px-0.5 ${filter === f.id ? 'bg-white/25 text-white' : 'bg-red-500 text-white'}`}>{count}</span>}
+                </button>
+              );
+            })}
+          </div>
         </div>
+        {/* Lista de conversas */}
         <div className="flex-1 overflow-y-auto">
           {filtered.map(c => {
             const isMentionedInLast = isGrp(c) && myName && (c.last_message || '').toLowerCase().includes(`@${myName.toLowerCase()}`);
+            const hasUnread = Number(c.unread_count) > 0;
             return (
-              <div key={c.id} onClick={() => selectChat(c)} className={`group flex items-center gap-3 px-3 py-3.5 cursor-pointer transition-colors border-b border-gray-50 ${cur?.id === c.id ? 'bg-blue-50' : 'hover:bg-gray-100'}`}>
-                <ProfilePic phone={c.contact_phone || c.remote_jid} tenantId={tenant.id} name={chatDisplayName(c)} isGroup={isGrp(c)} size="w-10 h-10" cachedUrl={c.profile_pic_url} />
+              <div key={c.id} onClick={() => selectChat(c)} className={`group flex items-center gap-3 px-3 py-3 cursor-pointer transition-all border-b border-gray-100/60 ${cur?.id === c.id ? 'bg-[#075e54]/5 border-l-[3px] border-l-[#25d366]' : 'hover:bg-gray-50 border-l-[3px] border-l-transparent'}`}>
+                <ProfilePic phone={c.contact_phone || c.remote_jid} tenantId={tenant.id} name={chatDisplayName(c)} isGroup={isGrp(c)} size="w-11 h-11" cachedUrl={c.profile_pic_url} />
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center">
-                    <p className="font-semibold text-sm text-gray-900 truncate">{chatDisplayName(c)}{isGrp(c) && <span className="ml-1.5 text-[8px] bg-gray-100 text-gray-400 px-1 py-0.5 rounded font-medium">GRUPO</span>}</p>
-                    <span className="text-[10px] text-gray-400 flex-shrink-0 ml-2">{fmt(c.last_message_time)}</span>
+                    <p className={`text-[13px] truncate ${hasUnread ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>{chatDisplayName(c)}{isGrp(c) && <span className="ml-1.5 text-[7px] bg-gray-100 text-gray-400 px-1 py-0.5 rounded font-medium align-middle">GRUPO</span>}</p>
+                    <span className={`text-[10px] flex-shrink-0 ml-2 ${hasUnread ? 'text-[#25d366] font-semibold' : 'text-gray-400'}`}>{fmt(c.last_message_time)}</span>
                   </div>
-                  <div className="flex justify-between mt-1 items-center">
-                    <p className="text-xs text-gray-500 truncate">{c.last_message}</p>
-                    <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                      {Number(c.awaiting_response) === 1 && Number(c.unread_count) > 0 && <span className="bg-red-500 text-white text-[7px] font-bold w-4 h-4 rounded-full flex items-center justify-center" title="Aguardando resposta">!</span>}
-                      {isMentionedInLast && <span className="bg-blue-700 text-white text-[7px] font-bold w-4 h-4 rounded-full flex items-center justify-center"><AtSign className="w-2.5 h-2.5" /></span>}
-                      {Number(c.unread_count) > 0 && <span className="bg-blue-700 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{Number(c.unread_count) > 9 ? '9+' : c.unread_count}</span>}
+                  <div className="flex justify-between mt-0.5 items-center">
+                    <p className={`text-[11px] truncate ${hasUnread ? 'text-gray-600' : 'text-gray-400'}`}>{c.last_message}</p>
+                    <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                      {Number(c.awaiting_response) === 1 && hasUnread && <span className="bg-red-500 text-white text-[7px] font-bold w-4 h-4 rounded-full flex items-center justify-center" title="Aguardando resposta">!</span>}
+                      {isMentionedInLast && <span className="bg-blue-600 text-white text-[7px] font-bold w-4 h-4 rounded-full flex items-center justify-center"><AtSign className="w-2.5 h-2.5" /></span>}
+                      {hasUnread && <span className="bg-[#25d366] text-white text-[9px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{Number(c.unread_count) > 9 ? '9+' : c.unread_count}</span>}
                     </div>
                   </div>
                 </div>
@@ -388,15 +408,15 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
               <div className="px-3 py-2 bg-gray-50"><span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Contatos WhatsApp</span></div>
               {contactResults.map(c => (
                 <div key={c.id} onClick={() => startNewChat(c.phone, c.name || c.push_name || c.phone)}
-                  className="flex items-center gap-3 px-3 py-3 cursor-pointer hover:bg-blue-50/50 transition-colors border-b border-gray-50">
-                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[10px] font-bold text-green-700">{(c.name || c.push_name || c.phone || '?').substring(0, 2).toUpperCase()}</span>
+                  className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-green-50/50 transition-colors border-b border-gray-50">
+                  <div className="w-10 h-10 rounded-full bg-[#25d366]/10 flex items-center justify-center flex-shrink-0">
+                    <span className="text-[10px] font-bold text-[#075e54]">{(c.name || c.push_name || c.phone || '?').substring(0, 2).toUpperCase()}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm text-gray-900 truncate">{c.name || c.push_name || c.phone}</p>
+                    <p className="font-semibold text-[13px] text-gray-900 truncate">{c.name || c.push_name || c.phone}</p>
                     <p className="text-[10px] text-gray-400 font-mono">{c.phone}</p>
                   </div>
-                  <span className="text-[9px] text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full">Nova conversa</span>
+                  <span className="text-[8px] text-[#075e54] font-bold bg-[#25d366]/10 px-2 py-0.5 rounded-full uppercase">Iniciar</span>
                 </div>
               ))}
             </div>
