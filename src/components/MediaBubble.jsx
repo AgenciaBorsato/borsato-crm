@@ -52,7 +52,7 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
       )}
       {media ? (
         <>
-          <img src={media} alt="" className="max-w-[330px] max-h-[360px] rounded-xl cursor-zoom-in shadow-sm hover:shadow-md hover:brightness-95 transition-all object-cover"
+          <img src={media} alt="" className="max-w-[400px] max-h-[400px] rounded-xl cursor-zoom-in shadow-sm hover:shadow-md hover:brightness-95 transition-all object-cover"
             onClick={() => setLightbox(true)}
             onError={(e) => { e.currentTarget.style.display='none'; }} />
           {lightbox && (

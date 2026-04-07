@@ -395,7 +395,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
 
   return (
     <div className="flex h-full bg-gray-50 overflow-hidden">
-      <div className="w-80 border-r border-gray-200 flex flex-col bg-white">
+      <div className="w-[340px] min-w-[340px] border-r border-gray-200 flex flex-col bg-white">
         {/* Header da lista de chats */}
         <div className="bg-[#075e54] px-3 py-3 space-y-2.5">
           <div className="flex items-center justify-between">
@@ -425,7 +425,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
             const hasUnread = Number(c.user_unread_count) > 0;
             return (
               <div key={c.id} onClick={() => selectChat(c)} className={`group flex items-center gap-3 px-3 py-3 cursor-pointer transition-all border-b border-gray-100/60 ${cur?.id === c.id ? 'bg-[#075e54]/5 border-l-[3px] border-l-[#25d366]' : 'hover:bg-gray-50 border-l-[3px] border-l-transparent'}`}>
-                <ProfilePic phone={c.contact_phone || c.remote_jid} tenantId={tenant.id} name={chatDisplayName(c)} isGroup={isGrp(c)} size="w-11 h-11" cachedUrl={c.profile_pic_url} />
+                <ProfilePic phone={c.contact_phone || c.remote_jid} tenantId={tenant.id} name={chatDisplayName(c)} isGroup={isGrp(c)} size="w-12 h-12" textSize="text-[11px]" cachedUrl={c.profile_pic_url} />
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center">
                     <p className={`text-[13px] truncate ${hasUnread ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>{chatDisplayName(c)}{isGrp(c) && <span className="ml-1.5 text-[7px] bg-gray-100 text-gray-400 px-1 py-0.5 rounded font-medium align-middle">GRUPO</span>}</p>
@@ -586,7 +586,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                     const lastMsg = gMsgs[gMsgs.length - 1];
                     return (
                       <div key={`group-${gMsgs[0].id}`} className={`flex ${fromMe ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[70%] rounded-xl px-2 py-2 ${fromMe ? 'bg-blue-50 border border-blue-100' : 'bg-white border border-gray-100'}`}>
+                        <div className={`max-w-[75%] rounded-xl px-2 py-2 ${fromMe ? 'bg-blue-50 border border-blue-100' : 'bg-white border border-gray-100'}`}>
                           {gMsgs[0].sender_name && <p className="text-[10px] font-bold mb-1 text-gray-500">{gMsgs[0].sender_name}</p>}
                           <div className={`grid gap-1 ${gMsgs.length === 2 ? 'grid-cols-2' : gMsgs.length === 3 ? 'grid-cols-2' : 'grid-cols-2'}`}>
                             {gMsgs.slice(0, 4).map((gm, gi) => (
@@ -647,7 +647,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                         </div>
                       </div>
                     )}
-                    <div id={`msg-${m.id}`} className={`max-w-[70%] rounded-xl px-3 py-2 transition-all ${
+                    <div id={`msg-${m.id}`} className={`max-w-[75%] rounded-xl px-3 py-2 transition-all ${
                       fromMe ? (isAI ? 'bg-purple-100/80 border border-purple-200' : (() => {
                           if (!m.sender_name) return 'bg-[#d9fdd3] border border-[#c5e8b7]';
                           const opColors = [
