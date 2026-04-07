@@ -76,7 +76,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   const [search, setSearch] = useState('');
   const [showEdit, setShowEdit] = useState(false);
   const [filter, setFilter] = useState('individual');
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [showTrash, setShowTrash] = useState(false);
   const [deletedChats, setDeletedChats] = useState([]);
   const [loadingTrash, setLoadingTrash] = useState(false);
@@ -127,7 +127,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   }, [cur, tenant.id]);
   useEffect(() => { load(); const i = setInterval(load, POLL_INTERVAL); return () => clearInterval(i); }, [tenant.id]);
   useEffect(() => {
-    if (cur) { loadMsgs(cur.id); loadLead(cur); const i = setInterval(() => loadMsgs(cur.id), POLL_INTERVAL); return () => clearInterval(i); }
+    if (cur) { loadMsgs(cur.id); loadLead(cur); api.markChatRead(cur.id).catch(() => {}); const i = setInterval(() => loadMsgs(cur.id), POLL_INTERVAL); return () => clearInterval(i); }
   }, [cur?.id]);
   useEffect(() => {
     if (cur && isGrp(cur)) { setShowParticipants(false); setMentionQuery(null); mentionStartRef.current = -1; loadParticipants(cur.remote_jid); }
@@ -151,7 +151,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
     endRef.current?.scrollIntoView({ behavior: 'auto' });
   }, [cur?.id]);
   useEffect(() => {
-    const handleVisibility = () => { if (!document.hidden) { const total = chats.reduce((sum, c) => sum + (Number(c.unread_count) || 0), 0); document.title = total > 0 ? `(${total}) Borsato CRM` : 'Borsato CRM'; } };
+    const handleVisibility = () => { if (!document.hidden) { const total = chats.reduce((sum, c) => sum + (Number(c.user_unread_count) || 0), 0); document.title = total > 0 ? `(${total}) Borsato CRM` : 'Borsato CRM'; } };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => { document.removeEventListener('visibilitychange', handleVisibility); document.title = 'Borsato CRM'; };
   }, [chats]);
@@ -161,7 +161,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
       const chatList = await api.getChats(tenant.id); setChats(chatList);
       const ac = curRef.current;
       if (ac) { const upd = chatList.find(c => c.id === ac.id); if (upd) setCur(upd); }
-      const totalUnread = chatList.reduce((sum, c) => sum + (Number(c.unread_count) || 0), 0);
+      const totalUnread = chatList.reduce((sum, c) => sum + (Number(c.user_unread_count) || 0), 0);
       if (!initialLoadRef.current && totalUnread > prevUnreadRef.current) playNotificationSound();
       document.title = totalUnread > 0 ? `(${totalUnread}) Borsato CRM` : 'Borsato CRM';
       prevUnreadRef.current = totalUnread; initialLoadRef.current = false;
@@ -242,26 +242,57 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
     if (e.key === 'Enter' && !e.shiftKey && !sending) { e.preventDefault(); send(); }
   };
 
-  const handleFile = e => { const f = e.target.files[0]; if (!f) return; if (f.size > 10 * 1024 * 1024) { alert('Max 10MB'); return; } setFile(f); };
+  const handleFile = e => {
+    const selected = Array.from(e.target.files || []);
+    if (!selected.length) return;
+    const valid = [];
+    for (const f of selected) {
+      if (f.size > 10 * 1024 * 1024) { alert(`${f.name}: max 10MB`); continue; }
+      valid.push(f);
+    }
+    if (valid.length) setFiles(prev => [...prev, ...valid]);
+  };
 
-  const sendFile = async () => {
-    if (!file || !cur) return;
+  const handlePaste = e => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const imageFiles = [];
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const f = item.getAsFile();
+        if (f && f.size <= 10 * 1024 * 1024) imageFiles.push(f);
+        else if (f) alert('Imagem colada excede 10MB');
+      }
+    }
+    if (imageFiles.length) setFiles(prev => [...prev, ...imageFiles]);
+  };
+
+  const removeFile = idx => setFiles(prev => prev.filter((_, i) => i !== idx));
+
+  const readFileAsDataURL = f => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(f);
+  });
+
+  const sendFiles = async () => {
+    if (!files.length || !cur) return;
     const ph = cur.contact_phone || cur.remote_jid?.split('@')[0];
     setSending(true);
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const dataUrl = reader.result; const base64 = dataUrl.split(',')[1];
-        const mt = file.type.startsWith('image') ? 'image' : file.type.startsWith('video') ? 'video' : 'document';
-        await api.sendWhatsAppMedia({ number: ph, base64, fileName: file.name, mediaType: mt, caption: '', tenantId: tenant.id, chatId: cur.id });
-        setFile(null); if (fileRef.current) fileRef.current.value = '';
-        const newMsgs = await api.getChatMessages(cur.id, 100, 0);
-        const lastSent = [...newMsgs].reverse().find(m => Number(m.is_from_me) === 1 && ['image','video','document'].includes(m.message_type));
-        if (lastSent) localMediaCache.current[lastSent.id] = dataUrl;
-        setMsgs(newMsgs); await load(); setSending(false);
-      };
-      reader.readAsDataURL(file);
-    } catch (e) { alert('Erro: ' + e.message); setSending(false); }
+      for (const f of files) {
+        const dataUrl = await readFileAsDataURL(f);
+        const base64 = dataUrl.split(',')[1];
+        const mt = f.type.startsWith('image') ? 'image' : f.type.startsWith('video') ? 'video' : 'document';
+        await api.sendWhatsAppMedia({ number: ph, base64, fileName: f.name, mediaType: mt, caption: '', tenantId: tenant.id, chatId: cur.id });
+      }
+      setFiles([]); if (fileRef.current) fileRef.current.value = '';
+      const newMsgs = await api.getChatMessages(cur.id, 100, 0);
+      setMsgs(newMsgs); await load();
+    } catch (e) { alert('Erro: ' + e.message); }
+    setSending(false);
   };
 
   const deleteChat = async id => {
@@ -280,7 +311,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   const filtered = chats.filter(c => {
     if (filter === 'individual' && isGrp(c)) return false;
     if (filter === 'group' && !isGrp(c)) return false;
-    if (filter === 'unread' && !(Number(c.unread_count) > 0)) return false;
+    if (filter === 'unread' && !(Number(c.user_unread_count) > 0)) return false;
     if (!search) return true;
     return chatDisplayName(c).toLowerCase().includes(search.toLowerCase());
   });
@@ -370,7 +401,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
           </div>
           <div className="flex gap-1">
             {[{ id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }, { id: 'unread', l: 'Nao lidas' }].map(f => {
-              const count = f.id === 'unread' ? chats.filter(c => Number(c.unread_count) > 0).length : null;
+              const count = f.id === 'unread' ? chats.filter(c => Number(c.user_unread_count) > 0).length : null;
               return (
                 <button key={f.id} onClick={() => setFilter(f.id)} className={`flex-1 py-1.5 text-[10px] font-semibold rounded-full transition-all flex items-center justify-center gap-1 ${filter === f.id ? 'bg-[#25d366] text-white shadow-sm' : 'bg-white/10 text-white/60 hover:bg-white/15 hover:text-white'}`}>
                   {f.l}
@@ -384,7 +415,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
         <div className="flex-1 overflow-y-auto">
           {filtered.map(c => {
             const isMentionedInLast = isGrp(c) && myName && (c.last_message || '').toLowerCase().includes(`@${myName.toLowerCase()}`);
-            const hasUnread = Number(c.unread_count) > 0;
+            const hasUnread = Number(c.user_unread_count) > 0;
             return (
               <div key={c.id} onClick={() => selectChat(c)} className={`group flex items-center gap-3 px-3 py-3 cursor-pointer transition-all border-b border-gray-100/60 ${cur?.id === c.id ? 'bg-[#075e54]/5 border-l-[3px] border-l-[#25d366]' : 'hover:bg-gray-50 border-l-[3px] border-l-transparent'}`}>
                 <ProfilePic phone={c.contact_phone || c.remote_jid} tenantId={tenant.id} name={chatDisplayName(c)} isGroup={isGrp(c)} size="w-11 h-11" cachedUrl={c.profile_pic_url} />
@@ -398,7 +429,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                     <div className="flex items-center gap-1 flex-shrink-0 ml-2">
                       {Number(c.awaiting_response) === 1 && hasUnread && <span className="bg-red-500 text-white text-[7px] font-bold w-4 h-4 rounded-full flex items-center justify-center" title="Aguardando resposta">!</span>}
                       {isMentionedInLast && <span className="bg-blue-600 text-white text-[7px] font-bold w-4 h-4 rounded-full flex items-center justify-center"><AtSign className="w-2.5 h-2.5" /></span>}
-                      {hasUnread && <span className="bg-[#25d366] text-white text-[9px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{Number(c.unread_count) > 9 ? '9+' : c.unread_count}</span>}
+                      {hasUnread && <span className="bg-[#25d366] text-white text-[9px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{Number(c.user_unread_count) > 9 ? '9+' : c.user_unread_count}</span>}
                     </div>
                   </div>
                 </div>
@@ -682,15 +713,30 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
               <div ref={endRef} />
             </div>
 
-            {file && (
-              <div className="px-4 py-2.5 bg-white border-t border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  {file.type.startsWith('image') ? <img src={URL.createObjectURL(file)} alt="" className="w-10 h-10 object-cover rounded-lg border border-gray-100" /> : <Paperclip className="w-4 h-4 text-gray-400" />}
-                  <span className="text-xs text-gray-600 truncate max-w-[200px]">{file.name}</span>
+            {files.length > 0 && (
+              <div className="px-4 py-2.5 bg-white border-t border-gray-100">
+                <div className="flex items-center gap-2 flex-wrap mb-2">
+                  {files.map((f, i) => (
+                    <div key={i} className="relative group">
+                      {f.type.startsWith('image') ? (
+                        <img src={URL.createObjectURL(f)} alt="" className="w-12 h-12 object-cover rounded-lg border border-gray-100" />
+                      ) : (
+                        <div className="w-12 h-12 flex flex-col items-center justify-center bg-gray-50 rounded-lg border border-gray-100">
+                          <Paperclip className="w-4 h-4 text-gray-400" />
+                          <span className="text-[7px] text-gray-400 mt-0.5 truncate max-w-[40px]">{f.name.split('.').pop()}</span>
+                        </div>
+                      )}
+                      <button onClick={() => removeFile(i)} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full text-[9px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">&times;</button>
+                    </div>
+                  ))}
+                  <button onClick={() => fileRef.current?.click()} className="w-12 h-12 flex items-center justify-center border-2 border-dashed border-gray-200 rounded-lg text-gray-400 hover:border-blue-300 hover:text-blue-500 transition-colors text-lg">+</button>
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={() => { setFile(null); if (fileRef.current) fileRef.current.value = ''; }} className="text-xs text-gray-500 font-medium hover:text-red-500 transition-colors">Cancelar</button>
-                  <button onClick={sendFile} disabled={sending} className="px-3 py-1.5 bg-blue-700 text-white text-xs font-semibold rounded-lg disabled:opacity-50 hover:bg-blue-800 transition-colors">Enviar</button>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-gray-400">{files.length} arquivo{files.length > 1 ? 's' : ''}</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => { setFiles([]); if (fileRef.current) fileRef.current.value = ''; }} className="text-xs text-gray-500 font-medium hover:text-red-500 transition-colors">Cancelar</button>
+                    <button onClick={sendFiles} disabled={sending} className="px-3 py-1.5 bg-blue-700 text-white text-xs font-semibold rounded-lg disabled:opacity-50 hover:bg-blue-800 transition-colors">{sending ? 'Enviando...' : 'Enviar'}</button>
+                  </div>
                 </div>
               </div>
             )}
@@ -726,9 +772,9 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                   ))}
                 </div>
               )}
-              <input type="file" ref={fileRef} onChange={handleFile} className="hidden" accept="image/*,video/*,.pdf,.doc,.docx" />
+              <input type="file" ref={fileRef} onChange={handleFile} className="hidden" accept="image/*,video/*,.pdf,.doc,.docx" multiple />
               <button onClick={() => fileRef.current?.click()} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg flex-shrink-0 mb-0.5 transition-colors"><Paperclip className="w-4 h-4" /></button>
-              <textarea ref={inputRef} value={msg} onChange={handleMsgChange} onKeyDown={handleKeyDown} disabled={sending} rows={2}
+              <textarea ref={inputRef} value={msg} onChange={handleMsgChange} onKeyDown={handleKeyDown} onPaste={handlePaste} disabled={sending} rows={2}
                 placeholder={isGrp(cur) ? 'Mensagem... (@ para mencionar)' : 'Escreva uma mensagem...'}
                 className="flex-1 bg-gray-100 rounded-2xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-1 focus:ring-blue-200 resize-none overflow-y-auto leading-relaxed transition-all"
                 style={{ minHeight: '52px', maxHeight: '120px' }} onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
