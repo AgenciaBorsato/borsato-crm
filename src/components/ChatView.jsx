@@ -803,7 +803,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
               {/* Agendar mensagem */}
               <div className="relative flex-shrink-0 mb-0.5">
                 <button onClick={() => setShowScheduleMsg(!showScheduleMsg)} disabled={!msg.trim()} title="Agendar envio"
-                  className="p-2 text-gray-400 hover:text-[#075e54] hover:bg-[#25d366]/10 rounded-lg disabled:opacity-30 transition-colors">
+                  className="p-2 text-[#25d366] hover:text-[#075e54] hover:bg-[#25d366]/10 rounded-lg disabled:opacity-30 transition-colors">
                   <CalendarClock className="w-4 h-4" />
                 </button>
                 {showScheduleMsg && msg.trim() && (
