@@ -648,7 +648,25 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                       </div>
                     )}
                     <div id={`msg-${m.id}`} className={`max-w-[70%] rounded-xl px-3 py-2 transition-all ${
-                      fromMe ? (isAI ? 'bg-purple-100/80 border border-purple-200' : 'bg-[#d9fdd3] border border-[#c5e8b7]') : isMentionedMsg ? 'bg-amber-50 border border-amber-200' : 'bg-white border border-gray-100'
+                      fromMe ? (isAI ? 'bg-purple-100/80 border border-purple-200' : 'bg-[#d9fdd3] border border-[#c5e8b7]')
+                      : isMentionedMsg ? 'bg-amber-50 border border-amber-200'
+                      : (() => {
+                          if (!m.sender_name) return 'bg-white border border-gray-100';
+                          const bubbleColors = [
+                            'bg-blue-50 border border-blue-100',
+                            'bg-emerald-50 border border-emerald-100',
+                            'bg-orange-50 border border-orange-100',
+                            'bg-pink-50 border border-pink-100',
+                            'bg-indigo-50 border border-indigo-100',
+                            'bg-red-50 border border-red-100',
+                            'bg-teal-50 border border-teal-100',
+                            'bg-purple-50 border border-purple-100',
+                            'bg-cyan-50 border border-cyan-100',
+                            'bg-amber-50 border border-amber-100',
+                          ];
+                          const h = Math.abs([...m.sender_name].reduce((a, c) => a + c.charCodeAt(0), 0));
+                          return bubbleColors[h % bubbleColors.length];
+                        })()
                     }`}>
                       {isForwarded && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-medium text-gray-400 flex items-center gap-0.5"><CornerUpRight className="w-2 h-2" /> Encaminhada</span></div>}
                       {isMentionedMsg && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-1 py-0.5 flex items-center gap-0.5"><AtSign className="w-2 h-2" /> mencionado</span></div>}
