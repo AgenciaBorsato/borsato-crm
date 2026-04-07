@@ -683,7 +683,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                         const color = nameColors[hash % nameColors.length];
                         const isCrmUser = fromMe && !isAI;
                         return (
-                          <p className={`text-[11px] font-bold mb-0.5 flex items-center gap-1.5 ${isAI ? 'text-violet-600' : color.text}`}>
+                          <p className={`text-[11px] font-bold mb-1.5 pb-1 border-b border-black/5 flex items-center gap-1.5 ${isAI ? 'text-violet-600' : color.text}`}>
                             {isAI && <Bot className="w-2.5 h-2.5" />}
                             {isCrmUser && <span className={`w-2 h-2 rounded-full ${color.bg} flex-shrink-0`} />}
                             {m.sender_name}
