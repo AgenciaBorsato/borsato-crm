@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MessageSquare, Search, Send, X, Check, Trash2, Edit2, Paperclip, Plus,
   Users2, CheckCheck, RotateCcw, RefreshCw, AtSign, Crown, Shield, Bot,
-  Reply, Forward, CornerUpRight, Phone
+  Reply, Forward, CornerUpRight, Phone, Bell, CalendarClock, Clock
 } from 'lucide-react';
 import { POLL_INTERVAL, CM } from '../constants';
 import { renderText } from '../utils/renderText';
@@ -94,6 +94,10 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   const [showNewChat, setShowNewChat] = useState(false);
   const [newChatPhone, setNewChatPhone] = useState('');
   const [newChatName, setNewChatName] = useState('');
+  const [showQuickFollowUp, setShowQuickFollowUp] = useState(false);
+  const [showScheduleMsg, setShowScheduleMsg] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleTime, setScheduleTime] = useState('09:00');
   const mentionStartRef = useRef(-1);
   const inputRef = useRef(null);
   const curRef = useRef(cur);
@@ -458,6 +462,35 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                       <Bot className="w-4 h-4" /> {leadAIOn ? 'IA ativa' : 'IA pausada'}
                     </button>
                   )}
+                  {lead && !isGrp(cur) && (
+                    <div className="relative">
+                      <button onClick={() => setShowQuickFollowUp(!showQuickFollowUp)} className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg text-xs font-semibold transition-colors" title="Criar lembrete">
+                        <Bell className="w-3.5 h-3.5" /> Follow Up
+                      </button>
+                      {showQuickFollowUp && (
+                        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 w-56 py-1">
+                          <p className="px-3 py-1.5 text-[9px] font-bold text-gray-400 uppercase">Lembrar de recontatar</p>
+                          {[
+                            { l: 'Em 1 hora', fn: () => { const d = new Date(); d.setHours(d.getHours() + 1); return d; } },
+                            { l: 'Em 3 horas', fn: () => { const d = new Date(); d.setHours(d.getHours() + 3); return d; } },
+                            { l: 'Amanha as 9h', fn: () => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0); return d; } },
+                            { l: 'Em 3 dias', fn: () => { const d = new Date(); d.setDate(d.getDate() + 3); d.setHours(9, 0, 0); return d; } },
+                            { l: 'Em 1 semana', fn: () => { const d = new Date(); d.setDate(d.getDate() + 7); d.setHours(9, 0, 0); return d; } },
+                          ].map(opt => (
+                            <button key={opt.l} onClick={async () => {
+                              const d = opt.fn();
+                              try {
+                                await api.createFollowUp({ tenantId: tenant.id, leadId: lead.id, leadName: lead.name || chatDisplayName(cur), leadPhone: lead.phone || cur.contact_phone, scheduledAt: d.toISOString(), note: '' });
+                                setShowQuickFollowUp(false);
+                              } catch { alert('Erro ao criar follow-up'); }
+                            }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors">
+                              <Clock className="w-3 h-3 text-gray-400" /> {opt.l}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {lead && (
                     <button onClick={() => setShowEdit(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-semibold transition-colors">
                       <Edit2 className="w-3.5 h-3.5" /> Editar lead
@@ -699,7 +732,42 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                 placeholder={isGrp(cur) ? 'Mensagem... (@ para mencionar)' : 'Escreva uma mensagem...'}
                 className="flex-1 bg-gray-100 rounded-2xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-1 focus:ring-blue-200 resize-none overflow-y-auto leading-relaxed transition-all"
                 style={{ minHeight: '52px', maxHeight: '120px' }} onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
-              <button onClick={send} disabled={sending || !msg.trim()} className="p-2.5 bg-blue-700 text-white rounded-xl disabled:opacity-30 flex-shrink-0 mb-0.5 hover:bg-blue-800 transition-colors"><Send className="w-4 h-4" /></button>
+              {/* Agendar mensagem */}
+              <div className="relative flex-shrink-0 mb-0.5">
+                <button onClick={() => setShowScheduleMsg(!showScheduleMsg)} disabled={!msg.trim()} title="Agendar envio"
+                  className="p-2 text-gray-400 hover:text-[#075e54] hover:bg-[#25d366]/10 rounded-lg disabled:opacity-30 transition-colors">
+                  <CalendarClock className="w-4 h-4" />
+                </button>
+                {showScheduleMsg && msg.trim() && (
+                  <div className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50 w-64 p-3 space-y-2">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Agendar envio desta mensagem</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input type="date" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-[#25d366]" />
+                      <input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-[#25d366]" />
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {[
+                        { l: '30min', fn: () => { const d = new Date(); d.setMinutes(d.getMinutes() + 30); setScheduleDate(d.toISOString().split('T')[0]); setScheduleTime(d.toTimeString().slice(0, 5)); } },
+                        { l: '1h', fn: () => { const d = new Date(); d.setHours(d.getHours() + 1); setScheduleDate(d.toISOString().split('T')[0]); setScheduleTime(d.toTimeString().slice(0, 5)); } },
+                        { l: 'Amanha 9h', fn: () => { const d = new Date(); d.setDate(d.getDate() + 1); setScheduleDate(d.toISOString().split('T')[0]); setScheduleTime('09:00'); } },
+                      ].map(s => (
+                        <button key={s.l} type="button" onClick={s.fn} className="px-2 py-1 bg-gray-100 hover:bg-[#25d366]/10 text-gray-600 hover:text-[#075e54] rounded text-[9px] font-semibold transition-colors">{s.l}</button>
+                      ))}
+                    </div>
+                    <button onClick={async () => {
+                      if (!scheduleDate) { alert('Escolha uma data'); return; }
+                      const ph = cur.contact_phone || cur.remote_jid?.split('@')[0];
+                      try {
+                        await api.createScheduledMessage({ tenantId: tenant.id, chatId: cur.id, contactName: chatDisplayName(cur), contactPhone: ph, remoteJid: cur.remote_jid, message: msg, scheduledAt: `${scheduleDate}T${scheduleTime}:00` });
+                        setMsg(''); setShowScheduleMsg(false); setScheduleDate(''); setScheduleTime('09:00');
+                      } catch { alert('Erro ao agendar'); }
+                    }} disabled={!scheduleDate} className="w-full py-2 bg-[#25d366] text-white rounded-lg text-xs font-bold disabled:opacity-50">
+                      Agendar envio
+                    </button>
+                  </div>
+                )}
+              </div>
+              <button onClick={send} disabled={sending || !msg.trim()} className="p-2.5 bg-[#075e54] text-white rounded-xl disabled:opacity-30 flex-shrink-0 mb-0.5 hover:bg-[#064a43] transition-colors"><Send className="w-4 h-4" /></button>
             </div>
 
             {showParticipants && isGrp(cur) && (

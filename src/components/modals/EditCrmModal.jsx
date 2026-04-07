@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { X, Building2, User, Shield, Settings2, FileText, CreditCard, Eye, EyeOff, Loader, LayoutGrid, MessageSquare, Users, Smartphone, BarChart3, Brain, UserPlus, Settings } from 'lucide-react';
+import { X, Building2, User, Shield, Settings2, FileText, CreditCard, Eye, EyeOff, Loader, LayoutGrid, MessageSquare, Users, Smartphone, BarChart3, Brain, UserPlus, Settings, Bell, CalendarClock } from 'lucide-react';
 import api from '../../api';
 
 const MODULE_OPTIONS = [
   { id: 'kanban',    label: 'Kanban',         icon: LayoutGrid },
   { id: 'chat',      label: 'Conversas',      icon: MessageSquare },
   { id: 'leads',     label: 'Leads',          icon: Users },
+  { id: 'followup',  label: 'Follow Up',      icon: Bell },
+  { id: 'schedule',  label: 'Agendamento',    icon: CalendarClock },
   { id: 'whatsapp',  label: 'WhatsApp',       icon: Smartphone },
   { id: 'analytics', label: 'Analytics',      icon: BarChart3 },
   { id: 'knowledge', label: 'Base de Conhecimento', icon: Brain },

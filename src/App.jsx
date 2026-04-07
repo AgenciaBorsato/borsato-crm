@@ -3,11 +3,14 @@ import api from './api';
 import SuperAdminPanel from './pages/SuperAdminPanel';
 import {
   MessageSquare, LayoutGrid, Users, Settings, UserPlus, ArrowLeft,
-  Smartphone, BarChart3, Brain, AlertTriangle, X, LogOut, Search
+  Smartphone, BarChart3, Brain, AlertTriangle, X, LogOut, Search,
+  Bell, CalendarClock
 } from 'lucide-react';
 import ChatView from './components/ChatView';
 import KanbanView from './components/KanbanView';
 import LeadsView from './components/LeadsView';
+import FollowUpView from './components/FollowUpView';
+import ScheduleView from './components/ScheduleView';
 import { WhatsAppView, AnalyticsView, KnowledgeView, TeamView, SettingsView } from './components/MiscViews';
 
 export default function BorsatoCRM() {
@@ -164,6 +167,8 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
     { id: 'kanban',    label: 'Kanban',       icon: LayoutGrid },
     { id: 'chat',      label: 'Conversas',    icon: MessageSquare },
     { id: 'leads',     label: 'Leads',        icon: Users },
+    { id: 'followup',  label: 'Follow Up',    icon: Bell },
+    { id: 'schedule',  label: 'Agendamento',  icon: CalendarClock },
     { id: 'whatsapp',  label: 'WhatsApp',     icon: Smartphone },
     { id: 'analytics', label: 'Analytics',    icon: BarChart3 },
     { id: 'knowledge', label: 'Base',         icon: Brain },
@@ -281,6 +286,8 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
           {activeTab === 'kanban'    && <KanbanView leads={tenant.leads || []} columns={columns} tenant={tenant} onRefresh={refreshAll} onOpenChat={openChatByPhone} />}
           {activeTab === 'chat'      && <ChatView tenant={tenant} columns={columns} onRefresh={refreshAll} requestedPhone={requestedPhone} onPhoneHandled={() => setRequestedPhone(null)} currentUser={user} />}
           {activeTab === 'leads'     && <LeadsView leads={tenant.leads || []} columns={columns} tenant={tenant} onRefresh={refreshAll} onOpenChat={openChatByPhone} />}
+          {activeTab === 'followup'  && <FollowUpView tenant={tenant} onRefresh={refreshAll} onOpenChat={openChatByPhone} />}
+          {activeTab === 'schedule'  && <ScheduleView tenant={tenant} onRefresh={refreshAll} />}
           {activeTab === 'whatsapp'  && <WhatsAppView tenant={tenant} />}
           {activeTab === 'analytics' && <AnalyticsView leads={tenant.leads || []} columns={columns} tenant={tenant} />}
           {activeTab === 'knowledge' && <KnowledgeView knowledge={tenant.knowledgeBase || []} tenant={tenant} onRefresh={refreshAll} />}

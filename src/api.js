@@ -115,6 +115,19 @@ class ApiService {
   async createUser(data) { return await this.request('/api/users', { method: 'POST', body: JSON.stringify(data) }); }
   async updateUser(id, data) { return await this.request(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }); }
   async deleteUser(id) { return await this.request(`/api/users/${id}`, { method: 'DELETE' }); }
+
+  // FOLLOW-UPS
+  async getFollowUps(tid) { return await this.request(`/api/follow-ups?tenantId=${encodeURIComponent(tid)}`); }
+  async createFollowUp(data) { return await this.request('/api/follow-ups', { method: 'POST', body: JSON.stringify(data) }); }
+  async updateFollowUp(id, data) { return await this.request(`/api/follow-ups/${id}`, { method: 'PUT', body: JSON.stringify(data) }); }
+  async deleteFollowUp(id) { return await this.request(`/api/follow-ups/${id}`, { method: 'DELETE' }); }
+  async completeFollowUp(id) { return await this.request(`/api/follow-ups/${id}/complete`, { method: 'POST' }); }
+
+  // SCHEDULED MESSAGES
+  async getScheduledMessages(tid) { return await this.request(`/api/scheduled-messages?tenantId=${encodeURIComponent(tid)}`); }
+  async createScheduledMessage(data) { return await this.request('/api/scheduled-messages', { method: 'POST', body: JSON.stringify(data) }); }
+  async updateScheduledMessage(id, data) { return await this.request(`/api/scheduled-messages/${id}`, { method: 'PUT', body: JSON.stringify(data) }); }
+  async deleteScheduledMessage(id) { return await this.request(`/api/scheduled-messages/${id}`, { method: 'DELETE' }); }
 }
 
 export const api = new ApiService();
