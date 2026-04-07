@@ -41,17 +41,27 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
     setPlaying(!playing);
   };
 
+  const [lightbox, setLightbox] = useState(false);
+
   if (msg.message_type === 'image') return (
     <div className="mb-1">
       {loading && !media && (
-        <div className="w-[200px] h-[140px] bg-gray-100 rounded-xl flex items-center justify-center">
+        <div className="w-[280px] h-[200px] bg-gray-100 rounded-xl flex items-center justify-center">
           <div className="w-5 h-5 border-2 border-blue-700 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
       {media ? (
-        <img src={media} alt="" className="max-w-[260px] rounded-xl cursor-zoom-in shadow-sm hover:opacity-95 transition-opacity"
-          onClick={() => { const w = window.open('', '_blank'); w.document.write(`<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="${media}" style="max-width:100%;max-height:100vh;object-fit:contain" /></body></html>`); w.document.close(); }}
-          onError={(e) => { e.currentTarget.style.display='none'; }} />
+        <>
+          <img src={media} alt="" className="max-w-[330px] max-h-[360px] rounded-xl cursor-zoom-in shadow-sm hover:shadow-md hover:brightness-95 transition-all object-cover"
+            onClick={() => setLightbox(true)}
+            onError={(e) => { e.currentTarget.style.display='none'; }} />
+          {lightbox && (
+            <div className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center cursor-pointer" onClick={() => setLightbox(false)}>
+              <img src={media} alt="" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl" />
+              <button className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white text-xl transition-colors">&times;</button>
+            </div>
+          )}
+        </>
       ) : (!loading && (
         <button onClick={loadMedia} className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-200">
           <Image className="w-5 h-5 text-blue-700" />
@@ -60,20 +70,40 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
       ))}
     </div>
   );
+  const [audioProgress, setAudioProgress] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+
+  const fmtTime = s => { if (!s || !isFinite(s)) return '0:00'; const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}`; };
+
   if (msg.message_type === 'audio') return (
     <div className="mb-1">
       {media ? (
-        <div className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-2 min-w-[180px]">
-          <button onClick={toggleAudio} className="w-8 h-8 bg-blue-700 rounded-full flex items-center justify-center flex-shrink-0">
+        <div className="flex items-center gap-2.5 bg-[#e7ffd4] rounded-2xl px-3 py-2.5 min-w-[240px] max-w-[320px]">
+          <button onClick={toggleAudio} className="w-9 h-9 bg-[#25d366] rounded-full flex items-center justify-center flex-shrink-0 shadow-sm hover:bg-[#1da851] transition-colors">
             {playing ? <Pause className="w-4 h-4 text-white" /> : <Play className="w-4 h-4 text-white ml-0.5" />}
           </button>
-          <div className="flex-1 h-1 bg-gray-300 rounded-full" />
-          <audio ref={audioRef} src={media} onEnded={() => setPlaying(false)} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-[2px] h-6">
+              {Array.from({ length: 32 }, (_, i) => {
+                const h = [3,5,8,12,6,14,10,7,15,9,4,11,13,6,8,16,7,12,5,10,14,8,6,11,9,15,7,13,4,10,8,12][i % 32];
+                const filled = i / 32 <= audioProgress;
+                return <div key={i} className={`w-[3px] rounded-full transition-all ${filled ? 'bg-[#25d366]' : 'bg-[#b5d9b0]'}`} style={{ height: `${h}px` }} />;
+              })}
+            </div>
+            <div className="flex justify-between mt-0.5">
+              <span className="text-[9px] text-gray-500 font-mono">{fmtTime(audioProgress * audioDuration)}</span>
+              <span className="text-[9px] text-gray-500 font-mono">{fmtTime(audioDuration)}</span>
+            </div>
+          </div>
+          <audio ref={audioRef} src={media}
+            onEnded={() => { setPlaying(false); setAudioProgress(0); }}
+            onLoadedMetadata={e => setAudioDuration(e.target.duration)}
+            onTimeUpdate={e => { if (e.target.duration) setAudioProgress(e.target.currentTime / e.target.duration); }} />
         </div>
       ) : (
-        <button onClick={loadMedia} disabled={loading} className="bg-gray-100 rounded-full px-3 py-2 flex items-center gap-2 hover:bg-gray-200">
-          <Mic className="w-4 h-4 text-blue-700" />
-          <span className="text-xs text-gray-600">{loading ? 'Carregando...' : 'Ouvir audio'}</span>
+        <button onClick={loadMedia} disabled={loading} className="bg-gray-100 rounded-full px-4 py-2.5 flex items-center gap-2.5 hover:bg-gray-200 transition-colors">
+          <Mic className="w-4 h-4 text-[#25d366]" />
+          <span className="text-xs text-gray-600 font-medium">{loading ? 'Carregando...' : 'Ouvir audio'}</span>
         </button>
       )}
     </div>

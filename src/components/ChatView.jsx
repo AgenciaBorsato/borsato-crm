@@ -75,7 +75,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
   const [showEdit, setShowEdit] = useState(false);
-  const [filter, setFilter] = useState('individual');
+  const [filter, setFilter] = useState('all');
   const [files, setFiles] = useState([]);
   const [showTrash, setShowTrash] = useState(false);
   const [deletedChats, setDeletedChats] = useState([]);
@@ -125,7 +125,14 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
     if (cur) localStorage.setItem(`currentChat_${tenant.id}`, JSON.stringify(cur));
     else localStorage.removeItem(`currentChat_${tenant.id}`);
   }, [cur, tenant.id]);
-  useEffect(() => { load(); const i = setInterval(load, POLL_INTERVAL); return () => clearInterval(i); }, [tenant.id]);
+  useEffect(() => {
+    // Inicializar leituras para usuario que nunca abriu o CRM (evita historico como nao lido)
+    const initKey = `chatReadsInit_${tenant.id}_${currentUser?.id || 'u'}`;
+    if (!sessionStorage.getItem(initKey)) {
+      api.markAllChatsRead(tenant.id).then(() => sessionStorage.setItem(initKey, '1')).catch(() => {});
+    }
+    load(); const i = setInterval(load, POLL_INTERVAL); return () => clearInterval(i);
+  }, [tenant.id]);
   useEffect(() => {
     if (cur) { loadMsgs(cur.id); loadLead(cur); api.markChatRead(cur.id).catch(() => {}); const i = setInterval(() => loadMsgs(cur.id), POLL_INTERVAL); return () => clearInterval(i); }
   }, [cur?.id]);
@@ -400,7 +407,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar conversa..." className="w-full bg-white/10 text-white placeholder-white/40 rounded-lg pl-9 pr-3 py-2 text-xs outline-none focus:bg-white/15 transition-all" />
           </div>
           <div className="flex gap-1">
-            {[{ id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }, { id: 'unread', l: 'Nao lidas' }].map(f => {
+            {[{ id: 'all', l: 'Tudo' }, { id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }, { id: 'unread', l: 'Nao lidas' }].map(f => {
               const count = f.id === 'unread' ? chats.filter(c => Number(c.user_unread_count) > 0).length : null;
               return (
                 <button key={f.id} onClick={() => setFilter(f.id)} className={`flex-1 py-1.5 text-[10px] font-semibold rounded-full transition-all flex items-center justify-center gap-1 ${filter === f.id ? 'bg-[#25d366] text-white shadow-sm' : 'bg-white/10 text-white/60 hover:bg-white/15 hover:text-white'}`}>
@@ -537,7 +544,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
               const el = scrollContainerRef.current;
               if (!el) return;
               userScrolledUpRef.current = el.scrollHeight - el.scrollTop - el.clientHeight > 150;
-            }} className="flex-1 overflow-y-auto px-4 py-3 space-y-1.5 bg-gray-50">
+            }} className="flex-1 overflow-y-auto px-5 py-4 space-y-2.5 bg-[#efeae2]">
               {(() => {
                 // Pre-process: marcar imagens agrupáveis (mesma direção, consecutivas, tipo image, sem caption real)
                 const grouped = new Set();
@@ -646,8 +653,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                       {isForwarded && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-medium text-gray-400 flex items-center gap-0.5"><CornerUpRight className="w-2 h-2" /> Encaminhada</span></div>}
                       {isMentionedMsg && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-1 py-0.5 flex items-center gap-0.5"><AtSign className="w-2 h-2" /> mencionado</span></div>}
                       {m.sender_name && (() => {
-                        // Cores fortes e distintas para operadores CRM (fromMe) — visíveis para todos
-                        const crmColors = [
+                        const nameColors = [
                           { text: 'text-blue-600', bg: 'bg-blue-600' },
                           { text: 'text-emerald-600', bg: 'bg-emerald-600' },
                           { text: 'text-orange-600', bg: 'bg-orange-600' },
@@ -656,14 +662,16 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                           { text: 'text-red-600', bg: 'bg-red-600' },
                           { text: 'text-teal-600', bg: 'bg-teal-600' },
                           { text: 'text-purple-600', bg: 'bg-purple-600' },
+                          { text: 'text-cyan-600', bg: 'bg-cyan-600' },
+                          { text: 'text-amber-600', bg: 'bg-amber-600' },
                         ];
                         const hash = Math.abs([...m.sender_name].reduce((a, c) => a + c.charCodeAt(0), 0));
-                        const crmColor = crmColors[hash % crmColors.length];
+                        const color = nameColors[hash % nameColors.length];
                         const isCrmUser = fromMe && !isAI;
                         return (
-                          <p className={`text-[11px] font-bold mb-0.5 flex items-center gap-1.5 ${isAI ? 'text-violet-600' : isCrmUser ? crmColor.text : 'text-gray-500'}`}>
+                          <p className={`text-[11px] font-bold mb-0.5 flex items-center gap-1.5 ${isAI ? 'text-violet-600' : color.text}`}>
                             {isAI && <Bot className="w-2.5 h-2.5" />}
-                            {isCrmUser && <span className={`w-2 h-2 rounded-full ${crmColor.bg} flex-shrink-0`} />}
+                            {isCrmUser && <span className={`w-2 h-2 rounded-full ${color.bg} flex-shrink-0`} />}
                             {m.sender_name}
                           </p>
                         );

@@ -97,6 +97,7 @@ class ApiService {
   async getDeletedChats(tid) { return await this.request(`/api/chats/deleted?tenantId=${encodeURIComponent(tid)}`); }
   async getChatMessages(chatId, limit = 50, offset = 0) { return await this.request(`/api/chats/${encodeURIComponent(chatId)}/messages?limit=${limit}&offset=${offset}`); }
   async markChatRead(chatId) { return await this.request(`/api/chats/${encodeURIComponent(chatId)}/read`, { method: 'POST', body: '{}' }); }
+  async markAllChatsRead(tid) { return await this.request('/api/chats/read-all', { method: 'POST', body: JSON.stringify({ tenantId: tid }) }); }
   async deleteChat(id) { return await this.request(`/api/chats/${id}`, { method: 'DELETE' }); }
   async restoreChat(id) { return await this.request(`/api/chats/${id}/restore`, { method: 'POST' }); }
 
