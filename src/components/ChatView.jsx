@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MessageSquare, Search, Send, X, Check, Trash2, Edit2, Paperclip, Plus,
   Users2, CheckCheck, RotateCcw, RefreshCw, AtSign, Crown, Shield, Bot,
-  Reply, Forward, CornerUpRight, Phone, Bell, CalendarClock, Clock
+  Reply, Forward, CornerUpRight, Phone, Bell, CalendarClock, Clock, Volume2, VolumeX
 } from 'lucide-react';
 import { POLL_INTERVAL, CM } from '../constants';
 import { renderText } from '../utils/renderText';
@@ -108,8 +108,16 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   const prevUnreadRef = useRef(0);
   const initialLoadRef = useRef(true);
   const myName = currentUser?.name || '';
+  const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem('borsato_sound') !== 'off');
+
+  const toggleSound = () => {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    localStorage.setItem('borsato_sound', next ? 'on' : 'off');
+  };
 
   const playNotificationSound = useCallback(() => {
+    if (!soundEnabled) return;
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator(); const gain = ctx.createGain();
@@ -118,7 +126,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
       gain.gain.setValueAtTime(0.25, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
       osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.35);
     } catch {}
-  }, []);
+  }, [soundEnabled]);
 
   useEffect(() => { curRef.current = cur; }, [cur]);
   useEffect(() => {
@@ -400,7 +408,12 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
         <div className="bg-[#075e54] px-3 py-3 space-y-2.5">
           <div className="flex items-center justify-between">
             <h2 className="text-white font-bold text-sm">Conversas</h2>
-            <button onClick={() => setShowNewChat(true)} className="w-8 h-8 bg-white/15 hover:bg-white/25 text-white rounded-lg flex items-center justify-center transition-colors" title="Nova conversa"><Plus className="w-4 h-4" /></button>
+            <div className="flex items-center gap-1">
+              <button onClick={toggleSound} className="w-8 h-8 bg-white/15 hover:bg-white/25 text-white rounded-lg flex items-center justify-center transition-colors" title={soundEnabled ? 'Desativar som' : 'Ativar som'}>
+                {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 opacity-50" />}
+              </button>
+              <button onClick={() => setShowNewChat(true)} className="w-8 h-8 bg-white/15 hover:bg-white/25 text-white rounded-lg flex items-center justify-center transition-colors" title="Nova conversa"><Plus className="w-4 h-4" /></button>
+            </div>
           </div>
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
