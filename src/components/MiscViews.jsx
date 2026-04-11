@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Brain, Bot, Plus, Trash2, Users2, TrendingUp, TrendingDown, BarChart3, Target, Sparkles, RefreshCw, Filter, ArrowRight, Zap, Users, MessageSquare, Eye, Edit2, Search } from 'lucide-react';
+import { Brain, Bot, Plus, Trash2, Users2, TrendingUp, TrendingDown, BarChart3, Target, Sparkles, RefreshCw, Filter, ArrowRight, Zap, Users, MessageSquare, Eye, Edit2, Search, Megaphone } from 'lucide-react';
 import { CM } from '../constants';
 import api from '../api';
 
@@ -165,6 +165,38 @@ export function AnalyticsView({ leads, columns, tenant }) {
           <p className="text-[10px] text-purple-500">{d.messages?.ai || 0} pela IA</p>
         </div>
       </div>
+
+      {/* Trafego Pago — Meta Ads */}
+      {(d.metaAds?.total > 0 || d.metaAds?.period > 0) && (
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border border-blue-200 rounded-xl p-5 shadow-sm">
+          <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
+            <Megaphone className="w-4 h-4 text-blue-600" /> Trafego Pago (Meta Ads)
+          </h3>
+          <div className="grid grid-cols-5 gap-4">
+            <div>
+              <p className="text-[10px] font-bold uppercase text-blue-500 mb-0.5">Leads no periodo</p>
+              <p className="text-2xl font-black text-blue-700">{d.metaAds.period || 0}</p>
+              <p className={`text-[10px] font-bold ${(d.metaAds.trend || 0) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                {(d.metaAds.trend || 0) >= 0 ? '+' : ''}{d.metaAds.trend || 0} vs anterior
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase text-blue-500 mb-0.5">Total acumulado</p>
+              <p className="text-2xl font-black text-gray-800">{d.metaAds.total || 0}</p>
+              <p className="text-[10px] text-gray-400">{leadsData.total ? ((d.metaAds.total / leadsData.total) * 100).toFixed(0) : 0}% dos leads</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase text-blue-500 mb-0.5">Convertidos</p>
+              <p className="text-2xl font-black text-green-700">{d.metaAds.won || 0}</p>
+              <p className="text-[10px] text-green-600">{d.metaAds.conversionRate || 0}% de conversao</p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-[10px] font-bold uppercase text-blue-500 mb-0.5">Leads Meta Ads ({days}d)</p>
+              <MiniChart data={d.metaAds.timeline || []} color="#4f46e5" height={50} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Linha 2 — Funil + Timeline */}
       <div className="grid grid-cols-3 gap-4">
