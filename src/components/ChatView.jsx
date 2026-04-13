@@ -275,7 +275,10 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   };
 
   const send = async () => {
-    if (!msg.trim() || !cur) return;
+    if (!cur) return;
+    // Se tem arquivos selecionados, envia arquivo com o texto como legenda
+    if (files.length > 0) { await sendFiles(msg.trim()); return; }
+    if (!msg.trim()) return;
     setSending(true); setMentionQuery(null);
     if (isNoteMode) {
       try {
@@ -311,7 +314,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
       if (e.key === 'Enter') { e.preventDefault(); selectMention(mentionSuggestions[mentionIdx]); return; }
       if (e.key === 'Escape') { setMentionQuery(null); return; }
     }
-    if (e.key === 'Enter' && !e.shiftKey && !sending) { e.preventDefault(); send(); }
+    if (e.key === 'Enter' && !e.shiftKey && !sending && (msg.trim() || files.length > 0)) { e.preventDefault(); send(); }
   };
 
   const handleFile = e => {
@@ -349,18 +352,21 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
     reader.readAsDataURL(f);
   });
 
-  const sendFiles = async () => {
+  const sendFiles = async (caption = '') => {
     if (!files.length || !cur) return;
     const ph = cur.contact_phone || cur.remote_jid?.split('@')[0];
     setSending(true);
     try {
-      for (const f of files) {
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
         const dataUrl = await readFileAsDataURL(f);
         const base64 = dataUrl.split(',')[1];
         const mt = f.type.startsWith('image') ? 'image' : f.type.startsWith('video') ? 'video' : 'document';
-        await api.sendWhatsAppMedia({ number: ph, base64, fileName: f.name, mediaType: mt, caption: '', tenantId: tenant.id, chatId: cur.id });
+        // Apenas o primeiro arquivo recebe a legenda (padrao WhatsApp)
+        await api.sendWhatsAppMedia({ number: ph, base64, fileName: f.name, mediaType: mt, caption: i === 0 ? caption : '', tenantId: tenant.id, chatId: cur.id });
       }
       setFiles([]); if (fileRef.current) fileRef.current.value = '';
+      setMsg(''); if (inputRef.current) inputRef.current.style.height = 'auto';
       const newMsgs = await api.getChatMessages(cur.id, 100, 0);
       setMsgs(newMsgs); await load();
     } catch (e) { alert('Erro: ' + e.message); }
@@ -838,11 +844,8 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                   <button onClick={() => fileRef.current?.click()} className="w-12 h-12 flex items-center justify-center border-2 border-dashed border-gray-200 rounded-lg text-gray-400 hover:border-blue-300 hover:text-blue-500 transition-colors text-lg">+</button>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-gray-400">{files.length} arquivo{files.length > 1 ? 's' : ''}</span>
-                  <div className="flex gap-2">
-                    <button onClick={() => { setFiles([]); if (fileRef.current) fileRef.current.value = ''; }} className="text-xs text-gray-500 font-medium hover:text-red-500 transition-colors">Cancelar</button>
-                    <button onClick={sendFiles} disabled={sending} className="px-3 py-1.5 bg-blue-700 text-white text-xs font-semibold rounded-lg disabled:opacity-50 hover:bg-blue-800 transition-colors">{sending ? 'Enviando...' : 'Enviar'}</button>
-                  </div>
+                  <span className="text-[10px] text-gray-400">{files.length} arquivo{files.length > 1 ? 's' : ''} — adicione uma legenda abaixo (opcional)</span>
+                  <button onClick={() => { setFiles([]); if (fileRef.current) fileRef.current.value = ''; }} className="text-xs text-gray-500 font-medium hover:text-red-500 transition-colors">Cancelar</button>
                 </div>
               </div>
             )}
@@ -921,7 +924,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                 <StickyNote className="w-4 h-4" />
               </button>
               <textarea ref={inputRef} value={msg} onChange={handleMsgChange} onKeyDown={handleKeyDown} onPaste={handlePaste} disabled={sending} rows={2}
-                placeholder={isNoteMode ? 'Escreva uma nota interna...' : (isGrp(cur) ? 'Mensagem... (@ para mencionar)' : 'Escreva uma mensagem...')}
+                placeholder={isNoteMode ? 'Escreva uma nota interna...' : files.length > 0 ? 'Legenda (opcional)...' : (isGrp(cur) ? 'Mensagem... (@ para mencionar)' : 'Escreva uma mensagem...')}
                 className={`flex-1 rounded-2xl px-4 py-2.5 text-sm outline-none resize-none overflow-y-auto leading-relaxed transition-all ${isNoteMode ? 'bg-amber-100/60 focus:bg-amber-50 focus:ring-1 focus:ring-amber-300' : 'bg-gray-100 focus:bg-white focus:ring-1 focus:ring-blue-200'}`}
                 style={{ minHeight: '52px', maxHeight: '120px' }} onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
               {/* Agendar mensagem */}
@@ -959,7 +962,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                   </div>
                 )}
               </div>
-              <button onClick={send} disabled={sending || !msg.trim()} className={`p-2.5 text-white rounded-xl disabled:opacity-30 flex-shrink-0 mb-0.5 transition-colors ${isNoteMode ? 'bg-amber-500 hover:bg-amber-600' : 'bg-[#075e54] hover:bg-[#064a43]'}`}>{isNoteMode ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4" />}</button>
+              <button onClick={send} disabled={sending || (!msg.trim() && !files.length)} className={`p-2.5 text-white rounded-xl disabled:opacity-30 flex-shrink-0 mb-0.5 transition-colors ${isNoteMode ? 'bg-amber-500 hover:bg-amber-600' : 'bg-[#075e54] hover:bg-[#064a43]'}`}>{isNoteMode ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4" />}</button>
             </div>
 
             {showParticipants && isGrp(cur) && (
