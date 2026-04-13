@@ -172,10 +172,11 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
     else localStorage.removeItem(`currentChat_${tenant.id}`);
   }, [cur, tenant.id]);
   useEffect(() => {
-    // Inicializar leituras para usuario que nunca abriu o CRM (evita historico como nao lido)
+    // Inicializar leituras apenas na primeira vez que o usuario acessa o CRM neste navegador
+    // Usa localStorage para nao disparar a cada sessao/aba nova
     const initKey = `chatReadsInit_${tenant.id}_${currentUser?.id || 'u'}`;
-    if (!sessionStorage.getItem(initKey)) {
-      api.markAllChatsRead(tenant.id).then(() => sessionStorage.setItem(initKey, '1')).catch(() => {});
+    if (!localStorage.getItem(initKey)) {
+      api.markAllChatsRead(tenant.id).then(() => localStorage.setItem(initKey, '1')).catch(() => {});
     }
     load(); const i = setInterval(load, POLL_INTERVAL); return () => clearInterval(i);
   }, [tenant.id]);
