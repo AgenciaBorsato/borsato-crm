@@ -424,6 +424,8 @@ export function IAView({ knowledge, tenant, onRefresh }) {
   const [togglingAI, setTogglingAI] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
+  const [syncingPics, setSyncingPics] = useState(false);
+  const [syncResult, setSyncResult] = useState(null);
 
   const savePrompt = async () => {
     setSaving(true);
@@ -435,33 +437,51 @@ export function IAView({ knowledge, tenant, onRefresh }) {
     try { await api.setTenantAI(tenant.id, !aiEnabled); setAiEnabled(!aiEnabled); onRefresh(); }
     catch { alert('Erro ao alterar IA'); } finally { setTogglingAI(false); }
   };
+  const syncProfilePics = async () => {
+    setSyncingPics(true); setSyncResult(null);
+    try { const r = await api.syncProfilePics(tenant.id); setSyncResult(r); }
+    catch { alert('Erro ao sincronizar fotos'); } finally { setSyncingPics(false); }
+  };
   const filtered = search ? knowledge.filter(k => (k.answer || '').toLowerCase().includes(search.toLowerCase()) || (k.category || '').toLowerCase().includes(search.toLowerCase())) : knowledge;
 
   return (
-    <div className="max-w-2xl space-y-5">
-      {/* AI Config */}
-      <div className="bg-white rounded-2xl p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Bot className="w-4 h-4 text-purple-500" />
-            <span className="font-semibold text-sm text-gray-800">Assistente IA</span>
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${aiEnabled ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-400'}`}>{aiEnabled ? 'Ativo' : 'Desligado'}</span>
+    <div className="grid grid-cols-2 gap-6 h-full">
+      {/* LEFT — AI Config */}
+      <div className="space-y-4">
+        <div className="bg-white rounded-2xl p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bot className="w-4 h-4 text-purple-500" />
+              <span className="font-semibold text-sm text-gray-800">Assistente IA</span>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${aiEnabled ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-400'}`}>{aiEnabled ? 'Ativo' : 'Desligado'}</span>
+            </div>
+            <button onClick={toggleAI} disabled={togglingAI} className={`w-11 h-6 rounded-full transition-all relative flex-shrink-0 disabled:opacity-50 ${aiEnabled ? 'bg-purple-500' : 'bg-gray-200'}`}>
+              <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${aiEnabled ? 'left-5' : 'left-0.5'}`} />
+            </button>
           </div>
-          <button onClick={toggleAI} disabled={togglingAI} className={`w-11 h-6 rounded-full transition-all relative flex-shrink-0 disabled:opacity-50 ${aiEnabled ? 'bg-purple-500' : 'bg-gray-200'}`}>
-            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${aiEnabled ? 'left-5' : 'left-0.5'}`} />
-          </button>
+          <div>
+            <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-2">Personalidade</label>
+            <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={10} placeholder={"Ex: Você é a assistente da Clínica X. Se apresente como Ana, seja educada e não marque consultas sem confirmar disponibilidade."} className="w-full bg-gray-50 rounded-xl px-3 py-2.5 text-xs font-mono leading-relaxed resize-none focus:outline-none focus:bg-white focus:ring-1 focus:ring-gray-200 transition-all" />
+            <div className="flex justify-end mt-2">
+              <button onClick={savePrompt} disabled={saving} className="px-4 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-semibold disabled:opacity-40 hover:bg-gray-700 transition-colors">{saving ? 'Salvando...' : 'Salvar'}</button>
+            </div>
+          </div>
         </div>
-        <div>
-          <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-2">Personalidade</label>
-          <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={6} placeholder={"Ex: Você é a assistente da Clínica X. Se apresente como Ana, seja educada e não marque consultas sem confirmar disponibilidade."} className="w-full bg-gray-50 rounded-xl px-3 py-2.5 text-xs font-mono leading-relaxed resize-none focus:outline-none focus:bg-white focus:ring-1 focus:ring-gray-200 transition-all" />
-          <div className="flex justify-end mt-2">
-            <button onClick={savePrompt} disabled={saving} className="px-4 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-semibold disabled:opacity-40 hover:bg-gray-700 transition-colors">{saving ? 'Salvando...' : 'Salvar'}</button>
+
+        {/* Fotos de Perfil */}
+        <div className="bg-white rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Users2 className="w-4 h-4 text-gray-400" />
+            <span className="font-semibold text-sm text-gray-800">Fotos de Perfil</span>
           </div>
+          <p className="text-xs text-gray-400 mb-4">Busca fotos do WhatsApp para todos os contatos e grupos.</p>
+          <button onClick={syncProfilePics} disabled={syncingPics} className="px-4 py-2 bg-gray-900 text-white font-semibold rounded-xl text-sm disabled:opacity-50 hover:bg-gray-700 transition-colors">{syncingPics ? 'Sincronizando...' : 'Sincronizar fotos'}</button>
+          {syncResult && <p className="text-xs text-gray-400 mt-2">{syncResult.updated} fotos atualizadas de {syncResult.total} contatos</p>}
         </div>
       </div>
 
-      {/* Scripts */}
-      <div>
+      {/* RIGHT — Scripts */}
+      <div className="flex flex-col min-h-0">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-sm text-gray-700">Scripts</span>
@@ -479,7 +499,7 @@ export function IAView({ knowledge, tenant, onRefresh }) {
             </button>
           </div>
         </div>
-        <div className="bg-white rounded-2xl px-4">
+        <div className="bg-white rounded-2xl px-4 flex-1 overflow-y-auto">
           {filtered.length === 0 && !search && (
             <div className="py-10 text-center">
               <p className="text-sm text-gray-400">Nenhum script criado</p>
