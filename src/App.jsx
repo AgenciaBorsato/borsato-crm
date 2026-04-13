@@ -4,7 +4,7 @@ import SuperAdminPanel from './pages/SuperAdminPanel';
 import {
   MessageSquare, LayoutGrid, Users, Settings, UserPlus, ArrowLeft,
   Smartphone, BarChart3, Brain, AlertTriangle, X, LogOut, Search,
-  Bell, CalendarClock
+  Bell, CalendarClock, Home, Wrench
 } from 'lucide-react';
 import ChatView from './components/ChatView';
 import KanbanView from './components/KanbanView';
@@ -12,6 +12,7 @@ import LeadsView from './components/LeadsView';
 import FollowUpView from './components/FollowUpView';
 import ScheduleView from './components/ScheduleView';
 import { WhatsAppView, AnalyticsView, KnowledgeView, TeamView, SettingsView } from './components/MiscViews';
+import HomeSimples from './components/HomeSimples';
 
 export default function BorsatoCRM() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -132,7 +133,7 @@ function LoginScreen({ onLogin, loading, error }) {
 }
 
 function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh }) {
-  const [activeTab, setActiveTab] = useState(() => localStorage.getItem(`activeTab_${tenant.id}`) || 'kanban');
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem(`activeTab_${tenant.id}`) || 'home');
   const [columns, setColumns] = useState([]);
   const [requestedPhone, setRequestedPhone] = useState(null);
   const [whatsappConnected, setWhatsappConnected] = useState(true);
@@ -163,18 +164,22 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
   const refreshAll = useCallback(async () => { await onRefresh(); await loadCols(); }, [onRefresh, tenant.id]);
   const openChatByPhone = useCallback((phone) => { setRequestedPhone(phone); setActiveTab('chat'); }, []);
 
-  const allTabs = [
-    { id: 'kanban',    label: 'Kanban',       icon: LayoutGrid },
+  const mainTabs = [
+    { id: 'home',      label: 'Inicio',       icon: Home },
     { id: 'chat',      label: 'Conversas',    icon: MessageSquare },
+    { id: 'kanban',    label: 'Kanban',       icon: LayoutGrid },
     { id: 'leads',     label: 'Leads',        icon: Users },
     { id: 'followup',  label: 'Follow Up',    icon: Bell },
     { id: 'schedule',  label: 'Agendamento',  icon: CalendarClock },
+    { id: 'analytics', label: 'Dashboard',    icon: BarChart3 },
+  ];
+  const advancedTabs = [
     { id: 'whatsapp',  label: 'WhatsApp',     icon: Smartphone },
-    { id: 'analytics', label: 'Analytics',    icon: BarChart3 },
     { id: 'knowledge', label: 'Base',         icon: Brain },
     { id: 'team',      label: 'Equipe',       icon: UserPlus },
     { id: 'settings',  label: 'Config',       icon: Settings },
   ];
+  const allTabs = [...mainTabs, ...advancedTabs];
 
   const userPerms = (() => { try { return JSON.parse(user.permissions || '[]'); } catch { return []; } })();
   const isAdmin = user.role === 'super_admin' || user.role === 'client_admin';
@@ -225,28 +230,72 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
         </div>
 
         {/* Nav items */}
-        <nav className="flex-1 py-2 space-y-0.5 overflow-y-auto">
-          {tabs.filter(tab => !sidebarSearch || tab.label.toLowerCase().includes(sidebarSearch.toLowerCase())).map(tab => {
-            const isActive = activeTab === tab.id;
-            const hasAlert = tab.id === 'whatsapp' && !whatsappConnected;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                title={!sidebarExpanded ? tab.label : undefined}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 transition-all duration-150 relative group
-                  ${isActive
-                    ? 'bg-white/15 text-white'
-                    : 'text-white/50 hover:text-white hover:bg-white/5'
-                  }`}
-              >
-                {isActive && <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-[#25d366] rounded-r" />}
-                <tab.icon className="w-[18px] h-[18px] flex-shrink-0" />
-                {sidebarExpanded && <span className="text-[11px] font-semibold truncate">{tab.label}</span>}
-                {hasAlert && <span className="absolute top-1.5 left-7 w-2 h-2 bg-red-400 rounded-full border border-[#075e54]" />}
-              </button>
-            );
-          })}
+        <nav className="flex-1 py-2 overflow-y-auto">
+          {/* Tabs principais */}
+          <div className="space-y-0.5">
+            {tabs.filter(t => mainTabs.some(m => m.id === t.id)).filter(tab => !sidebarSearch || tab.label.toLowerCase().includes(sidebarSearch.toLowerCase())).map(tab => {
+              const isActive = activeTab === tab.id;
+              const hasAlert = tab.id === 'whatsapp' && !whatsappConnected;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  title={!sidebarExpanded ? tab.label : undefined}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 transition-all duration-150 relative group
+                    ${isActive
+                      ? 'bg-white/15 text-white'
+                      : 'text-white/50 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                  {isActive && <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-[#25d366] rounded-r" />}
+                  <tab.icon className="w-[18px] h-[18px] flex-shrink-0" />
+                  {sidebarExpanded && <span className="text-[11px] font-semibold truncate">{tab.label}</span>}
+                  {hasAlert && <span className="absolute top-1.5 left-7 w-2 h-2 bg-red-400 rounded-full border border-[#075e54]" />}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Separador Avancado */}
+          {tabs.some(t => advancedTabs.some(a => a.id === t.id)) && (
+            <div className="mx-3 my-2 border-t border-white/10">
+              {sidebarExpanded ? (
+                <div className="flex items-center gap-1.5 mt-2 mb-1 px-0.5">
+                  <Wrench className="w-3 h-3 text-white/25" />
+                  <span className="text-[9px] font-bold text-white/25 uppercase tracking-wider">Avancado</span>
+                </div>
+              ) : (
+                <div className="mt-2 mb-1 flex justify-center">
+                  <div className="w-1 h-1 bg-white/20 rounded-full" />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tabs avancadas */}
+          <div className="space-y-0.5">
+            {tabs.filter(t => advancedTabs.some(a => a.id === t.id)).filter(tab => !sidebarSearch || tab.label.toLowerCase().includes(sidebarSearch.toLowerCase())).map(tab => {
+              const isActive = activeTab === tab.id;
+              const hasAlert = tab.id === 'whatsapp' && !whatsappConnected;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  title={!sidebarExpanded ? tab.label : undefined}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 transition-all duration-150 relative group
+                    ${isActive
+                      ? 'bg-white/15 text-white'
+                      : 'text-white/50 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                  {isActive && <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-[#25d366] rounded-r" />}
+                  <tab.icon className="w-[18px] h-[18px] flex-shrink-0" />
+                  {sidebarExpanded && <span className="text-[11px] font-semibold truncate">{tab.label}</span>}
+                  {hasAlert && <span className="absolute top-1.5 left-7 w-2 h-2 bg-red-400 rounded-full border border-[#075e54]" />}
+                </button>
+              );
+            })}
+          </div>
         </nav>
 
         {/* Bottom actions */}
@@ -283,6 +332,7 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
 
         {/* Content */}
         <div className={`flex-1 overflow-auto ${activeTab === 'chat' ? '' : 'max-w-[1800px] w-full mx-auto px-4 py-4'}`}>
+          {activeTab === 'home'      && <HomeSimples tenant={tenant} columns={columns} onRefresh={refreshAll} onOpenChat={openChatByPhone} currentUser={user} onNavigate={setActiveTab} />}
           {activeTab === 'kanban'    && <KanbanView leads={tenant.leads || []} columns={columns} tenant={tenant} onRefresh={refreshAll} onOpenChat={openChatByPhone} />}
           {activeTab === 'chat'      && <ChatView tenant={tenant} columns={columns} onRefresh={refreshAll} requestedPhone={requestedPhone} onPhoneHandled={() => setRequestedPhone(null)} currentUser={user} />}
           {activeTab === 'leads'     && <LeadsView leads={tenant.leads || []} columns={columns} tenant={tenant} onRefresh={refreshAll} onOpenChat={openChatByPhone} />}
