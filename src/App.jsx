@@ -11,7 +11,7 @@ import KanbanView from './components/KanbanView';
 import LeadsView from './components/LeadsView';
 import FollowUpView from './components/FollowUpView';
 import ScheduleView from './components/ScheduleView';
-import { WhatsAppView, AnalyticsView, KnowledgeView, TeamView, SettingsView } from './components/MiscViews';
+import { WhatsAppView, AnalyticsView, IAView, TeamView, SettingsView } from './components/MiscViews';
 import HomeSimples from './components/HomeSimples';
 
 export default function BorsatoCRM() {
@@ -175,7 +175,7 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
   ];
   const advancedTabs = [
     { id: 'whatsapp',  label: 'WhatsApp',     icon: Smartphone },
-    { id: 'knowledge', label: 'Base',         icon: Brain },
+    { id: 'knowledge', label: 'IA',            icon: Brain },
     { id: 'team',      label: 'Equipe',       icon: UserPlus },
     { id: 'settings',  label: 'Config',       icon: Settings },
   ];
@@ -340,7 +340,7 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
           {activeTab === 'schedule'  && <ScheduleView tenant={tenant} onRefresh={refreshAll} />}
           {activeTab === 'whatsapp'  && <WhatsAppView tenant={tenant} />}
           {activeTab === 'analytics' && <AnalyticsView leads={tenant.leads || []} columns={columns} tenant={tenant} />}
-          {activeTab === 'knowledge' && <KnowledgeView knowledge={tenant.knowledgeBase || []} tenant={tenant} onRefresh={refreshAll} />}
+          {activeTab === 'knowledge' && <IAView knowledge={tenant.knowledgeBase || []} tenant={tenant} onRefresh={refreshAll} />}
           {activeTab === 'team'      && <TeamView users={tenant.users || []} tenant={tenant} currentUser={user} onRefresh={refreshAll} />}
           {activeTab === 'settings'  && <SettingsView tenant={tenant} onRefresh={refreshAll} />}
         </div>

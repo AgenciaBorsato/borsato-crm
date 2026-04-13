@@ -336,120 +336,162 @@ export function AnalyticsView({ leads, columns, tenant }) {
   );
 }
 
-function KnowledgeForm({ tenant, onClose, onSuccess, existingCategories }) {
-  const [f, setF] = useState({ category: '', content: '', customCat: '' });
-  const [useCustom, setUseCustom] = useState(false);
-  const finalCat = useCustom ? f.customCat.trim() : f.category;
+const SCRIPT_COLORS = [
+  'bg-blue-50 text-blue-700',
+  'bg-violet-50 text-violet-700',
+  'bg-emerald-50 text-emerald-700',
+  'bg-amber-50 text-amber-700',
+  'bg-rose-50 text-rose-700',
+  'bg-cyan-50 text-cyan-700',
+  'bg-orange-50 text-orange-700',
+];
+
+function ScriptModal({ tenant, item, onClose, onSuccess }) {
+  const [name, setName] = useState(item?.category || '');
+  const [content, setContent] = useState(item?.answer || '');
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
+    if (!name.trim() || !content.trim()) return;
+    setSaving(true);
+    try {
+      if (item) {
+        await api.updateKnowledge(item.id, { category: name.trim(), answer: content });
+      } else {
+        await api.createKnowledge({ category: name.trim(), question: name.trim(), answer: content, tenantId: tenant.id });
+      }
+      onSuccess();
+    } catch { alert('Erro ao salvar'); } finally { setSaving(false); }
+  };
   return (
-    <form onSubmit={async e => { e.preventDefault(); if (!finalCat) return alert('Selecione ou crie uma categoria'); await api.createKnowledge({ category: finalCat, question: finalCat, answer: f.content, tenantId: tenant.id }); onSuccess(); }} className="space-y-3">
-      {!useCustom ? (
-        <div className="space-y-2">
-          <select value={f.category} onChange={e => setF({ ...f, category: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
-            <option value="">Selecione a categoria...</option>
-            {existingCategories.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <button type="button" onClick={() => setUseCustom(true)} className="text-[10px] text-blue-600 hover:text-blue-800 font-medium">+ Criar nova categoria</button>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="font-semibold text-sm text-gray-800">{item ? 'Editar script' : 'Novo script'}</h3>
         </div>
-      ) : (
-        <div className="space-y-2">
-          <input value={f.customCat} onChange={e => setF({ ...f, customCat: e.target.value })} placeholder="Ex: Ofertas da Semana, Horarios, Promocoes..." className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" autoFocus />
-          <button type="button" onClick={() => setUseCustom(false)} className="text-[10px] text-gray-400 hover:text-gray-600 font-medium">Voltar para categorias existentes</button>
+        <div className="px-6 py-5 space-y-4">
+          <div>
+            <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-1.5">Nome de referência</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: FLUXO COMPRADOR, FAQ, OBJEÇÃO PREÇO" className="w-full bg-gray-50 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:bg-white focus:ring-1 focus:ring-gray-300 transition-all" autoFocus />
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Script</label>
+              <span className="text-[10px] text-gray-300">{content.length} chars</span>
+            </div>
+            <textarea value={content} onChange={e => setContent(e.target.value)} rows={8} placeholder="Descreva o fluxo ou instrução específica para a IA usar nesse contexto..." className="w-full bg-gray-50 rounded-lg px-3 py-2.5 text-xs leading-relaxed resize-y focus:outline-none focus:bg-white focus:ring-1 focus:ring-gray-300 transition-all" />
+          </div>
         </div>
-      )}
-      <textarea placeholder="Ex: Atendemos de segunda a sexta das 8h as 18h..." value={f.content} onChange={e => setF({ ...f, content: e.target.value })} rows={5} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" required />
-      <div className="flex gap-2"><button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-bold">Cancelar</button><button type="submit" className="flex-1 py-2.5 bg-[#25d366] text-white rounded-xl text-sm font-bold">Salvar</button></div>
-    </form>
+        <div className="px-6 pb-5 flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-200 transition-colors">Cancelar</button>
+          <button onClick={save} disabled={saving || !name.trim() || !content.trim()} className="flex-1 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-gray-700 transition-colors">{saving ? 'Salvando...' : 'Salvar'}</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
-function KnowledgeItem({ item, onRefresh }) {
+function ScriptItem({ item, tenant, onRefresh }) {
   const [expanded, setExpanded] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState(item.answer);
-  const [saving, setSaving] = useState(false);
-  const isLong = (item.answer || '').length > 200;
-  const save = async () => {
-    setSaving(true);
-    try { await api.updateKnowledge(item.id, { answer: text }); setEditing(false); onRefresh(); }
-    catch { alert('Erro ao salvar'); } finally { setSaving(false); }
-  };
-  if (editing) return (
-    <div className="bg-blue-50/50 border border-blue-200 rounded-lg p-3 mb-2">
-      <textarea value={text} onChange={e => setText(e.target.value)} rows={6} className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-xs leading-relaxed resize-y mb-2" />
-      <div className="flex items-center justify-between">
-        <span className="text-[9px] text-gray-400">{text.length} caracteres</span>
-        <div className="flex gap-1.5">
-          <button onClick={() => { setEditing(false); setText(item.answer); }} className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold">Cancelar</button>
-          <button onClick={save} disabled={saving} className="px-3 py-1 bg-blue-600 text-white rounded-lg text-[10px] font-bold disabled:opacity-50">{saving ? 'Salvando...' : 'Salvar'}</button>
-        </div>
-      </div>
-    </div>
-  );
+  const [modal, setModal] = useState(false);
+  const isLong = (item.answer || '').length > 180;
+  const ci = (item.category || ' ').charCodeAt(0) % SCRIPT_COLORS.length;
   return (
-    <div className="bg-gray-50 rounded-lg p-3 mb-2 group">
-      <div className="flex justify-between items-start gap-2">
-        <p className={`text-xs text-gray-700 leading-relaxed flex-1 ${!expanded && isLong ? 'line-clamp-3' : ''}`}>{item.answer}</p>
-        <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => setEditing(true)} className="p-1 hover:bg-blue-50 rounded"><Edit2 className="w-3 h-3 text-gray-400 hover:text-blue-500" /></button>
-          <button onClick={async () => { if (confirm('Deletar?')) { await api.deleteKnowledge(item.id); onRefresh(); } }} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-3 h-3 text-gray-300 hover:text-red-400" /></button>
+    <>
+      <div className="flex items-start gap-3 py-3.5 border-b border-gray-100 last:border-0 group">
+        <span className={`text-[10px] font-bold px-2 py-1 rounded-md whitespace-nowrap mt-0.5 flex-shrink-0 ${SCRIPT_COLORS[ci]}`}>{item.category || 'SEM NOME'}</span>
+        <div className="flex-1 min-w-0">
+          <p className={`text-xs text-gray-500 leading-relaxed ${!expanded && isLong ? 'line-clamp-2' : ''}`}>{item.answer}</p>
+          {isLong && <button onClick={() => setExpanded(!expanded)} className="text-[10px] text-gray-400 hover:text-gray-600 mt-0.5">{expanded ? 'ver menos' : 'ver mais'}</button>}
+        </div>
+        <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5">
+          <button onClick={() => setModal(true)} className="p-1.5 hover:bg-gray-100 rounded-lg"><Edit2 className="w-3.5 h-3.5 text-gray-400" /></button>
+          <button onClick={async () => { if (confirm('Deletar este script?')) { await api.deleteKnowledge(item.id); onRefresh(); } }} className="p-1.5 hover:bg-red-50 rounded-lg"><Trash2 className="w-3.5 h-3.5 text-gray-300 hover:text-red-400" /></button>
         </div>
       </div>
-      {isLong && (
-        <button onClick={() => setExpanded(!expanded)} className="text-[9px] text-blue-600 hover:text-blue-800 font-medium mt-1">
-          {expanded ? 'Ver menos' : 'Ver mais...'}
-        </button>
-      )}
-      <span className="text-[8px] text-gray-300 mt-1 block">{(item.answer || '').length} chars</span>
-    </div>
+      {modal && <ScriptModal item={item} tenant={tenant} onClose={() => setModal(false)} onSuccess={() => { setModal(false); onRefresh(); }} />}
+    </>
   );
 }
 
 export function KnowledgeView({ knowledge, tenant, onRefresh }) {
-  const [show, setShow] = useState(false);
+  return <IAView knowledge={knowledge} tenant={tenant} onRefresh={onRefresh} />;
+}
+
+export function IAView({ knowledge, tenant, onRefresh }) {
+  const [prompt, setPrompt] = useState(tenant.ai_prompt || '');
+  const [aiEnabled, setAiEnabled] = useState(Number(tenant.ai_enabled) === 1 || tenant.ai_enabled === true);
+  const [saving, setSaving] = useState(false);
+  const [togglingAI, setTogglingAI] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
-  const defaultCats = ['Produtos/Servicos', 'Precos', 'Agendamento', 'FAQ'];
-  const existingCats = [...new Set(knowledge.map(k => k.category).filter(Boolean))];
-  const allCats = [...new Set([...defaultCats, ...existingCats])];
-  const visibleCats = allCats.filter(cat => defaultCats.includes(cat) || knowledge.some(k => k.category === cat));
+
+  const savePrompt = async () => {
+    setSaving(true);
+    try { await api.updateTenant(tenant.id, { name: tenant.name, plan: tenant.plan, monthlyValue: tenant.monthly_value, aiPrompt: prompt, customFields: JSON.parse(tenant.custom_fields || '[]'), active: tenant.active }); onRefresh(); }
+    catch { alert('Erro'); } finally { setSaving(false); }
+  };
+  const toggleAI = async () => {
+    setTogglingAI(true);
+    try { await api.setTenantAI(tenant.id, !aiEnabled); setAiEnabled(!aiEnabled); onRefresh(); }
+    catch { alert('Erro ao alterar IA'); } finally { setTogglingAI(false); }
+  };
   const filtered = search ? knowledge.filter(k => (k.answer || '').toLowerCase().includes(search.toLowerCase()) || (k.category || '').toLowerCase().includes(search.toLowerCase())) : knowledge;
+
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center gap-3">
-          <h2 className="font-bold text-lg">Conhecimento</h2>
-          <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">{knowledge.length} itens em {visibleCats.length} categorias</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="bg-white border border-gray-200 rounded-lg pl-8 pr-3 py-1.5 text-xs w-48 shadow-sm" />
+    <div className="max-w-2xl space-y-5">
+      {/* AI Config */}
+      <div className="bg-white rounded-2xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Bot className="w-4 h-4 text-purple-500" />
+            <span className="font-semibold text-sm text-gray-800">Assistente IA</span>
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${aiEnabled ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-400'}`}>{aiEnabled ? 'Ativo' : 'Desligado'}</span>
           </div>
-          <button onClick={() => setShow(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#25d366] text-white text-xs font-bold rounded-lg"><Plus className="w-3 h-3" /> Novo</button>
+          <button onClick={toggleAI} disabled={togglingAI} className={`w-11 h-6 rounded-full transition-all relative flex-shrink-0 disabled:opacity-50 ${aiEnabled ? 'bg-purple-500' : 'bg-gray-200'}`}>
+            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${aiEnabled ? 'left-5' : 'left-0.5'}`} />
+          </button>
+        </div>
+        <div>
+          <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-2">Personalidade</label>
+          <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={6} placeholder={"Ex: Você é a assistente da Clínica X. Se apresente como Ana, seja educada e não marque consultas sem confirmar disponibilidade."} className="w-full bg-gray-50 rounded-xl px-3 py-2.5 text-xs font-mono leading-relaxed resize-none focus:outline-none focus:bg-white focus:ring-1 focus:ring-gray-200 transition-all" />
+          <div className="flex justify-end mt-2">
+            <button onClick={savePrompt} disabled={saving} className="px-4 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-semibold disabled:opacity-40 hover:bg-gray-700 transition-colors">{saving ? 'Salvando...' : 'Salvar'}</button>
+          </div>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        {visibleCats.map(cat => {
-          const items = filtered.filter(k => k.category === cat);
-          const totalItems = knowledge.filter(k => k.category === cat).length;
-          const isCustom = !defaultCats.includes(cat);
-          if (search && items.length === 0) return null;
-          return (
-            <div key={cat} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-sm">{cat}</h3>
-                  {isCustom && <span className="text-[8px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">CUSTOM</span>}
-                </div>
-                <span className="text-[9px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full">{search ? `${items.length}/${totalItems}` : totalItems}</span>
+
+      {/* Scripts */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm text-gray-700">Scripts</span>
+            <span className="text-[10px] text-gray-400">{knowledge.length} {knowledge.length === 1 ? 'item' : 'itens'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {knowledge.length > 0 && (
+              <div className="relative">
+                <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300" />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="bg-white border border-gray-200 rounded-lg pl-7 pr-3 py-1.5 text-xs w-36 focus:outline-none focus:ring-1 focus:ring-gray-200" />
               </div>
-              {items.map(item => <KnowledgeItem key={item.id} item={item} onRefresh={onRefresh} />)}
-              {items.length === 0 && !search && <p className="text-[10px] text-gray-300 text-center py-3">Vazio</p>}
-              {items.length === 0 && search && <p className="text-[10px] text-gray-300 text-center py-3">Nenhum resultado</p>}
+            )}
+            <button onClick={() => setShowModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-lg hover:bg-gray-700 transition-colors">
+              <Plus className="w-3 h-3" /> Novo script
+            </button>
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl px-4">
+          {filtered.length === 0 && !search && (
+            <div className="py-10 text-center">
+              <p className="text-sm text-gray-400">Nenhum script criado</p>
+              <p className="text-xs text-gray-300 mt-1">Scripts ensinam a IA a lidar com situações específicas</p>
             </div>
-          );
-        })}
+          )}
+          {filtered.length === 0 && search && <p className="py-8 text-center text-sm text-gray-400">Nenhum resultado para "{search}"</p>}
+          {filtered.map(item => <ScriptItem key={item.id} item={item} tenant={tenant} onRefresh={onRefresh} />)}
+        </div>
       </div>
-      {show && (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"><h2 className="font-bold mb-1">Novo conteudo</h2><p className="text-[11px] text-gray-400 mb-4">Escolha uma categoria existente ou crie uma nova. A IA decide o que usar em cada conversa.</p><KnowledgeForm tenant={tenant} existingCategories={allCats} onClose={() => setShow(false)} onSuccess={() => { setShow(false); onRefresh(); }} /></div></div>)}
+
+      {showModal && <ScriptModal tenant={tenant} item={null} onClose={() => setShowModal(false)} onSuccess={() => { setShowModal(false); onRefresh(); }} />}
     </div>
   );
 }
@@ -522,86 +564,24 @@ export function TeamView({ users, tenant, currentUser, onRefresh }) {
 }
 
 export function SettingsView({ tenant, onRefresh }) {
-  const [prompt, setPrompt] = useState(tenant.ai_prompt || '');
-  const [aiEnabled, setAiEnabled] = useState(Number(tenant.ai_enabled) === 1 || tenant.ai_enabled === true);
-  const [saving, setSaving] = useState(false);
-  const [togglingAI, setTogglingAI] = useState(false);
   const [syncingPics, setSyncingPics] = useState(false);
   const [syncResult, setSyncResult] = useState(null);
-
   const syncProfilePics = async () => {
     setSyncingPics(true); setSyncResult(null);
     try { const r = await api.syncProfilePics(tenant.id); setSyncResult(r); }
-    catch { alert('Erro ao sincronizar fotos'); }
-    finally { setSyncingPics(false); }
+    catch { alert('Erro ao sincronizar fotos'); } finally { setSyncingPics(false); }
   };
-
-  const savePrompt = async () => {
-    setSaving(true);
-    try { await api.updateTenant(tenant.id, { name: tenant.name, plan: tenant.plan, monthlyValue: tenant.monthly_value, aiPrompt: prompt, customFields: JSON.parse(tenant.custom_fields || '[]'), active: tenant.active }); alert('Salvo!'); onRefresh(); }
-    catch { alert('Erro'); } finally { setSaving(false); }
-  };
-
-  const toggleAI = async () => {
-    setTogglingAI(true);
-    try { await api.setTenantAI(tenant.id, !aiEnabled); setAiEnabled(!aiEnabled); onRefresh(); }
-    catch { alert('Erro ao alterar IA'); } finally { setTogglingAI(false); }
-  };
-
   return (
-    <div className="space-y-5">
-      <h2 className="font-bold text-lg">Configuracoes</h2>
-
-      {/* Linha 1 — IA toggle + Personalidade */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-4">
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1"><Bot className="w-4 h-4 text-purple-600" /><h3 className="font-bold text-sm">Assistente IA</h3><span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${aiEnabled?'bg-purple-100 text-purple-700':'bg-gray-100 text-gray-400'}`}>{aiEnabled?'ATIVO':'DESLIGADO'}</span></div>
-                <p className="text-xs text-gray-400 leading-relaxed">Quando ativo, a IA responde automaticamente mensagens recebidas de leads usando a base de conhecimento e o historico da conversa.</p>
-              </div>
-              <button onClick={toggleAI} disabled={togglingAI} className={`flex-shrink-0 w-12 h-6 rounded-full transition-all relative ${aiEnabled?'bg-purple-500':'bg-gray-300'} disabled:opacity-50`}><div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${aiEnabled?'left-6':'left-0.5'}`} /></button>
-            </div>
-            {aiEnabled&&<div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 text-[10px] text-purple-600 bg-purple-50 rounded-lg px-3 py-2"><Bot className="w-3 h-3 flex-shrink-0" />IA ativa — responde com memoria de sessao, resumo do lead e base de conhecimento</div>}
-          </div>
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <h3 className="font-bold text-sm mb-1 flex items-center gap-2"><Users2 className="w-4 h-4 text-gray-400" /> Fotos de Perfil</h3>
-            <p className="text-[10px] text-gray-400 mb-3">Busca fotos de perfil do WhatsApp para todos os contatos e grupos.</p>
-            <button onClick={syncProfilePics} disabled={syncingPics} className="px-4 py-2 bg-blue-700 text-white font-semibold rounded-xl text-sm disabled:opacity-50 hover:bg-blue-800 transition-colors">{syncingPics ? 'Sincronizando...' : 'Sincronizar fotos'}</button>
-            {syncResult && <p className="text-[10px] text-gray-500 mt-2">{syncResult.updated} fotos atualizadas de {syncResult.total} contatos ({syncResult.failed} sem foto disponivel)</p>}
-          </div>
+    <div className="max-w-sm space-y-4">
+      <h2 className="font-semibold text-sm text-gray-700">Configurações</h2>
+      <div className="bg-white rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <Users2 className="w-4 h-4 text-gray-400" />
+          <span className="font-semibold text-sm text-gray-800">Fotos de Perfil</span>
         </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col">
-          <h3 className="font-bold text-sm mb-1 flex items-center gap-2"><Brain className="w-4 h-4 text-gray-400" /> Personalidade da IA</h3>
-          <p className="text-[10px] text-gray-400 mb-3">Defina como a IA deve se apresentar. Se vazio, usa atendimento padrao cordial.</p>
-          <textarea value={prompt} onChange={e=>setPrompt(e.target.value)} rows={8} placeholder={"Exemplo:\nVoce e a assistente da Clinica Exemplo.\nSe apresente como Ana e seja sempre educada.\nNao marque consultas sem confirmar disponibilidade."} className="w-full flex-1 bg-gray-50 border border-gray-200 rounded-xl p-3 mb-3 font-mono text-xs leading-relaxed resize-none" />
-          <button onClick={savePrompt} disabled={saving} className="px-5 py-2 bg-[#25d366] text-white font-bold rounded-xl text-sm disabled:opacity-50 self-start">{saving?'Salvando...':'Salvar prompt'}</button>
-        </div>
-      </div>
-
-      {/* Linha 2 — Memoria da IA + Como funciona */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
-          <p className="text-[10px] font-bold text-amber-700 uppercase mb-2 flex items-center gap-1"><Brain className="w-3 h-3" /> Memoria da IA</p>
-          <div className="space-y-1.5 text-[11px] text-amber-800">
-            <p>A IA mantem 3 camadas de contexto por lead:</p>
-            <p>1. <b>Sessao ativa</b> — historico das ultimas mensagens (24h)</p>
-            <p>2. <b>Resumo persistente</b> — contexto estrategico salvo no lead</p>
-            <p>3. <b>Perfil estruturado</b> — objetivo, dor, estagio e interesse detectados automaticamente</p>
-            <p className="mt-2 text-amber-600">O resumo aparece no modal do lead e no header do chat. Use o botao de atualizar para gerar um novo resumo manualmente.</p>
-          </div>
-        </div>
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
-          <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">Como funciona</p>
-          <div className="space-y-1.5 text-[11px] text-gray-500">
-            <p>1. IA ligada aqui responde todos os leads automaticamente</p>
-            <p>2. Base de Conhecimento e a fonte das respostas</p>
-            <p>3. Em Conversas: botao IA ativa/pausada por contato individual</p>
-            <p>4. Mensagens da IA aparecem com badge roxo na conversa</p>
-            <p>5. Resumo atualizado automaticamente na 3a, 7a e 15a mensagem do lead</p>
-          </div>
-        </div>
+        <p className="text-xs text-gray-400 mb-4">Busca fotos do WhatsApp para todos os contatos e grupos.</p>
+        <button onClick={syncProfilePics} disabled={syncingPics} className="px-4 py-2 bg-gray-900 text-white font-semibold rounded-xl text-sm disabled:opacity-50 hover:bg-gray-700 transition-colors">{syncingPics ? 'Sincronizando...' : 'Sincronizar fotos'}</button>
+        {syncResult && <p className="text-xs text-gray-400 mt-2">{syncResult.updated} fotos atualizadas de {syncResult.total} contatos</p>}
       </div>
     </div>
   );
