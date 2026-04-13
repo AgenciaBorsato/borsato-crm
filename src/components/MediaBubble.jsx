@@ -9,6 +9,7 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
   const audioRef = useRef(null);
   const [transcription, setTranscription] = useState(null);
   const [transcribing, setTranscribing] = useState(false);
+  const [aiTriggered, setAiTriggered] = useState(false);
 
   const handleTranscribe = async () => {
     if (transcribing || transcription) return;
@@ -137,6 +138,21 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
         <div className="mt-1.5 bg-white/80 border border-gray-200 rounded-xl px-3 py-2 max-w-[320px]">
           <p className="text-[10px] font-bold text-gray-400 uppercase mb-1 flex items-center gap-1"><FileText className="w-3 h-3" /> Transcricao</p>
           <p className="text-xs text-gray-700 leading-relaxed">{transcription}</p>
+          {!msg.from_me && msg.chat_id && (
+            <button
+              onClick={async () => {
+                if (aiTriggered) return;
+                try {
+                  await api.triggerAI(msg.chat_id, tenantId, transcription);
+                  setAiTriggered(true);
+                } catch (e) { setAiTriggered('erro'); }
+              }}
+              disabled={!!aiTriggered}
+              className="mt-2 text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50 bg-[#075e54] text-white hover:bg-[#054d44] disabled:bg-gray-300 disabled:text-gray-500"
+            >
+              {aiTriggered === 'erro' ? 'Erro ao acionar' : aiTriggered ? 'IA acionada' : 'Acionar IA'}
+            </button>
+          )}
         </div>
       )}
     </div>
