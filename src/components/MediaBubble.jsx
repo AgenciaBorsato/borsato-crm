@@ -7,6 +7,22 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
   const [loading, setLoading] = useState(false);
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef(null);
+  const [transcription, setTranscription] = useState(null);
+  const [transcribing, setTranscribing] = useState(false);
+
+  const handleTranscribe = async () => {
+    if (transcribing || transcription) return;
+    setTranscribing(true);
+    try {
+      const result = await api.transcribeAudio(tenantId, msg.id);
+      if (result?.text) setTranscription(result.text);
+      else setTranscription('Nao foi possivel transcrever.');
+    } catch (e) {
+      setTranscription('Erro ao transcrever.');
+    } finally {
+      setTranscribing(false);
+    }
+  };
 
   const loadMedia = async () => {
     if (loading || media) return;
@@ -95,16 +111,33 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
               <span className="text-[9px] text-gray-500 font-mono">{fmtTime(audioDuration)}</span>
             </div>
           </div>
+          <button onClick={handleTranscribe} disabled={transcribing || !!transcription} title="Transcrever audio" className="flex-shrink-0 p-1.5 rounded-full hover:bg-black/5 disabled:opacity-40 transition-colors">
+            <FileText className="w-4 h-4 text-[#075e54]" />
+          </button>
           <audio ref={audioRef} src={media}
             onEnded={() => { setPlaying(false); setAudioProgress(0); }}
             onLoadedMetadata={e => setAudioDuration(e.target.duration)}
             onTimeUpdate={e => { if (e.target.duration) setAudioProgress(e.target.currentTime / e.target.duration); }} />
         </div>
       ) : (
-        <button onClick={loadMedia} disabled={loading} className="bg-gray-100 rounded-full px-4 py-2.5 flex items-center gap-2.5 hover:bg-gray-200 transition-colors">
-          <Mic className="w-4 h-4 text-[#25d366]" />
-          <span className="text-xs text-gray-600 font-medium">{loading ? 'Carregando...' : 'Ouvir audio'}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={loadMedia} disabled={loading} className="bg-gray-100 rounded-full px-4 py-2.5 flex items-center gap-2.5 hover:bg-gray-200 transition-colors">
+            <Mic className="w-4 h-4 text-[#25d366]" />
+            <span className="text-xs text-gray-600 font-medium">{loading ? 'Carregando...' : 'Ouvir audio'}</span>
+          </button>
+          <button onClick={handleTranscribe} disabled={transcribing || !!transcription} title="Transcrever audio" className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 disabled:opacity-40 transition-colors">
+            <FileText className="w-4 h-4 text-gray-500" />
+          </button>
+        </div>
+      )}
+      {transcribing && (
+        <p className="text-[10px] text-gray-400 mt-1.5 italic">Transcrevendo...</p>
+      )}
+      {transcription && (
+        <div className="mt-1.5 bg-white/80 border border-gray-200 rounded-xl px-3 py-2 max-w-[320px]">
+          <p className="text-[10px] font-bold text-gray-400 uppercase mb-1 flex items-center gap-1"><FileText className="w-3 h-3" /> Transcricao</p>
+          <p className="text-xs text-gray-700 leading-relaxed">{transcription}</p>
+        </div>
       )}
     </div>
   );
