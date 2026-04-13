@@ -2,8 +2,42 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MessageSquare, Search, Send, X, Check, Trash2, Edit2, Paperclip, Plus,
   Users2, CheckCheck, RotateCcw, RefreshCw, AtSign, Crown, Shield, Bot,
-  Reply, Forward, CornerUpRight, Phone, Bell, CalendarClock, Clock, Volume2, VolumeX
+  Reply, Forward, CornerUpRight, Phone, Bell, CalendarClock, Clock, Volume2, VolumeX,
+  Smile, Lock, StickyNote
 } from 'lucide-react';
+
+const EMOJI_CATEGORIES = [
+  { label: '😀', emojis: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤩','🥳','😎','🤓','🧐','😏','😒','😞','😔','😟','😕','🙁','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓'] },
+  { label: '👍', emojis: ['👍','👎','👌','🤌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','✋','🖐','🖖','👋','🤚','🙌','👏','🤲','🙏','✍️','💪','🦾','🫶','🤝','👐'] },
+  { label: '❤️', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','♥️','🫀','💋','💯','🔥','✨','⭐','🌟','💫','🎉','🎊','🎈','🏆','🥇'] },
+  { label: '😂', emojis: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🐦','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🦋','🐛','🐌','🐞','🐜','🦟','🐢','🐍','🦎','🦕','🦖','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈'] },
+  { label: '🍕', emojis: ['🍕','🍔','🌮','🌯','🍟','🌭','🍿','🧂','🥓','🥚','🍳','🧇','🥞','🧈','🍞','🥐','🥖','🫓','🧀','🥗','🥘','🍝','🍜','🍛','🍣','🍱','🥟','🦪','🍤','🍙','🍚','🍘','🍥','🥮','🍢','🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍿','☕','🍵','🧃','🥤','🧋','🍺','🍻','🥂','🍷'] },
+  { label: '⚽', emojis: ['⚽','🏀','🏈','⚾','🎾','🏐','🏉','🎱','🏓','🏸','🥊','🥋','⛳','🎣','🤿','🎽','🛹','🛷','🥌','🎿','⛷️','🏂','🏋️','🤼','🤸','⛹️','🤺','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🎖️'] },
+];
+
+function EmojiPicker({ onSelect, onClose }) {
+  const [cat, setCat] = useState(0);
+  const ref = useRef(null);
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [onClose]);
+  return (
+    <div ref={ref} className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 w-72 overflow-hidden">
+      <div className="flex border-b border-gray-100">
+        {EMOJI_CATEGORIES.map((c, i) => (
+          <button key={i} onClick={() => setCat(i)} className={`flex-1 py-2 text-sm hover:bg-gray-50 transition-colors ${cat === i ? 'bg-gray-100' : ''}`}>{c.label}</button>
+        ))}
+      </div>
+      <div className="p-2 grid grid-cols-8 gap-0.5 max-h-48 overflow-y-auto">
+        {EMOJI_CATEGORIES[cat].emojis.map(e => (
+          <button key={e} onClick={() => onSelect(e)} className="p-1.5 text-lg hover:bg-gray-100 rounded-lg transition-colors leading-none">{e}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
 import { POLL_INTERVAL, CM } from '../constants';
 import { renderText } from '../utils/renderText';
 import api from '../api';
@@ -98,6 +132,10 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   const [showScheduleMsg, setShowScheduleMsg] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('09:00');
+  const [isNoteMode, setIsNoteMode] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]);
+  const typingDebounceRef = useRef(null);
   const mentionStartRef = useRef(-1);
   const inputRef = useRef(null);
   const curRef = useRef(cur);
@@ -143,6 +181,12 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   }, [tenant.id]);
   useEffect(() => {
     if (cur) { loadMsgs(cur.id); loadLead(cur); api.markChatRead(cur.id).catch(() => {}); const i = setInterval(() => loadMsgs(cur.id), POLL_INTERVAL); return () => clearInterval(i); }
+  }, [cur?.id]);
+  useEffect(() => {
+    if (!cur) { setTypingUsers([]); return; }
+    setIsNoteMode(false);
+    const poll = async () => { try { const r = await api.getTyping(cur.id); setTypingUsers(Array.isArray(r) ? r : []); } catch {} };
+    poll(); const i = setInterval(poll, 3000); return () => clearInterval(i);
   }, [cur?.id]);
   useEffect(() => {
     if (cur && isGrp(cur)) { setShowParticipants(false); setMentionQuery(null); mentionStartRef.current = -1; loadParticipants(cur.remote_jid); }
@@ -223,12 +267,24 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
       if (m) { mentionStartRef.current = m.index; setMentionQuery(m[1]); setMentionIdx(0); }
       else { setMentionQuery(null); mentionStartRef.current = -1; }
     }
+    if (cur && val.trim()) {
+      if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
+      typingDebounceRef.current = setTimeout(() => { api.sendTyping(cur.id).catch(() => {}); }, 300);
+    }
   };
 
   const send = async () => {
     if (!msg.trim() || !cur) return;
-    const ph = cur.remote_jid && (isGrp(cur) || cur.remote_jid.includes('@lid')) ? cur.remote_jid : cur.contact_phone || cur.remote_jid?.split('@')[0];
     setSending(true); setMentionQuery(null);
+    if (isNoteMode) {
+      try {
+        await api.sendNote(cur.id, tenant.id, msg);
+        setMsg(''); if (inputRef.current) inputRef.current.style.height = 'auto';
+        await loadMsgs(cur.id);
+      } catch (e) { alert(e.message || 'Erro ao salvar nota'); } finally { setSending(false); }
+      return;
+    }
+    const ph = cur.remote_jid && (isGrp(cur) || cur.remote_jid.includes('@lid')) ? cur.remote_jid : cur.contact_phone || cur.remote_jid?.split('@')[0];
     try {
       await api.sendWhatsAppMessage(ph, msg, tenant.id, cur.id, replyTo?.id || null);
       setMsg(''); setReplyTo(null); if (inputRef.current) inputRef.current.style.height = 'auto';
@@ -621,7 +677,21 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                       </div>
                     );
                   }
-                  // Mensagem normal (não agrupada)
+                  // Nota interna
+                if (Number(m.is_internal) === 1) return (
+                  <div key={m.id} className="flex justify-center my-1">
+                    <div className="max-w-[70%] bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Lock className="w-2.5 h-2.5 text-amber-500" />
+                        <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wider">Nota interna</span>
+                        {m.sender_name && <span className="text-[9px] text-amber-500">• {m.sender_name}</span>}
+                        <span className="text-[8px] text-amber-400 ml-auto">{fmt(m.timestamp)}</span>
+                      </div>
+                      <p className="text-xs text-amber-900 leading-relaxed">{m.content}</p>
+                    </div>
+                  </div>
+                );
+                // Mensagem normal (não agrupada)
                 const fromMe = Number(m.is_from_me) === 1 || m.is_from_me === true;
                 const cachedSrc = fromMe ? (localMediaCache.current[m.id] || null) : null;
                 const isMedia = ['image','video','document','audio','sticker'].includes(m.message_type);
@@ -788,7 +858,23 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
               </div>
             )}
 
-            <div className="bg-white px-4 py-3 flex items-end gap-2.5 border-t border-gray-100 relative">
+            {typingUsers.length > 0 && (
+              <div className="px-5 py-1.5 bg-white border-t border-gray-100 flex items-center gap-2">
+                <div className="flex gap-0.5">
+                  {[0,1,2].map(i => <div key={i} className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />)}
+                </div>
+                <span className="text-[11px] text-gray-400 italic">{typingUsers.join(', ')} {typingUsers.length === 1 ? 'está' : 'estão'} digitando...</span>
+              </div>
+            )}
+
+            {isNoteMode && (
+              <div className="px-4 py-1.5 bg-amber-50 border-t border-amber-200 flex items-center gap-2">
+                <Lock className="w-3 h-3 text-amber-500" />
+                <span className="text-[11px] text-amber-600 font-semibold">Modo nota interna — não será enviado ao contato</span>
+              </div>
+            )}
+
+            <div className={`px-4 py-3 flex items-end gap-2.5 border-t relative ${isNoteMode ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
               {mentionSuggestions.length > 0 && (
                 <div className="absolute bottom-full left-4 right-4 mb-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-20 max-h-52 overflow-y-auto">
                   <div className="px-3 py-1.5 border-b border-gray-100 flex items-center gap-1.5"><AtSign className="w-3 h-3 text-blue-700" /><span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">Mencionar participante</span></div>
@@ -809,9 +895,33 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
               )}
               <input type="file" ref={fileRef} onChange={handleFile} className="hidden" accept="image/*,video/*,.pdf,.doc,.docx" multiple />
               <button onClick={() => fileRef.current?.click()} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg flex-shrink-0 mb-0.5 transition-colors"><Paperclip className="w-4 h-4" /></button>
+              <div className="relative flex-shrink-0 mb-0.5">
+                <button onClick={() => setShowEmojiPicker(v => !v)} className={`p-2 rounded-lg transition-colors ${showEmojiPicker ? 'text-[#25d366] bg-[#25d366]/10' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`} title="Emoji">
+                  <Smile className="w-4 h-4" />
+                </button>
+                {showEmojiPicker && (
+                  <EmojiPicker
+                    onSelect={emoji => {
+                      const el = inputRef.current;
+                      if (el) {
+                        const start = el.selectionStart ?? msg.length;
+                        const end = el.selectionEnd ?? msg.length;
+                        const newVal = msg.slice(0, start) + emoji + msg.slice(end);
+                        setMsg(newVal);
+                        setTimeout(() => { el.focus(); el.setSelectionRange(start + emoji.length, start + emoji.length); }, 10);
+                      } else { setMsg(m => m + emoji); }
+                      setShowEmojiPicker(false);
+                    }}
+                    onClose={() => setShowEmojiPicker(false)}
+                  />
+                )}
+              </div>
+              <button onClick={() => setIsNoteMode(v => !v)} className={`p-2 rounded-lg flex-shrink-0 mb-0.5 transition-colors ${isNoteMode ? 'text-amber-600 bg-amber-100' : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50'}`} title="Nota interna (não enviada ao contato)">
+                <StickyNote className="w-4 h-4" />
+              </button>
               <textarea ref={inputRef} value={msg} onChange={handleMsgChange} onKeyDown={handleKeyDown} onPaste={handlePaste} disabled={sending} rows={2}
-                placeholder={isGrp(cur) ? 'Mensagem... (@ para mencionar)' : 'Escreva uma mensagem...'}
-                className="flex-1 bg-gray-100 rounded-2xl px-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-1 focus:ring-blue-200 resize-none overflow-y-auto leading-relaxed transition-all"
+                placeholder={isNoteMode ? 'Escreva uma nota interna...' : (isGrp(cur) ? 'Mensagem... (@ para mencionar)' : 'Escreva uma mensagem...')}
+                className={`flex-1 rounded-2xl px-4 py-2.5 text-sm outline-none resize-none overflow-y-auto leading-relaxed transition-all ${isNoteMode ? 'bg-amber-100/60 focus:bg-amber-50 focus:ring-1 focus:ring-amber-300' : 'bg-gray-100 focus:bg-white focus:ring-1 focus:ring-blue-200'}`}
                 style={{ minHeight: '52px', maxHeight: '120px' }} onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
               {/* Agendar mensagem */}
               <div className="relative flex-shrink-0 mb-0.5">
@@ -848,7 +958,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                   </div>
                 )}
               </div>
-              <button onClick={send} disabled={sending || !msg.trim()} className="p-2.5 bg-[#075e54] text-white rounded-xl disabled:opacity-30 flex-shrink-0 mb-0.5 hover:bg-[#064a43] transition-colors"><Send className="w-4 h-4" /></button>
+              <button onClick={send} disabled={sending || !msg.trim()} className={`p-2.5 text-white rounded-xl disabled:opacity-30 flex-shrink-0 mb-0.5 transition-colors ${isNoteMode ? 'bg-amber-500 hover:bg-amber-600' : 'bg-[#075e54] hover:bg-[#064a43]'}`}>{isNoteMode ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4" />}</button>
             </div>
 
             {showParticipants && isGrp(cur) && (

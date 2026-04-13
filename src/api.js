@@ -102,6 +102,9 @@ class ApiService {
   async markAllChatsRead(tid) { return await this.request('/api/chats/read-all', { method: 'POST', body: JSON.stringify({ tenantId: tid }) }); }
   async deleteChat(id) { return await this.request(`/api/chats/${id}`, { method: 'DELETE' }); }
   async restoreChat(id) { return await this.request(`/api/chats/${id}/restore`, { method: 'POST' }); }
+  async sendTyping(chatId) { return await this.request(`/api/chats/${encodeURIComponent(chatId)}/typing`, { method: 'POST', body: '{}' }); }
+  async getTyping(chatId) { return await this.request(`/api/chats/${encodeURIComponent(chatId)}/typing`); }
+  async sendNote(chatId, tenantId, text) { return await this.request(`/api/chats/${encodeURIComponent(chatId)}/note`, { method: 'POST', body: JSON.stringify({ tenantId, text }) }); }
 
   // KNOWLEDGE
   async createKnowledge(data) { return await this.request('/api/knowledge', { method: 'POST', body: JSON.stringify(data) }); }
