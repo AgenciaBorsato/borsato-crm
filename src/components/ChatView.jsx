@@ -441,7 +441,11 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
         const base64 = dataUrl.split(',')[1];
         const mt = f.type.startsWith('image') ? 'image' : f.type.startsWith('video') ? 'video' : 'document';
         // Apenas o primeiro arquivo recebe a legenda (padrao WhatsApp)
-        await api.sendWhatsAppMedia({ number: ph, base64, fileName: f.name, mediaType: mt, caption: i === 0 ? caption : '', tenantId: tenant.id, chatId: cur.id });
+        const sendResult = await api.sendWhatsAppMedia({ number: ph, base64, fileName: f.name, mediaType: mt, caption: i === 0 ? caption : '', tenantId: tenant.id, chatId: cur.id });
+        // Guarda dataUrl no cache local para exibir a imagem imediatamente sem precisar buscar do servidor
+        if ((mt === 'image' || mt === 'video') && sendResult?.messageId) {
+          localMediaCache.current[sendResult.messageId] = dataUrl;
+        }
       }
       setFiles([]); if (fileRef.current) fileRef.current.value = '';
       setMsg(''); if (inputRef.current) inputRef.current.style.height = 'auto';
