@@ -2,9 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Image, Mic, Play, Pause, Download, FileText, MapPin, User } from 'lucide-react';
 import api from '../api';
 
+const RETRY_DELAY_MS = 5 * 60 * 1000; // 5 minutos
+
 export default function MediaBubble({ msg, tenantId, cachedSrc }) {
   const [media, setMedia] = useState(cachedSrc || null);
   const [loading, setLoading] = useState(false);
+  const [mediaError, setMediaError] = useState(false);
+  const [retryAt, setRetryAt] = useState(null); // timestamp do proximo retry
+  const [retryCountdown, setRetryCountdown] = useState(null);
+  const retryTimerRef = useRef(null);
+  const countdownRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef(null);
   const [transcription, setTranscription] = useState(null);
@@ -25,12 +32,37 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
     }
   };
 
+  const scheduleRetry = () => {
+    const at = Date.now() + RETRY_DELAY_MS;
+    setRetryAt(at);
+    retryTimerRef.current = setTimeout(() => {
+      setMediaError(false);
+      setRetryAt(null);
+      setRetryCountdown(null);
+      loadMedia();
+    }, RETRY_DELAY_MS);
+    // countdown a cada segundo
+    countdownRef.current = setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((at - Date.now()) / 1000));
+      setRetryCountdown(remaining);
+      if (remaining === 0) clearInterval(countdownRef.current);
+    }, 1000);
+  };
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(retryTimerRef.current);
+      clearInterval(countdownRef.current);
+    };
+  }, []);
+
   const loadMedia = async () => {
     if (loading || media) return;
     if (!msg.media_url || msg.media_url === 'undefined') return;
     try {
       let key; try { key = JSON.parse(msg.media_url); } catch (e) { return; }
       setLoading(true);
+      setMediaError(false);
       const data = await api.fetchMedia(tenantId, key);
       if (data.base64) {
         let src = data.base64;
@@ -39,14 +71,51 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
           src = `data:${mm[msg.message_type] || 'application/octet-stream'};base64,${src}`;
         }
         setMedia(src);
+      } else {
+        // Midia indisponivel no momento — agenda retry em 5 min
+        setMediaError(true);
+        scheduleRetry();
       }
-    } catch (e) {}
+    } catch (e) {
+      setMediaError(true);
+      scheduleRetry();
+    }
     finally { setLoading(false); }
   };
 
+  const handleManualRetry = () => {
+    clearTimeout(retryTimerRef.current);
+    clearInterval(countdownRef.current);
+    setMediaError(false);
+    setRetryAt(null);
+    setRetryCountdown(null);
+    loadMedia();
+  };
+
+  const MediaErrorBadge = ({ icon }) => (
+    <div className="flex flex-col gap-1">
+      <div className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 text-gray-400">
+        {icon}
+        <span className="text-xs">Midia temporariamente indisponivel</span>
+      </div>
+      <div className="flex items-center gap-2">
+        {retryCountdown !== null && retryCountdown > 0 ? (
+          <span className="text-[10px] text-gray-400">
+            Nova tentativa em {retryCountdown >= 60
+              ? `${Math.ceil(retryCountdown / 60)} min`
+              : `${retryCountdown}s`}
+          </span>
+        ) : null}
+        <button onClick={handleManualRetry} className="text-[10px] text-blue-500 hover:underline">
+          Tentar agora
+        </button>
+      </div>
+    </div>
+  );
+
   useEffect(() => {
     if (cachedSrc) { setMedia(cachedSrc); return; }
-    const autoTypes = ['image', 'sticker'];
+    const autoTypes = ['image', 'sticker', 'video'];
     if (autoTypes.includes(msg.message_type) && msg.media_url && msg.media_url !== 'undefined') {
       loadMedia();
     }
@@ -79,6 +148,8 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
             </div>
           )}
         </>
+      ) : mediaError ? (
+        <MediaErrorBadge icon={<Image className="w-4 h-4" />} />
       ) : (!loading && (
         <button onClick={loadMedia} className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-200">
           <Image className="w-5 h-5 text-blue-700" />
@@ -120,6 +191,8 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
             onLoadedMetadata={e => setAudioDuration(e.target.duration)}
             onTimeUpdate={e => { if (e.target.duration) setAudioProgress(e.target.currentTime / e.target.duration); }} />
         </div>
+      ) : mediaError ? (
+        <MediaErrorBadge icon={<Mic className="w-4 h-4" />} />
       ) : (
         <div className="flex items-center gap-2">
           <button onClick={loadMedia} disabled={loading} className="bg-gray-100 rounded-full px-4 py-2.5 flex items-center gap-2.5 hover:bg-gray-200 transition-colors">
@@ -160,12 +233,14 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
   if (msg.message_type === 'video') return (
     <div className="mb-1">
       {media ? <video src={media} controls className="max-w-[250px] rounded-lg" />
+        : mediaError ? <MediaErrorBadge icon={<Play className="w-4 h-4" />} />
         : <button onClick={loadMedia} disabled={loading} className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-200"><Play className="w-5 h-5 text-blue-700" /><span className="text-xs">{loading ? 'Carregando...' : 'Ver video'}</span></button>}
     </div>
   );
   if (msg.message_type === 'document') return (
     <div className="mb-1">
       {media ? <a href={media} download={msg.content || 'doc'} className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-200"><Download className="w-5 h-5 text-blue-700" /><span className="text-xs">Baixar</span></a>
+        : mediaError ? <MediaErrorBadge icon={<FileText className="w-4 h-4" />} />
         : <button onClick={loadMedia} disabled={loading} className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-200"><FileText className="w-5 h-5 text-gray-400" /><span className="text-xs">{loading ? 'Carregando...' : 'Baixar'}</span></button>}
     </div>
   );
