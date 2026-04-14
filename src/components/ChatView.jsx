@@ -70,14 +70,19 @@ function DateSeparator({ timestamp }) {
 
 // ─── Preview de link ─────────────────────────────────────────────────────────
 const URL_REGEX = /https?:\/\/[^\s<>"']+|www\.[^\s<>"']+\.[a-z]{2,}[^\s<>"']*/i;
+// Cache global: evita múltiplos fetches para a mesma URL em mensagens diferentes
+const _linkPreviewCache = new Map();
 function LinkPreviewCard({ url, tenantId }) {
-  const [data, setData] = React.useState(null);
-  const [done, setDone] = React.useState(false);
+  const [data, setData] = React.useState(_linkPreviewCache.get(url) ?? null);
+  const [done, setDone] = React.useState(_linkPreviewCache.has(url));
   React.useEffect(() => {
+    if (_linkPreviewCache.has(url)) return; // já resolvido, não refetch
     let cancelled = false;
     api.fetchLinkPreview(url).then(d => {
-      if (!cancelled && d && !d.error && d.title) setData(d);
-    }).catch(() => {}).finally(() => { if (!cancelled) setDone(true); });
+      const result = (d && !d.error && d.title) ? d : null;
+      _linkPreviewCache.set(url, result);
+      if (!cancelled) setData(result);
+    }).catch(() => { _linkPreviewCache.set(url, null); }).finally(() => { if (!cancelled) setDone(true); });
     return () => { cancelled = true; };
   }, [url]);
   if (!data || !done) return null;
@@ -430,8 +435,11 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
     reader.readAsDataURL(f);
   });
 
+  const MAX_FILE_SIZE_MB = 64;
   const sendFiles = async (caption = '') => {
     if (!files.length || !cur) return;
+    const oversized = files.find(f => f.size > MAX_FILE_SIZE_MB * 1024 * 1024);
+    if (oversized) { alert(`Arquivo "${oversized.name}" excede ${MAX_FILE_SIZE_MB}MB. Reduza o tamanho antes de enviar.`); return; }
     const ph = cur.contact_phone || cur.remote_jid?.split('@')[0];
     setSending(true);
     try {
@@ -783,7 +791,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                   const _msgDate = new Date(m.timestamp).toDateString();
                   const _showDateSep = _msgDate !== _lastMsgDate;
                   _lastMsgDate = _msgDate;
-                  const _sep = _showDateSep ? <DateSeparator key={`sep-${idx}`} timestamp={m.timestamp} /> : null;
+                  const _sep = _showDateSep ? <DateSeparator key={`sep-${_msgDate}`} timestamp={m.timestamp} /> : null;
                   if (groupStartMap[idx]) {
                     const g = groupStartMap[idx];
                     const gMsgs = g.indices.map(i => msgs[i]);
