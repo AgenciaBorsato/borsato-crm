@@ -6,35 +6,157 @@ import {
   Smile, Lock, StickyNote
 } from 'lucide-react';
 
+// ─── Emojis (10 categorias expandidas) ───────────────────────────────────────
 const EMOJI_CATEGORIES = [
-  { label: '😀', emojis: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤩','🥳','😎','🤓','🧐','😏','😒','😞','😔','😟','😕','🙁','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓'] },
-  { label: '👍', emojis: ['👍','👎','👌','🤌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','✋','🖐','🖖','👋','🤚','🙌','👏','🤲','🙏','✍️','💪','🦾','🫶','🤝','👐'] },
-  { label: '❤️', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','♥️','🫀','💋','💯','🔥','✨','⭐','🌟','💫','🎉','🎊','🎈','🏆','🥇'] },
-  { label: '😂', emojis: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🐦','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🦋','🐛','🐌','🐞','🐜','🦟','🐢','🐍','🦎','🦕','🦖','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈'] },
-  { label: '🍕', emojis: ['🍕','🍔','🌮','🌯','🍟','🌭','🍿','🧂','🥓','🥚','🍳','🧇','🥞','🧈','🍞','🥐','🥖','🫓','🧀','🥗','🥘','🍝','🍜','🍛','🍣','🍱','🥟','🦪','🍤','🍙','🍚','🍘','🍥','🥮','🍢','🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍿','☕','🍵','🧃','🥤','🧋','🍺','🍻','🥂','🍷'] },
-  { label: '⚽', emojis: ['⚽','🏀','🏈','⚾','🎾','🏐','🏉','🎱','🏓','🏸','🥊','🥋','⛳','🎣','🤿','🎽','🛹','🛷','🥌','🎿','⛷️','🏂','🏋️','🤼','🤸','⛹️','🤺','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🎖️'] },
+  { label:'😀', title:'Sorrisos', emojis:['😀','😃','😄','😁','😆','😅','😂','🤣','🥲','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🫠','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👻','💀','☠️','👽','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾'] },
+  { label:'👋', title:'Gestos', emojis:['👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','🫶','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦵','🦶','👂','🦻','👃','👀','👁','👅','🦷','🦴','👣','💋','🫦','👶','🧒','👦','👧','🧔','👱','👴','👵','🧓','👮','🕵️','💂','🧑‍⚕️','🧑‍🎓','🧑‍🍳','🧑‍🔧','🧑‍💻','🧑‍🎤','🧑‍🎨','🧑‍✈️','🧑‍🚀','🧑‍🚒','🧑‍⚖️','🧑‍🌾','🧑‍💼'] },
+  { label:'❤️', title:'Corações', emojis:['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','♥️','❤️‍🔥','❤️‍🩹','💋','💯','🔥','✨','⭐','🌟','💫','⚡','🌈','🎉','🎊','🎈','🎁','🏆','🥇','🥈','🥉','🎖️','🏅','🎗️','🎀','🎆','🎇','🧨','✅','❌','⭕','🛑','⛔','⚠️','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔶','🔷','🔸','🔹','🔺','🔻','💠','🔘','♻️','🆘','🆕','🆒','🆓','🆗','🆙','©️','®️','™️'] },
+  { label:'🐶', title:'Animais', emojis:['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🐦','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🦋','🐛','🐌','🐞','🐜','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦀','🐡','🐠','🐟','🐬','🐳','🦈','🐊','🐅','🐆','🦓','🦍','🐘','🦛','🦏','🦒','🦘','🦬','🐃','🐄','🐎','🐑','🦙','🐕','🦮','🐩','🐈','🕊️','🦚','🦜','🦩','🌿','🌱','🌲','🌳','🌴','🌵','🌾','🌺','🌸','🌼','🌻','🌹','🥀','🌷','🌊','🏔️','🌋','🌄','🌅','🌃','🌆','🌇','🌉','🌌','🌠','🌤️','⛅','🌧️','⛈️','🌨️','❄️','☃️','⛄','💨','🌀','☔','🌙','🌛','🌜','🌕','🌑','🌞','☀️','🌈'] },
+  { label:'🍕', title:'Comida', emojis:['🍕','🍔','🌮','🌯','🍟','🌭','🍿','🧂','🥓','🥚','🍳','🧇','🥞','🧈','🍞','🥐','🥖','🫓','🧀','🥗','🥘','🍝','🍜','🍛','🍣','🍱','🥟','🍤','🍙','🍚','🍘','🍥','🍢','🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍩','🍪','🥜','🍯','☕','🫖','🍵','🧋','🍾','🍷','🍸','🍹','🍺','🍻','🥂','🥃','🥤','🧃','🧊','🍼','🥛','🍦','🍧','🍨','🫐','🍓','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🫒','🥑','🍆','🥔','🥕','🌽','🌶️','🥒','🥬','🥦','🧄','🧅','🍇','🍈','🍉','🍊','🍋','🍌','🍎','🍏','🍐'] },
+  { label:'✈️', title:'Viagem', emojis:['✈️','🚀','🛸','🚁','🛶','⛵','🚤','🛥️','🚢','🚂','🚄','🚅','🚇','🚌','🚍','🚗','🚕','🚙','🛻','🚚','🚛','🚜','🏎️','🏍️','🛵','🚲','🛴','🛹','🛼','🚧','⚓','🗺️','🗼','🗽','⛪','🕌','⛩️','🏔️','🗻','🌋','🏕️','🏖️','🏜️','🏝️','🏟️','🏛️','🏗️','🏠','🏡','🏢','🏥','🏦','🏨','🏪','🏫','🏬','🏭','🏯','🏰','💒','🗿','🌍','🌎','🌏','🌐','🧭','🛖','🏕️'] },
+  { label:'⚽', title:'Atividades', emojis:['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🏓','🏸','🏒','🥍','🏏','🪃','⛳','🪁','🏹','🎣','🤿','🎽','🎿','🛷','🥌','🎯','🎮','🎲','🎰','🎭','🎨','🖼️','🎪','🎠','🎡','🎢','🎤','🎧','🎼','🎹','🥁','🪘','🎷','🎺','🎸','🪕','🎻','🎬','📽️','📺','📻','🎙️','🎟️','🎫','🎗️','🎀','🏆','🥇','🥈','🥉','🏅','🎖️'] },
+  { label:'💡', title:'Objetos', emojis:['💡','🔦','🕯️','🪔','📱','💻','⌨️','🖥️','🖨️','🖱️','💾','💿','📀','📷','📸','📹','🎥','📞','☎️','📺','📻','🧭','⏱️','⏰','⏳','🔋','🔌','🪴','🪑','🚪','🛋️','🛏️','🛁','🚿','💊','💉','🩺','🩻','🩹','🩼','💰','💳','💎','⚖️','🪜','🧰','🔧','🔨','⚒️','🛠️','⛏️','🪚','🔩','🪤','🔑','🗝️','🔐','🔒','🔓','📦','📫','📬','📪','📥','📤','📧','✏️','✒️','🖊️','🖋️','📝','📁','📂','📋','📊','📈','📉','📅','📆','📓','📔','📒','📕','📗','📘','📙','📚','📖','🔖','🏷️','💼','📌','📍','✂️','🔍','🔎','🔬','🔭','📡','🧲','🪄','🧸','🪆'] },
+  { label:'🔣', title:'Símbolos', emojis:['💯','🔞','📵','🚫','❌','⭕','🛑','⛔','📛','🚷','🚯','🚳','🔕','💤','✅','☑️','🆗','🆙','🆒','🆕','🆓','⁉️','‼️','❗','❓','⚠️','♻️','✔️','🔗','➡️','⬅️','⬆️','⬇️','↩️','↪️','🔄','🔃','🔀','🔁','🔂','▶️','⏩','⏪','⏫','⏬','🆘','🆔','🆚','🔤','🔡','🔠','💱','💲','©️','®️','™️','🔔','🔕','🎵','🎶','⚕️','♾️','🔰','📶','📳','📴','📵','🔊','🔉','🔈','🔇','📢','📣','📯','🃏','🎴','🀄','ℹ️','🔅','🔆','🔱','⚜️','🏧','🚾','♿','🅿️','🛗','🈳','🈹','🈺','🈵','🈴','🈲','🈶','🈚','🈸','🈷️'] },
+  { label:'🇧🇷', title:'Bandeiras', emojis:['🇧🇷','🇺🇸','🇬🇧','🇪🇸','🇵🇹','🇫🇷','🇩🇪','🇮🇹','🇯🇵','🇰🇷','🇨🇳','🇷🇺','🇦🇷','🇨🇴','🇲🇽','🇨🇱','🇵🇪','🇻🇪','🇺🇾','🇧🇴','🇵🇾','🇪🇨','🇬🇹','🇭🇳','🇳🇮','🇨🇷','🇵🇦','🇩🇴','🇨🇺','🇭🇹','🇿🇦','🇳🇬','🇪🇬','🇲🇦','🇰🇪','🇮🇳','🇮🇩','🇵🇭','🇻🇳','🇹🇭','🇲🇾','🇸🇬','🇦🇺','🇨🇦','🇲🇿','🇦🇴','🇵🇱','🇳🇱','🇸🇪','🇳🇴','🇩🇰','🇫🇮','🇨🇭','🇦🇹','🇬🇷','🇹🇷','🇮🇱','🇸🇦','🇦🇪','🏳️','🏴','🏳️‍🌈','🏴‍☠️','🚩'] },
 ];
 
-function EmojiPicker({ onSelect, onClose }) {
-  const [cat, setCat] = useState(0);
-  const ref = useRef(null);
-  useEffect(() => {
+// Palavras-chave por emoji para busca
+const EMOJI_KEYWORDS = {'😀':'feliz happy sorrindo alegre smile bom dia','😃':'feliz happy sorrindo alegre smile','😄':'feliz happy sorrindo alegre smile','😁':'feliz happy sorrindo alegre radiante','😆':'feliz happy rindo alegre laugh','😅':'aliviado nervoso suado relieved laugh','😂':'rindo laugh funny haha choro lol rofl','🤣':'rindo laugh funny haha lol rolando','🥲':'aliviado feliz triste emocionado','😊':'feliz happy sorrindo alegre','😇':'inocente anjo feliz','🙂':'sorrindo feliz ok','🙃':'ironico sarcasmo upside down','😉':'piscando wink','😌':'aliviado satisfeito calmo relieved','😍':'amor love apaixonado coracao olhos','🥰':'amor love apaixonado carinhoso amoroso','😘':'beijo kiss amor love','😗':'beijo kiss','😙':'beijo kiss','😚':'beijo kiss','😋':'delicioso gostoso yummy comida','😛':'lingua brincadeira funny','😝':'lingua brincadeira','😜':'louco brincadeira funny','🤪':'louco crazy brincadeira','🤩':'apaixonado emocionado star struck animado excited','🥳':'festa party parabens birthday animado','😎':'legal cool oculos sunglass','🤓':'nerd geek estudioso','🧐':'pensando intrigado monoculo','😏':'sorriso ironico smirk safado','😒':'desanimado entediado unamused','😞':'triste sad desapontado','😔':'triste sad pensativo pensive','😟':'preocupado worried triste','🥺':'olhos cachorro please pedindo triste puppy eyes','😢':'triste sad chorando cry lagrima','😭':'chorando cry triste sad muito','😤':'bravo raiva frustrado steam','😠':'bravo angry raiva','😡':'bravo angry raiva pouting','🤬':'furioso angry rage palavrao','🤯':'surpreso chocado mind blown explodiu','😳':'surpreso corado flushed embarrassed','🥵':'calor quente hot fever','🥶':'frio cold gelo','😱':'medo scared assustado surprised chocado','😨':'medo scared fearful','😰':'ansioso nervoso suado anxious','😥':'preocupado triste disappointed','😓':'suado nervoso sweat','🤗':'abraco hug carinhoso','🤔':'pensando thinking hmm','🤭':'rindo secreto ah nao oops','🤫':'silencio segredo shh quiet','🤥':'mentiroso lying nariz comprido','😶':'sem expressao speechless','😐':'neutro neutral','😑':'expressionless entediado','😬':'nervoso constrangido grimacing','🙄':'revirando olhos eye roll','😴':'dormindo sleep cansado tired zzz','😷':'mascara doente sick mask','🤒':'doente sick febre','🤕':'doente sick machucado','🤑':'dinheiro money rico rich','😈':'diabinho evil bad','👿':'diabinho angry evil','👻':'fantasma ghost','💀':'caveira skull morto dead','🤖':'robo robot','👋':'oi tchau hi bye hello wave','✋':'para stop high five','👌':'ok perfeito tudo bem fine','✌️':'vitoria peace dois dedos','🤞':'torcer esperanca boa sorte luck','🤟':'rock amo','🤘':'rock heavy metal','🤙':'ligame telefone hang loose','👈':'esquerda left apontando','👉':'direita right apontando','👆':'acima up apontando','👇':'abaixo down apontando','☝️':'um first apontando cima','👍':'ok bom aprovado like concordo thumbs up sim yes','👎':'nao ruim dislike thumbs down','✊':'forca power punho','👊':'soco punch','🤛':'soco esquerda','🤜':'soco direita','👏':'palmas aplausos bravo clapping','🙌':'feliz celebracao palmas hands up','🫶':'amor love carinho heart hands obrigado','👐':'abertas maos open','🤲':'maos juntas cupped','🤝':'acordo aperto mao handshake trato','🙏':'obrigado please favor pray oracao pedir obrigada','✍️':'escrevendo writing assinando','💅':'unhas nails','💪':'forte strength musculo biceps','🦾':'braco mecanico robo forte','❤️':'amor love coracao heart','🧡':'amor love coracao laranja','💛':'amor love coracao amarelo','💚':'amor love coracao verde','💙':'amor love coracao azul','💜':'amor love coracao roxo','🖤':'amor love coracao preto','🤍':'amor love coracao branco','🤎':'amor love coracao marrom','💔':'coracao partido broken heart dor','❣️':'coracao exclamacao amor','💕':'dois coracoes amor love','💞':'coracoes girando amor','💓':'coracao batendo amor','💗':'coracao crescendo amor','💖':'coracao brilhante amor','💘':'flecha cupido amor','💝':'coracao laco presente amor','💋':'beijo kiss amor love','💯':'perfeito cem por cento aprovado ok','🔥':'fogo fire quente hot bomba incrivel','✨':'brilho sparkle estrela magico','⭐':'estrela star favorito','🌟':'estrela star destaque brilhante','💫':'estrela star tonteando','🎉':'festa party parabens birthday celebracao','🎊':'festa party parabens celebracao confete','🎈':'festa party balao balloon parabens','🎁':'presente gift parabens birthday','🏆':'trofeu trophy campeao winner','🥇':'ouro primeiro gold winner','🥈':'prata segundo silver','🥉':'bronze terceiro','✅':'sim certo correto ok verdadeiro check','❌':'nao errado wrong false negativo','⚠️':'atencao warning cuidado','🐶':'cachorro dog animal pet','🐱':'gato cat animal pet','🐭':'rato mouse animal','🐹':'hamster animal pet','🐰':'coelho rabbit animal','🦊':'raposa fox animal','🐻':'urso bear animal','🐼':'panda animal','🐨':'coala koala animal','🐯':'tigre tiger animal','🦁':'leao lion animal','🐮':'vaca cow animal','🐷':'porco pig animal','🐸':'sapo frog animal','🐵':'macaco monkey animal','🙈':'macaco nao ver','🙉':'macaco nao ouvir','🙊':'macaco nao falar','🐔':'galinha chicken frango','🐧':'pinguim penguin','🦋':'borboleta butterfly','🐢':'tartaruga turtle devagar slow','🦄':'unicornio unicorn magico','🐬':'golfinho dolphin','🦈':'tubarao shark','🌺':'flor flower bonito','🌸':'flor florzinha sakura','🌻':'girassol sunflower','🌹':'rosa rose amor romantico','💐':'flores flowers buque','🌷':'tulipa tulip flores','🌊':'onda wave mar sea praia','☀️':'sol sun quente hot dia','🌙':'lua moon noite night','🌈':'arco iris rainbow','🌧️':'chuva rain','❄️':'neve snow frio cold gelo ice','⚡':'raio lightning trovao','🍕':'pizza comida food','🍔':'hamburguer burger comida food','🍟':'batata frita fries comida','🌮':'taco comida food','🍝':'macarrao pasta comida','🍜':'ramen macarrao comida','🍣':'sushi comida japones','🍩':'rosquinha donut comida','🍪':'biscoito cookie comida','🎂':'bolo cake parabens birthday','🧁':'cupcake bolo doce sweet','🍫':'chocolate comida doce sweet','🍭':'bala candy doce sweet','🍦':'sorvete ice cream','🍓':'morango strawberry fruta','🍉':'melancia watermelon fruta','🍎':'maca apple fruta','🍌':'banana fruta','🍋':'limao lemon fruta azedo','🥑':'abacate avocado','☕':'cafe coffee bebida drink','🧋':'bubble tea boba bebida','🍺':'cerveja beer bebida','🥂':'brinde champanhe toast','🍷':'vinho wine bebida','✈️':'aviao plane viagem travel voo','🚀':'foguete rocket espaco space','🚗':'carro car viagem','🏎️':'carro corrida race car','🚲':'bicicleta bike','🚢':'navio ship barco viagem','🏠':'casa house home','🏢':'edificio building escritorio','🏖️':'praia beach areia sand','🌍':'mundo world terra earth','⚽':'bola futebol soccer','🏀':'basquete basketball','🏈':'futebol americano football','🎾':'tenis tennis','🎮':'video game jogo controle','🎲':'dado dice jogo','🎤':'microfone microphone cantor','🎧':'fone headphone musica','🎵':'nota musical music song','🎶':'notas musicais music song','🎸':'guitarra guitar musica','🎹':'piano teclado','🥁':'bateria drums musica','🎨':'arte art pintura painting','📱':'celular phone smartphone','💻':'computador laptop computer','📷':'camera foto photo','💊':'remedio pill medicine','💉':'injecao injection vacina','🩺':'estetoscopio medico doctor','💰':'dinheiro money rico','💳':'cartao card credito','💎':'diamante diamond joia rico','🔑':'chave key','📚':'livros books estudar study','📝':'nota escrever write','🔍':'lupa search buscar procurar','💡':'lampada ideia idea light','🔧':'ferramenta tool chave','🔒':'cadeado lock seguro','🎁':'presente gift parabens birthday','🪄':'varinha magica magic wand','🇧🇷':'brasil brazil bandeira flag','🇺🇸':'estados unidos usa america flag'};
+
+function EmojiPicker({ onSelect, onClose, onGif }) {
+  const [tab, setTab] = React.useState('emoji');
+  const [cat, setCat] = React.useState(0);
+  const [search, setSearch] = React.useState('');
+  const [gifQuery, setGifQuery] = React.useState('');
+  const [gifs, setGifs] = React.useState([]);
+  const [gifLoading, setGifLoading] = React.useState(false);
+  const [gifConfigured, setGifConfigured] = React.useState(true);
+  const ref = React.useRef(null);
+  const searchRef = React.useRef(null);
+
+  React.useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, [onClose]);
+
+  React.useEffect(() => {
+    if (tab === 'emoji') setTimeout(() => searchRef.current?.focus(), 50);
+    if (tab === 'gif') loadGifs('');
+  }, [tab]);
+
+  React.useEffect(() => {
+    if (tab !== 'gif') return;
+    const t = setTimeout(() => loadGifs(gifQuery), 400);
+    return () => clearTimeout(t);
+  }, [gifQuery]);
+
+  const loadGifs = async (q) => {
+    setGifLoading(true);
+    try {
+      const res = await api.searchGifs(q);
+      setGifConfigured(res.configured !== false);
+      setGifs(res.results || []);
+    } catch { setGifs([]); }
+    setGifLoading(false);
+  };
+
+  const searchResults = React.useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return null;
+    const seen = new Set(); const out = [];
+    for (const [emoji, kw] of Object.entries(EMOJI_KEYWORDS)) {
+      if (kw.includes(q) && !seen.has(emoji)) { seen.add(emoji); out.push(emoji); }
+    }
+    return out;
+  }, [search]);
+
+  const displayEmojis = searchResults ?? EMOJI_CATEGORIES[cat].emojis;
+
   return (
-    <div ref={ref} className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 w-72 overflow-hidden">
+    <div ref={ref} className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 w-80 overflow-hidden">
+      {/* Tabs */}
       <div className="flex border-b border-gray-100">
-        {EMOJI_CATEGORIES.map((c, i) => (
-          <button key={i} onClick={() => setCat(i)} className={`flex-1 py-2 text-sm hover:bg-gray-50 transition-colors ${cat === i ? 'bg-gray-100' : ''}`}>{c.label}</button>
-        ))}
+        <button onClick={() => setTab('emoji')} className={`flex-1 py-2 text-sm font-medium transition-colors ${tab==='emoji'?'text-[#25d366] border-b-2 border-[#25d366]':'text-gray-400 hover:text-gray-600'}`}>😀 Emoji</button>
+        <button onClick={() => setTab('gif')} className={`flex-1 py-2 text-sm font-medium transition-colors ${tab==='gif'?'text-[#25d366] border-b-2 border-[#25d366]':'text-gray-400 hover:text-gray-600'}`}>GIF</button>
       </div>
-      <div className="p-2 grid grid-cols-8 gap-0.5 max-h-48 overflow-y-auto">
-        {EMOJI_CATEGORIES[cat].emojis.map(e => (
-          <button key={e} onClick={() => onSelect(e)} className="p-1.5 text-lg hover:bg-gray-100 rounded-lg transition-colors leading-none">{e}</button>
-        ))}
-      </div>
+
+      {tab === 'emoji' && (<>
+        {/* Search */}
+        <div className="px-2 pt-2 pb-1">
+          <div className="relative">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">🔍</span>
+            <input ref={searchRef} value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar emoji..." className="w-full pl-7 pr-7 py-1.5 text-sm bg-gray-100 rounded-lg outline-none focus:ring-1 focus:ring-[#25d366]/30" />
+            {search && <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">✕</button>}
+          </div>
+        </div>
+        {/* Category tabs */}
+        {!search && (
+          <div className="flex overflow-x-auto border-b border-gray-100 px-1 gap-0.5" style={{scrollbarWidth:'none'}}>
+            {EMOJI_CATEGORIES.map((c, i) => (
+              <button key={i} onClick={() => setCat(i)} title={c.title}
+                className={`flex-shrink-0 py-1.5 px-2 text-base hover:bg-gray-50 rounded-lg transition-colors ${cat===i?'bg-gray-100':''}`}>{c.label}</button>
+            ))}
+          </div>
+        )}
+        {!search && <div className="px-3 pt-1.5 pb-0.5"><span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{EMOJI_CATEGORIES[cat].title}</span></div>}
+        {/* Grid */}
+        <div className="p-1.5 grid grid-cols-8 gap-0.5 max-h-52 overflow-y-auto">
+          {displayEmojis.length === 0
+            ? <div className="col-span-8 text-center py-6 text-gray-400 text-sm">Nenhum emoji encontrado</div>
+            : displayEmojis.map(e => (
+              <button key={e} onClick={() => onSelect(e)}
+                className="p-1.5 text-lg hover:bg-gray-100 rounded-lg transition-colors leading-none hover:scale-110">{e}</button>
+            ))}
+        </div>
+        {search && searchResults && searchResults.length > 0 && (
+          <div className="px-3 pb-2 text-[10px] text-gray-400">{searchResults.length} emoji{searchResults.length!==1?'s':''} encontrado{searchResults.length!==1?'s':''}</div>
+        )}
+      </>)}
+
+      {tab === 'gif' && (<>
+        <div className="px-2 pt-2 pb-1">
+          <div className="relative">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">🔍</span>
+            <input value={gifQuery} onChange={e => setGifQuery(e.target.value)} autoFocus
+              placeholder="Buscar GIF..." className="w-full pl-7 pr-3 py-1.5 text-sm bg-gray-100 rounded-lg outline-none focus:ring-1 focus:ring-[#25d366]/30" />
+          </div>
+        </div>
+        <div className="max-h-64 overflow-y-auto p-1.5">
+          {!gifConfigured && (
+            <div className="text-center py-8 text-gray-400">
+              <div className="text-3xl mb-2">🎬</div>
+              <p className="text-xs">Configure TENOR_API_KEY<br/>para ativar GIFs</p>
+            </div>
+          )}
+          {gifConfigured && gifLoading && (
+            <div className="text-center py-8 text-gray-400">
+              <div className="text-2xl animate-pulse">🔍</div>
+              <p className="text-xs mt-2">Buscando...</p>
+            </div>
+          )}
+          {gifConfigured && !gifLoading && gifs.length === 0 && (
+            <div className="text-center py-8 text-gray-400">
+              <div className="text-3xl mb-2">🎬</div>
+              <p className="text-xs">{gifQuery ? 'Nenhum GIF encontrado' : 'Digite para buscar'}</p>
+            </div>
+          )}
+          {gifConfigured && !gifLoading && gifs.length > 0 && (
+            <div className="grid grid-cols-2 gap-1">
+              {gifs.map((g, i) => (
+                <button key={i} onClick={() => { onGif && onGif(g); onClose(); }}
+                  className="relative rounded-lg overflow-hidden hover:opacity-80 transition-opacity bg-gray-100 aspect-video">
+                  <img src={g.preview} alt="GIF" className="w-full h-full object-cover" loading="lazy" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {!gifQuery && gifs.length > 0 && (
+          <div className="px-3 pb-1.5 text-[10px] text-gray-400 text-center">Em destaque · Tenor</div>
+        )}
+      </>)}
     </div>
   );
 }
@@ -1069,6 +1191,18 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                         setTimeout(() => { el.focus(); el.setSelectionRange(start + emoji.length, start + emoji.length); }, 10);
                       } else { setMsg(m => m + emoji); }
                       setShowEmojiPicker(false);
+                    }}
+                    onGif={async gif => {
+                      if (!cur || !gif?.mp4) return;
+                      setShowEmojiPicker(false);
+                      const ph = cur.contact_phone || cur.remote_jid?.split('@')[0];
+                      setSending(true);
+                      try {
+                        await api.sendGif({ gifUrl: gif.mp4, chatId: cur.id, tenantId: tenant.id, number: ph });
+                        const newMsgs = await api.getChatMessages(cur.id, 100, 0);
+                        setMsgs(newMsgs); await load();
+                      } catch (e) { alert('Erro ao enviar GIF: ' + e.message); }
+                      setSending(false);
                     }}
                     onClose={() => setShowEmojiPicker(false)}
                   />
