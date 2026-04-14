@@ -87,6 +87,7 @@ class ApiService {
   async transcribeAudio(tenantId, messageId) { return await this.request('/api/whatsapp/transcribe', { method: 'POST', body: JSON.stringify({ tenantId, messageId }) }); }
   async triggerAI(chatId, tenantId, text) { return await this.request(`/api/chats/${encodeURIComponent(chatId)}/trigger-ai`, { method: 'POST', body: JSON.stringify({ tenantId, text }) }); }
   async fetchProfilePic(phone, tenantId) { return await this.request(`/api/whatsapp/profile-pic/${encodeURIComponent(phone)}?tenantId=${encodeURIComponent(tenantId)}`); }
+  async fetchLinkPreview(url) { return await this.request(`/api/link-preview?url=${encodeURIComponent(url)}`); }
   async syncProfilePics(tenantId) { return await this.request('/api/whatsapp/sync-profile-pics', { method: 'POST', body: JSON.stringify({ tenantId }) }); }
   async getGroupParticipants(tenantId, groupJid) { return await this.request(`/api/whatsapp/group-participants?tenantId=${encodeURIComponent(tenantId)}&groupJid=${encodeURIComponent(groupJid)}`); }
   async sendReaction(tenantId, chatId, messageId, remoteJid, emoji) { return await this.request('/api/whatsapp/react', { method: 'POST', body: JSON.stringify({ tenantId, chatId, messageId, remoteJid, emoji }) }); }

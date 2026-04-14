@@ -46,6 +46,60 @@ import MediaBubble from './MediaBubble';
 import LeadSummaryCard from './LeadSummaryCard';
 import EditLeadModal from './EditLeadModal';
 
+// ─── Separador de data ───────────────────────────────────────────────────────
+function DateSeparator({ timestamp }) {
+  const d = new Date(timestamp);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  let label;
+  if (d.toDateString() === today.toDateString()) label = 'Hoje';
+  else if (d.toDateString() === yesterday.toDateString()) label = 'Ontem';
+  else {
+    const sameYear = d.getFullYear() === today.getFullYear();
+    label = d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', ...(sameYear ? {} : { year: 'numeric' }) });
+  }
+  return (
+    <div className="flex items-center justify-center my-3 select-none">
+      <span className="bg-[#e1f2fb] text-[#4a9dba] text-[11px] font-medium px-3 py-1 rounded-full shadow-sm border border-[#cde9f6]">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+// ─── Preview de link ─────────────────────────────────────────────────────────
+const URL_REGEX = /https?:\/\/[^\s<>"']+|www\.[^\s<>"']+\.[a-z]{2,}[^\s<>"']*/i;
+function LinkPreviewCard({ url, tenantId }) {
+  const [data, setData] = React.useState(null);
+  const [done, setDone] = React.useState(false);
+  React.useEffect(() => {
+    let cancelled = false;
+    api.fetchLinkPreview(url).then(d => {
+      if (!cancelled && d && !d.error && d.title) setData(d);
+    }).catch(() => {}).finally(() => { if (!cancelled) setDone(true); });
+    return () => { cancelled = true; };
+  }, [url]);
+  if (!data || !done) return null;
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer"
+       onClick={e => e.stopPropagation()}
+       className="block mt-2 border border-gray-200 rounded-xl overflow-hidden hover:bg-gray-50 transition-colors no-underline">
+      {data.image && (
+        <img src={data.image} alt="" className="w-full h-[120px] object-cover"
+             onError={e => e.target.style.display='none'} />
+      )}
+      <div className="px-3 py-2">
+        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">{data.siteName || data.host}</p>
+        <p className="text-[12px] font-semibold text-gray-800 leading-snug line-clamp-2">{data.title}</p>
+        {data.description && (
+          <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">{data.description}</p>
+        )}
+      </div>
+    </a>
+  );
+}
+
 function ParticipantRow({ p, onMention }) {
   const [hover, setHover] = useState(false);
   return (
@@ -719,15 +773,22 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                 const groupStartMap = {};
                 imageGroups.forEach(g => { groupStartMap[g.startIdx] = g; });
 
+                let _lastMsgDate = null;
                 return displayMsgs.map((m, idx) => {
                   if (grouped.has(idx) && !groupStartMap[idx]) return null; // parte de grupo, renderizado pelo líder
+                  const _msgDate = new Date(m.timestamp).toDateString();
+                  const _showDateSep = _msgDate !== _lastMsgDate;
+                  _lastMsgDate = _msgDate;
+                  const _sep = _showDateSep ? <DateSeparator key={`sep-${idx}`} timestamp={m.timestamp} /> : null;
                   if (groupStartMap[idx]) {
                     const g = groupStartMap[idx];
                     const gMsgs = g.indices.map(i => msgs[i]);
                     const fromMe = Number(gMsgs[0].is_from_me) === 1;
                     const lastMsg = gMsgs[gMsgs.length - 1];
                     return (
-                      <div key={`group-${gMsgs[0].id}`} className={`flex ${fromMe ? 'justify-end' : 'justify-start'}`}>
+                      <React.Fragment key={`group-${gMsgs[0].id}`}>
+                      {_sep}
+                      <div className={`flex ${fromMe ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[75%] rounded-xl px-2 py-2 ${fromMe ? 'bg-blue-50 border border-blue-100' : 'bg-white border border-gray-100'}`}>
                           {gMsgs[0].sender_name && <p className="text-[10px] font-bold mb-1 text-gray-500">{gMsgs[0].sender_name}</p>}
                           <div className={`grid gap-1 ${gMsgs.length === 2 ? 'grid-cols-2' : gMsgs.length === 3 ? 'grid-cols-2' : 'grid-cols-2'}`}>
@@ -748,11 +809,14 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                           </div>
                         </div>
                       </div>
+                      </React.Fragment>
                     );
                   }
                   // Nota interna
                 if (Number(m.is_internal) === 1) return (
-                  <div key={m.id} className="flex justify-center my-1">
+                  <React.Fragment key={`note-${m.id}`}>
+                  {_sep}
+                  <div className="flex justify-center my-1">
                     <div className="max-w-[70%] bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
                       <div className="flex items-center gap-1.5 mb-1">
                         <Lock className="w-2.5 h-2.5 text-amber-500" />
@@ -763,6 +827,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                       <p className="text-xs text-amber-900 leading-relaxed">{m.content}</p>
                     </div>
                   </div>
+                  </React.Fragment>
                 );
                 // Mensagem normal (não agrupada)
                 const fromMe = Number(m.is_from_me) === 1 || m.is_from_me === true;
@@ -774,17 +839,26 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                 const isMentionedMsg = !fromMe && mentionsMe(m.content);
                 const isReaction = m.message_type === 'reaction' && m.content && !m.content.startsWith('[');
                 if (isReaction) return (
-                  <div key={m.id} className={`flex ${fromMe ? 'justify-end' : 'justify-start'} my-0.5`}>
+                  <React.Fragment key={`react-${m.id}`}>
+                  {_sep}
+                  <div className={`flex ${fromMe ? 'justify-end' : 'justify-start'} my-0.5`}>
                     <div className="flex items-center gap-1.5 bg-white border border-gray-100 rounded-full px-2.5 py-1">
                       <span className="text-lg leading-none">{m.content}</span>
                       {m.sender_name && <span className="text-[9px] text-gray-400 font-medium">{m.sender_name}</span>}
                       <span className="text-[8px] text-gray-300">{fmt(m.timestamp)}</span>
                     </div>
                   </div>
+                  </React.Fragment>
                 );
                 const isForwarded = m.content && m.content.startsWith('[Encaminhada]');
+                const _firstUrl = m.content && !isPlaceholder ? (m.content.match(URL_REGEX) || [])[0] : null;
                 return (
-                  <div key={m.id} className={`flex ${fromMe ? 'justify-end' : 'justify-start'} group items-end gap-1`}>
+                  <React.Fragment key={m.id}>
+                  {_sep}
+                  <div className={`flex ${fromMe ? 'justify-end' : 'justify-start'} group items-end gap-1`}>
+                    {!fromMe && isGrp(cur) && m.sender_name && (
+                      <ParticipantAvatar name={m.sender_name} size="w-6 h-6" textSize="text-[9px]" />
+                    )}
                     {fromMe && (
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mb-1 self-end">
                         <div className="bg-white border border-gray-100 rounded-lg shadow-sm py-0.5 flex flex-col min-w-[110px]">
@@ -861,6 +935,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                       {hasMedia && <MediaBubble msg={m} tenantId={tenant.id} cachedSrc={cachedSrc} />}
                       {m.content && !isPlaceholder && renderText(m.content, myName)}
                       {m.content && isPlaceholder && !hasMedia && <p className="text-[13px] text-gray-500 italic">{m.content}</p>}
+                      {_firstUrl && !hasMedia && <LinkPreviewCard url={_firstUrl.startsWith('http') ? _firstUrl : 'https://'+_firstUrl} tenantId={tenant.id} />}
                       <div className="flex items-center justify-end gap-0.5 mt-0.5">
                         <span className="text-[9px] text-gray-400">{fmt(m.timestamp)}</span>
                         {fromMe && getStatus(m.status)}
@@ -885,6 +960,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                       </div>
                     )}
                   </div>
+                  </React.Fragment>
                 );
               }).filter(Boolean);
               })()}

@@ -237,13 +237,34 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
         : <button onClick={loadMedia} disabled={loading} className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-200"><Play className="w-5 h-5 text-blue-700" /><span className="text-xs">{loading ? 'Carregando...' : 'Ver video'}</span></button>}
     </div>
   );
-  if (msg.message_type === 'document') return (
-    <div className="mb-1">
-      {media ? <a href={media} download={msg.content || 'doc'} className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-200"><Download className="w-5 h-5 text-blue-700" /><span className="text-xs">Baixar</span></a>
-        : mediaError ? <MediaErrorBadge icon={<FileText className="w-4 h-4" />} />
-        : <button onClick={loadMedia} disabled={loading} className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 hover:bg-gray-200"><FileText className="w-5 h-5 text-gray-400" /><span className="text-xs">{loading ? 'Carregando...' : 'Baixar'}</span></button>}
-    </div>
-  );
+  if (msg.message_type === 'document') {
+    const rawName = msg.content && !msg.content.startsWith('[') ? msg.content : 'documento';
+    const ext = rawName.includes('.') ? rawName.split('.').pop().toUpperCase().slice(0, 5) : 'DOC';
+    const extColors = { PDF: 'bg-red-600', DOC: 'bg-blue-700', DOCX: 'bg-blue-700', XLS: 'bg-green-700', XLSX: 'bg-green-700', PPT: 'bg-orange-600', PPTX: 'bg-orange-600', ZIP: 'bg-yellow-600', RAR: 'bg-yellow-600' };
+    const extBg = extColors[ext] || 'bg-gray-600';
+    return (
+      <div className="mb-1">
+        {media
+          ? <a href={media} download={rawName} className="bg-gray-100 rounded-xl p-3 flex items-center gap-3 hover:bg-gray-200 transition-colors min-w-[180px] max-w-[260px]">
+              <div className={`${extBg} text-white text-[9px] font-bold px-1.5 py-1.5 rounded-lg min-w-[36px] text-center flex-shrink-0`}>{ext}</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[12px] font-medium text-gray-800 truncate leading-tight">{rawName}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">Toque para baixar</p>
+              </div>
+              <Download className="w-4 h-4 text-blue-700 flex-shrink-0" />
+            </a>
+          : mediaError ? <MediaErrorBadge icon={<FileText className="w-4 h-4" />} />
+          : <button onClick={loadMedia} disabled={loading} className="bg-gray-100 rounded-xl p-3 flex items-center gap-3 min-w-[180px] max-w-[260px] hover:bg-gray-200 transition-colors w-full text-left">
+              <div className={`${loading ? 'bg-gray-400' : extBg} text-white text-[9px] font-bold px-1.5 py-1.5 rounded-lg min-w-[36px] text-center flex-shrink-0`}>{ext}</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[12px] font-medium text-gray-800 truncate leading-tight">{rawName}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{loading ? 'Carregando...' : 'Toque para baixar'}</p>
+              </div>
+            </button>
+        }
+      </div>
+    );
+  }
   if (msg.message_type === 'sticker') return (
     <div className="mb-1">
       {media ? (
