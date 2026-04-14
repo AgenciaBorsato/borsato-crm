@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Brain, Bot, Plus, Trash2, Users2, TrendingUp, TrendingDown, BarChart3, Target, Sparkles, RefreshCw, Filter, ArrowRight, Zap, Users, MessageSquare, Eye, Edit2, Search, Megaphone } from 'lucide-react';
+import { Brain, Bot, Plus, Trash2, Users2, TrendingUp, TrendingDown, BarChart3, Target, Sparkles, RefreshCw, Filter, ArrowRight, Zap, Users, MessageSquare, Eye, Edit2, Search, Megaphone, Contact2 } from 'lucide-react';
 import { CM } from '../constants';
 import api from '../api';
 
@@ -7,9 +7,23 @@ export function WhatsAppView({ tenant }) {
   const [status, setStatus] = useState(null);
   const [token, setToken] = useState('');
   const [ld, setLd] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState(null);
   const nm = `tenant_${tenant.id}`;
   useEffect(() => { ck(); const i = setInterval(ck, 5000); return () => clearInterval(i); }, []);
   const ck = async () => { try { setStatus(await api.getWhatsAppStatus(tenant.id)); } catch {} };
+  const syncContacts = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const r = await api.syncContacts(tenant.id);
+      setSyncResult({ ok: true, msg: `${r.saved || 0} contatos sincronizados` });
+    } catch (e) {
+      setSyncResult({ ok: false, msg: e.message || 'Erro ao sincronizar' });
+    } finally {
+      setSyncing(false);
+    }
+  };
   return (
     <div className="max-w-xl">
       <h2 className="font-bold text-lg mb-4">WhatsApp</h2>
@@ -30,11 +44,23 @@ export function WhatsAppView({ tenant }) {
             </div>
           )}
         </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-          <h3 className="font-bold text-sm mb-3">Instancia</h3>
-          <div className="bg-gray-50 rounded-lg p-2.5 flex justify-between items-center">
-            <code className="text-[#075e54] text-xs font-bold">{nm}</code>
-            <button onClick={() => navigator.clipboard.writeText(nm)} className="text-[10px] text-gray-400">Copiar</button>
+        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-4">
+          <div>
+            <h3 className="font-bold text-sm mb-3">Instancia</h3>
+            <div className="bg-gray-50 rounded-lg p-2.5 flex justify-between items-center">
+              <code className="text-[#075e54] text-xs font-bold">{nm}</code>
+              <button onClick={() => navigator.clipboard.writeText(nm)} className="text-[10px] text-gray-400">Copiar</button>
+            </div>
+          </div>
+          <div>
+            <h3 className="font-bold text-sm mb-2">Contatos</h3>
+            <p className="text-[10px] text-gray-400 mb-2">Importa nomes da agenda do celular para exibir nos chats.</p>
+            <button onClick={syncContacts} disabled={syncing} className="w-full py-2 bg-[#075e54] text-white rounded-lg text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-2">
+              {syncing ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Sincronizando...</> : <><Contact2 className="w-3.5 h-3.5" /> Sincronizar Contatos</>}
+            </button>
+            {syncResult && (
+              <p className={`text-[10px] mt-1.5 font-bold ${syncResult.ok ? 'text-green-600' : 'text-red-500'}`}>{syncResult.msg}</p>
+            )}
           </div>
         </div>
       </div>

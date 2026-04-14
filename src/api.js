@@ -105,6 +105,8 @@ class ApiService {
   async sendTyping(chatId) { return await this.request(`/api/chats/${encodeURIComponent(chatId)}/typing`, { method: 'POST', body: '{}' }); }
   async getTyping(chatId) { return await this.request(`/api/chats/${encodeURIComponent(chatId)}/typing`); }
   async sendNote(chatId, tenantId, text) { return await this.request(`/api/chats/${encodeURIComponent(chatId)}/note`, { method: 'POST', body: JSON.stringify({ tenantId, text }) }); }
+  async setChatViewing(chatId) { return await this.request(`/api/chats/${encodeURIComponent(chatId)}/viewing`, { method: 'POST', body: '{}' }); }
+  async getChatViewers(chatId) { return await this.request(`/api/chats/${encodeURIComponent(chatId)}/viewing`); }
 
   // KNOWLEDGE
   async createKnowledge(data) { return await this.request('/api/knowledge', { method: 'POST', body: JSON.stringify(data) }); }

@@ -135,6 +135,9 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   const [isNoteMode, setIsNoteMode] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [typingUsers, setTypingUsers] = useState([]);
+  const [chatViewers, setChatViewers] = useState([]);
+  const [chatSearchQuery, setChatSearchQuery] = useState('');
+  const [showChatSearch, setShowChatSearch] = useState(false);
   const typingDebounceRef = useRef(null);
   const mentionStartRef = useRef(-1);
   const inputRef = useRef(null);
@@ -184,10 +187,22 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
     if (cur) { loadMsgs(cur.id); loadLead(cur); api.markChatRead(cur.id).catch(() => {}); const i = setInterval(() => loadMsgs(cur.id), POLL_INTERVAL); return () => clearInterval(i); }
   }, [cur?.id]);
   useEffect(() => {
-    if (!cur) { setTypingUsers([]); return; }
+    if (!cur) { setTypingUsers([]); setChatViewers([]); return; }
     setIsNoteMode(false);
+    setChatSearchQuery('');
+    setShowChatSearch(false);
     const poll = async () => { try { const r = await api.getTyping(cur.id); setTypingUsers(Array.isArray(r) ? r : []); } catch {} };
     poll(); const i = setInterval(poll, 3000); return () => clearInterval(i);
+  }, [cur?.id]);
+  useEffect(() => {
+    if (!cur) return;
+    const heartbeat = () => { api.setChatViewing(cur.id).catch(() => {}); };
+    const pollViewers = async () => { try { const r = await api.getChatViewers(cur.id); setChatViewers(Array.isArray(r) ? r : []); } catch {} };
+    heartbeat();
+    pollViewers();
+    const hb = setInterval(heartbeat, 25000);
+    const pv = setInterval(pollViewers, 5000);
+    return () => { clearInterval(hb); clearInterval(pv); };
   }, [cur?.id]);
   useEffect(() => {
     if (cur && isGrp(cur)) { setShowParticipants(false); setMentionQuery(null); mentionStartRef.current = -1; loadParticipants(cur.remote_jid); }
@@ -566,11 +581,23 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                   <ProfilePic phone={cur.contact_phone || cur.remote_jid} tenantId={tenant.id} name={chatDisplayName(cur)} size="w-9 h-9" isGroup={isGrp(cur)} cachedUrl={cur.profile_pic_url} />
                   <div>
                     <p className="font-semibold text-sm text-gray-900">{chatDisplayName(cur)}</p>
-                    {isGrp(cur) ? (
-                      <button onClick={() => setShowParticipants(v => !v)} className="text-[10px] text-blue-700 font-medium hover:underline flex items-center gap-0.5">
-                        <Users2 className="w-2.5 h-2.5" />{loadingPart ? 'Carregando...' : participants.length > 0 ? `${participants.length} participantes` : 'Ver participantes'}
-                      </button>
-                    ) : <p className="text-[11px] text-gray-400">{cur.contact_phone}</p>}
+                    <div className="flex items-center gap-2">
+                      {isGrp(cur) ? (
+                        <button onClick={() => setShowParticipants(v => !v)} className="text-[10px] text-blue-700 font-medium hover:underline flex items-center gap-0.5">
+                          <Users2 className="w-2.5 h-2.5" />{loadingPart ? 'Carregando...' : participants.length > 0 ? `${participants.length} participantes` : 'Ver participantes'}
+                        </button>
+                      ) : <p className="text-[11px] text-gray-400">{cur.contact_phone}</p>}
+                      {chatViewers.length > 0 && (
+                        <div className="flex items-center gap-1" title={`Vendo: ${chatViewers.join(', ')}`}>
+                          <div className="flex -space-x-1">
+                            {chatViewers.slice(0, 3).map((name, i) => (
+                              <div key={i} className={`w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold text-white border border-white ${['bg-purple-500','bg-pink-500','bg-indigo-500'][i % 3]}`}>{name[0]?.toUpperCase()}</div>
+                            ))}
+                          </div>
+                          <span className="text-[9px] text-purple-500 font-medium">{chatViewers.length === 1 ? chatViewers[0].split(' ')[0] : `${chatViewers.length} vendo`}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -619,8 +646,32 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                       <Edit2 className="w-3.5 h-3.5" /> Editar lead
                     </button>
                   )}
+                  <button onClick={() => { setShowChatSearch(v => !v); setChatSearchQuery(''); }} className={`p-1.5 rounded-lg transition-colors ${showChatSearch ? 'bg-gray-200 text-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`} title="Buscar mensagens">
+                    <Search className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
+              {showChatSearch && (
+                <div className="mt-2.5 flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+                  <Search className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                  <input
+                    autoFocus
+                    type="text"
+                    value={chatSearchQuery}
+                    onChange={e => setChatSearchQuery(e.target.value)}
+                    placeholder="Buscar nesta conversa..."
+                    className="flex-1 bg-transparent text-xs outline-none text-gray-700 placeholder-gray-400"
+                  />
+                  {chatSearchQuery && (
+                    <button onClick={() => setChatSearchQuery('')} className="text-gray-400 hover:text-gray-600"><X className="w-3.5 h-3.5" /></button>
+                  )}
+                  {chatSearchQuery && (
+                    <span className="text-[10px] text-gray-400 flex-shrink-0">
+                      {msgs.filter(m => m.content?.toLowerCase().includes(chatSearchQuery.toLowerCase())).length} resultado(s)
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {!isGrp(cur) && lead && <LeadSummaryCard lead={lead} onRefresh={handleLeadContextRefresh} compact={true} />}
@@ -631,19 +682,25 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
               userScrolledUpRef.current = el.scrollHeight - el.scrollTop - el.clientHeight > 150;
             }} className="flex-1 overflow-y-auto px-5 py-4 space-y-2.5 bg-[#efeae2]">
               {(() => {
+                const displayMsgs = chatSearchQuery.trim()
+                  ? msgs.filter(m => m.content?.toLowerCase().includes(chatSearchQuery.toLowerCase()))
+                  : msgs;
+                if (chatSearchQuery.trim() && displayMsgs.length === 0) {
+                  return <div className="flex items-center justify-center py-16 text-gray-400 text-xs">Nenhuma mensagem encontrada</div>;
+                }
                 // Pre-process: marcar imagens agrupáveis (mesma direção, consecutivas, tipo image, sem caption real)
                 const grouped = new Set();
                 const imageGroups = [];
-                for (let i = 0; i < msgs.length; i++) {
+                for (let i = 0; i < displayMsgs.length; i++) {
                   if (grouped.has(i)) continue;
-                  const m = msgs[i];
+                  const m = displayMsgs[i];
                   const fromMe = Number(m.is_from_me) === 1;
                   const isImg = m.message_type === 'image' && (m.media_url || (fromMe && localMediaCache.current[m.id]));
                   const isPlaceholderContent = !m.content || m.content === '[image]' || m.content === '[Imagem]';
                   if (!isImg || !isPlaceholderContent) continue;
                   const group = [i];
-                  for (let j = i + 1; j < msgs.length; j++) {
-                    const n = msgs[j];
+                  for (let j = i + 1; j < displayMsgs.length; j++) {
+                    const n = displayMsgs[j];
                     const nFromMe = Number(n.is_from_me) === 1;
                     if (nFromMe !== fromMe) break;
                     const nIsImg = n.message_type === 'image' && (n.media_url || (nFromMe && localMediaCache.current[n.id]));
@@ -662,7 +719,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                 const groupStartMap = {};
                 imageGroups.forEach(g => { groupStartMap[g.startIdx] = g; });
 
-                return msgs.map((m, idx) => {
+                return displayMsgs.map((m, idx) => {
                   if (grouped.has(idx) && !groupStartMap[idx]) return null; // parte de grupo, renderizado pelo líder
                   if (groupStartMap[idx]) {
                     const g = groupStartMap[idx];
