@@ -246,7 +246,16 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   };
 
   const isGrp = c => Number(c.is_group) === 1 || c.is_group === true;
-  const chatDisplayName = c => { const name = c.contact_name; if (name && !/^\d{10,}$/.test(name)) return name; if (!isGrp(c)) return c.contact_phone || c.remote_jid || ''; return 'Grupo'; };
+  const chatDisplayName = c => {
+    // 1. Nome salvo no celular (contacts.upsert da Evolution API) — maior prioridade
+    if (c.device_contact_name) return c.device_contact_name;
+    // 2. Nome do lead/contato no CRM (se nao for numero puro)
+    const name = c.contact_name;
+    if (name && !/^\d{10,}$/.test(name)) return name;
+    // 3. Numero de telefone ou JID como fallback
+    if (!isGrp(c)) return c.contact_phone || c.remote_jid || '';
+    return 'Grupo';
+  };
   const selectChat = c => { setCur(c); setSearch(''); };
   const mentionsMe = useCallback((content) => { if (!myName || !content) return false; return content.toLowerCase().includes(`@${myName.toLowerCase()}`); }, [myName]);
 
