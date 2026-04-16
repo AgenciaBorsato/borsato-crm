@@ -414,7 +414,9 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
 
   const load = async () => {
     try {
-      const chatList = await api.getChats(tenant.id); setChats(chatList);
+      const rawList = await api.getChats(tenant.id);
+      const chatList = rawList.filter((c, i, a) => a.findIndex(x => x.id === c.id) === i);
+      setChats(chatList);
       const ac = curRef.current;
       if (ac) { const upd = chatList.find(c => c.id === ac.id); if (upd) setCur(upd); }
       const totalUnread = chatList.reduce((sum, c) => sum + (Number(c.user_unread_count) || 0), 0);
