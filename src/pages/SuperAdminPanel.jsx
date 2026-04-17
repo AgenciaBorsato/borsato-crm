@@ -3,7 +3,7 @@ import {
   TrendingUp, Plus, Search,
   LogIn, Edit2, ChevronUp, ChevronDown,
   BarChart2, AlertCircle, CheckCircle, Users, X,
-  LogOut, LayoutDashboard, Building2, RefreshCw
+  LogOut, LayoutDashboard, Building2, RefreshCw, Trash2
 } from 'lucide-react';
 import CreateCrmModal from '../components/modals/CreateCrmModal.jsx';
 import EditCrmModal from '../components/modals/EditCrmModal.jsx';
@@ -22,6 +22,8 @@ const PLAN_COLORS = {
 export default function SuperAdminPanel({ user, tenants = [], onLogout, onRefresh, onEnterTenant }) {
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [search, setSearch]         = useState('');
   const [sort, setSort]             = useState('name');
   const [sortDir, setSortDir]       = useState('asc');
@@ -267,6 +269,11 @@ export default function SuperAdminPanel({ user, tenants = [], onLogout, onRefres
                           className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition">
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
+                        <button
+                          onClick={() => setDeleteTarget(t)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -293,6 +300,41 @@ export default function SuperAdminPanel({ user, tenants = [], onLogout, onRefres
       )}
       {editTarget && (
         <EditCrmModal tenant={editTarget} onClose={() => setEditTarget(null)} onSuccess={() => { setEditTarget(null); onRefresh?.(); }} />
+      )}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl p-6">
+            <h3 className="font-semibold text-sm text-gray-800 mb-1">Excluir cliente</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              Tem certeza que deseja excluir <span className="font-semibold text-gray-800">{deleteTarget.name}</span>? Todos os dados serão removidos permanentemente.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+                className="px-4 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                Cancelar
+              </button>
+              <button
+                disabled={deleting}
+                onClick={async () => {
+                  setDeleting(true);
+                  try {
+                    await api.deleteTenant(deleteTarget.id);
+                    setDeleteTarget(null);
+                    onRefresh?.();
+                  } catch (e) {
+                    alert('Erro ao excluir: ' + e.message);
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                className="px-4 py-2 text-xs font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition disabled:opacity-50">
+                {deleting ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
