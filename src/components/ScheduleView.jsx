@@ -52,7 +52,7 @@ function NewScheduleModal({ chats, onClose, onSave }) {
         contactPhone: selectedChat?.contact_phone || '',
         remoteJid: selectedChat?.remote_jid || '',
         message: message.trim(),
-        scheduledAt: `${date}T${time}:00`,
+        scheduledAt: new Date(`${date}T${time}:00`).toISOString(),
       });
       onClose();
     } catch (err) {
@@ -136,11 +136,11 @@ function NewScheduleModal({ chats, onClose, onSave }) {
             <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">Atalhos</label>
             <div className="flex flex-wrap gap-1.5">
               {[
-                { l: 'Em 30min', fn: () => { const d = new Date(); d.setMinutes(d.getMinutes() + 30); setDate(d.toISOString().split('T')[0]); setTime(d.toTimeString().slice(0, 5)); } },
-                { l: 'Em 1h', fn: () => { const d = new Date(); d.setHours(d.getHours() + 1); setDate(d.toISOString().split('T')[0]); setTime(d.toTimeString().slice(0, 5)); } },
-                { l: 'Amanha 9h', fn: () => { const d = new Date(); d.setDate(d.getDate() + 1); setDate(d.toISOString().split('T')[0]); setTime('09:00'); } },
-                { l: 'Amanha 14h', fn: () => { const d = new Date(); d.setDate(d.getDate() + 1); setDate(d.toISOString().split('T')[0]); setTime('14:00'); } },
-                { l: 'Segunda 9h', fn: () => { const d = new Date(); const day = d.getDay(); d.setDate(d.getDate() + (day === 0 ? 1 : 8 - day)); setDate(d.toISOString().split('T')[0]); setTime('09:00'); } },
+                { l: 'Em 30min', fn: () => { const d = new Date(); d.setMinutes(d.getMinutes() + 30); setDate(d.toLocaleDateString('en-CA')); setTime(d.toTimeString().slice(0, 5)); } },
+                { l: 'Em 1h', fn: () => { const d = new Date(); d.setHours(d.getHours() + 1); setDate(d.toLocaleDateString('en-CA')); setTime(d.toTimeString().slice(0, 5)); } },
+                { l: 'Amanha 9h', fn: () => { const d = new Date(); d.setDate(d.getDate() + 1); setDate(d.toLocaleDateString('en-CA')); setTime('09:00'); } },
+                { l: 'Amanha 14h', fn: () => { const d = new Date(); d.setDate(d.getDate() + 1); setDate(d.toLocaleDateString('en-CA')); setTime('14:00'); } },
+                { l: 'Segunda 9h', fn: () => { const d = new Date(); const day = d.getDay(); d.setDate(d.getDate() + (day === 0 ? 1 : 8 - day)); setDate(d.toLocaleDateString('en-CA')); setTime('09:00'); } },
               ].map(s => (
                 <button key={s.l} type="button" onClick={s.fn}
                   className="px-2.5 py-1 bg-gray-100 hover:bg-[#25d366]/10 hover:text-[#075e54] text-gray-600 rounded-lg text-[10px] font-semibold transition-colors">
