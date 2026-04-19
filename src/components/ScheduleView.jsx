@@ -285,8 +285,8 @@ export default function ScheduleView({ tenant, onRefresh }) {
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <p className="font-bold text-sm text-gray-900">{s.contactName || 'Contato'}</p>
-                      {s.contactPhone && <span className="text-[10px] text-gray-400 font-mono">{s.contactPhone}</span>}
+                      <p className="font-bold text-sm text-gray-900">{s.contact_name || s.contactName || 'Contato'}</p>
+                      {(s.contact_phone || s.contactPhone) && <span className="text-[10px] text-gray-400 font-mono">{s.contact_phone || s.contactPhone}</span>}
                       {isSent && <span className="text-[8px] font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full uppercase">Enviada</span>}
                       {isFailed && <span className="text-[8px] font-bold text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full uppercase">Erro</span>}
                     </div>
