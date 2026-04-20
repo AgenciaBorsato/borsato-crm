@@ -213,7 +213,7 @@ function LinkPreviewCard({ url, tenantId }) {
        onClick={e => e.stopPropagation()}
        className="block mt-2 border border-gray-200 rounded-xl overflow-hidden hover:bg-gray-50 transition-colors no-underline">
       {data.image && (
-        <img src={data.image} alt="" className="w-full h-[120px] object-cover"
+        <img src={data.image} alt="" loading="lazy" decoding="async" className="w-full h-[120px] object-cover"
              onError={e => e.target.style.display='none'} />
       )}
       <div className="px-3 py-2">
@@ -283,6 +283,7 @@ function TrashModal({ chats, loading, onClose, onRestore, chatDisplayName, isGrp
 
 export default function ChatView({ tenant, columns, onRefresh, requestedPhone, onPhoneHandled, currentUser }) {
   const [chats, setChats] = useState([]);
+  const [chatsLoaded, setChatsLoaded] = useState(false);
   const [cur, setCur] = useState(() => { const s = localStorage.getItem(`currentChat_${tenant.id}`); return s ? JSON.parse(s) : null; });
   const [lead, setLead] = useState(null);
   const [msgs, setMsgs] = useState([]);
@@ -417,6 +418,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
       const rawList = await api.getChats(tenant.id);
       const chatList = rawList.filter((c, i, a) => a.findIndex(x => x.id === c.id) === i);
       setChats(chatList);
+      setChatsLoaded(true);
       const ac = curRef.current;
       if (ac) { const upd = chatList.find(c => c.id === ac.id); if (upd) setCur(upd); }
       const totalUnread = chatList.reduce((sum, c) => sum + (Number(c.user_unread_count) || 0), 0);
@@ -638,9 +640,28 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   };
 
   const getStatus = s => {
-    if (s === 'read') return <CheckCheck className="w-3 h-3 text-blue-500" />;
-    if (s === 'delivered') return <CheckCheck className="w-3 h-3 text-gray-400" />;
-    return <Check className="w-3 h-3 text-gray-400" />;
+    if (s === 'read') return <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb]" />;
+    if (s === 'delivered') return <CheckCheck className="w-3.5 h-3.5 text-gray-400" />;
+    if (s === 'pending') return <Clock className="w-3 h-3 text-gray-400" />;
+    return <Check className="w-3.5 h-3.5 text-gray-400" />;
+  };
+
+  // Formata preview da última mensagem na lista de chats com ícone de mídia
+  const formatChatPreview = (c) => {
+    const raw = c.last_message || '';
+    if (!raw) return '';
+    const lower = raw.toLowerCase();
+    // Detecta placeholders de tipo gerados pelo backend
+    if (raw === '[image]' || lower.includes('[imagem]')) return { icon: '📷', text: 'Foto' };
+    if (raw === '[video]' || lower.includes('[vídeo]') || lower.includes('[video]')) return { icon: '🎥', text: 'Vídeo' };
+    if (raw === '[audio]' || lower.includes('[áudio]') || lower.includes('[audio]')) return { icon: '🎵', text: 'Áudio' };
+    if (raw === '[document]' || lower.includes('[documento]')) return { icon: '📄', text: 'Documento' };
+    if (raw === '[sticker]' || lower.includes('[figurinha]') || lower.includes('[sticker]')) return { icon: '🎭', text: 'Figurinha' };
+    if (raw === '[location]' || lower.includes('[localização]')) return { icon: '📍', text: 'Localização' };
+    if (raw === '[contact]' || lower.includes('[contato]')) return { icon: '👤', text: 'Contato' };
+    if (raw === '[emoji]') return { icon: '😀', text: 'Emoji' };
+    if (raw === '[reaction]' || lower.includes('[reacao]') || lower.includes('[reação]')) return { icon: '❤️', text: 'Reação' };
+    return { text: raw };
   };
 
   const tenantAIOn = Number(tenant.ai_enabled) === 1 || tenant.ai_enabled === true;
@@ -710,6 +731,28 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
         </div>
         {/* Lista de conversas */}
         <div className="flex-1 overflow-y-auto">
+          {!chatsLoaded && chats.length === 0 && (
+            <div className="py-1">
+              {[0,1,2,3,4,5,6].map(i => (
+                <div key={`sk-${i}`} className="flex items-center gap-3 px-3 py-3 border-b border-gray-100/60">
+                  <div className="skeleton w-12 h-12 rounded-full flex-shrink-0" />
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="skeleton h-3 w-28 rounded" />
+                      <div className="skeleton h-2 w-8 rounded" />
+                    </div>
+                    <div className="skeleton h-2.5 w-5/6 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {chatsLoaded && filtered.length === 0 && !search && (
+            <div className="flex flex-col items-center justify-center py-16 text-gray-400 text-xs gap-2">
+              <MessageSquare className="w-8 h-8 opacity-40" />
+              <p>Nenhuma conversa ainda</p>
+            </div>
+          )}
           {filtered.map(c => {
             const isMentionedInLast = isGrp(c) && myName && (c.last_message || '').toLowerCase().includes(`@${myName.toLowerCase()}`);
             const hasUnread = Number(c.user_unread_count) > 0;
@@ -722,7 +765,22 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                     <span className={`text-[10px] flex-shrink-0 ml-2 ${hasUnread ? 'text-[#25d366] font-semibold' : 'text-gray-400'}`}>{fmt(c.last_message_time)}</span>
                   </div>
                   <div className="flex justify-between mt-0.5 items-center">
-                    <p className={`text-[11px] truncate ${hasUnread ? 'text-gray-600' : 'text-gray-400'}`}>{c.last_message}</p>
+                    <p className={`text-[11px] truncate flex items-center gap-1 ${hasUnread ? 'text-gray-700' : 'text-gray-500'}`}>
+                      {(() => {
+                        const preview = formatChatPreview(c);
+                        // Double-check antes do preview (quando última msg é nossa)
+                        const showTick = c.last_message_is_from_me ? (
+                          c.last_message_status === 'read' ? <CheckCheck className="w-3 h-3 text-[#53bdeb] flex-shrink-0" /> :
+                          c.last_message_status === 'delivered' ? <CheckCheck className="w-3 h-3 text-gray-400 flex-shrink-0" /> :
+                          <Check className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                        ) : null;
+                        return <>
+                          {showTick}
+                          {preview.icon && <span className="flex-shrink-0">{preview.icon}</span>}
+                          <span className="truncate">{preview.text}</span>
+                        </>;
+                      })()}
+                    </p>
                     <div className="flex items-center gap-1 flex-shrink-0 ml-2">
                       {Number(c.awaiting_response) === 1 && hasUnread && <span className="bg-red-500 text-white text-[7px] font-bold w-4 h-4 rounded-full flex items-center justify-center" title="Aguardando resposta">!</span>}
                       {isMentionedInLast && <span className="bg-blue-600 text-white text-[7px] font-bold w-4 h-4 rounded-full flex items-center justify-center"><AtSign className="w-2.5 h-2.5" /></span>}
@@ -870,7 +928,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
               const el = scrollContainerRef.current;
               if (!el) return;
               userScrolledUpRef.current = el.scrollHeight - el.scrollTop - el.clientHeight > 150;
-            }} className="flex-1 overflow-y-auto px-5 py-4 space-y-2.5 bg-[#efeae2]">
+            }} className="flex-1 overflow-y-auto px-5 py-4 space-y-2.5 chat-bg-pattern">
               {(() => {
                 const displayMsgs = chatSearchQuery.trim()
                   ? msgs.filter(m => m.content?.toLowerCase().includes(chatSearchQuery.toLowerCase()))
@@ -991,7 +1049,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                 return (
                   <React.Fragment key={m.id}>
                   {_sep}
-                  <div className={`flex ${fromMe ? 'justify-end' : 'justify-start'} group items-end gap-1`}>
+                  <div className={`flex ${fromMe ? 'justify-end' : 'justify-start'} group items-end gap-1 ${m.timestamp && (Date.now() - new Date(m.timestamp).getTime()) < 15000 ? 'msg-enter' : ''}`}>
                     {!fromMe && isGrp(cur) && m.sender_name && (
                       <ParticipantAvatar name={m.sender_name} size="w-6 h-6" textSize="text-[9px]" />
                     )}
@@ -1013,7 +1071,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                         </div>
                       </div>
                     )}
-                    <div id={`msg-${m.id}`} className={`max-w-[75%] rounded-xl px-3 py-2 transition-all ${
+                    <div id={`msg-${m.id}`} className={`msg-bubble ${!hasMedia ? (fromMe ? 'msg-bubble-out' : 'msg-bubble-in') : ''} max-w-[75%] rounded-xl px-3 py-2 transition-all ${
                       fromMe ? (isAI ? 'bg-purple-100/80 border border-purple-200' : (() => {
                           if (!m.sender_name) return 'bg-[#d9fdd3] border border-[#c5e8b7]';
                           const opColors = [
@@ -1141,11 +1199,13 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
             )}
 
             {typingUsers.length > 0 && (
-              <div className="px-5 py-1.5 bg-white border-t border-gray-100 flex items-center gap-2">
-                <div className="flex gap-0.5">
-                  {[0,1,2].map(i => <div key={i} className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />)}
+              <div className="px-5 py-2 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex items-center gap-2">
+                <div className="flex gap-1 items-end h-4">
+                  <span className="typing-dot" />
+                  <span className="typing-dot" />
+                  <span className="typing-dot" />
                 </div>
-                <span className="text-[11px] text-gray-400 italic">{typingUsers.join(', ')} {typingUsers.length === 1 ? 'está' : 'estão'} digitando...</span>
+                <span className="text-[11px] text-gray-500 italic">{typingUsers.join(', ')} {typingUsers.length === 1 ? 'está' : 'estão'} digitando…</span>
               </div>
             )}
 

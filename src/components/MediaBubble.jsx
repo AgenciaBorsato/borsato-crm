@@ -138,7 +138,7 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
       )}
       {media ? (
         <>
-          <img src={media} alt="" className="max-w-[400px] max-h-[400px] rounded-xl cursor-zoom-in shadow-sm hover:shadow-md hover:brightness-95 transition-all object-cover"
+          <img src={media} alt="" loading="lazy" decoding="async" className="max-w-[400px] max-h-[400px] rounded-xl cursor-zoom-in shadow-sm hover:shadow-md hover:brightness-95 transition-all object-cover"
             onClick={() => setLightbox(true)}
             onError={(e) => { e.currentTarget.style.display='none'; }} />
           {lightbox && (
@@ -268,7 +268,7 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
   if (msg.message_type === 'sticker') return (
     <div className="mb-1">
       {media ? (
-        <img src={media} alt="sticker" className="w-[140px] h-[140px] object-contain" />
+        <img src={media} alt="sticker" loading="lazy" decoding="async" className="w-[140px] h-[140px] object-contain" />
       ) : loading ? (
         <div className="w-[80px] h-[80px] bg-gray-50 rounded-lg flex items-center justify-center">
           <div className="w-4 h-4 border-2 border-blue-700 border-t-transparent rounded-full animate-spin" />

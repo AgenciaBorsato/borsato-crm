@@ -41,7 +41,7 @@ export default function ProfilePic({ phone, tenantId, name, size = 'w-9 h-9', te
 
   const fallbackInitials = (name || phone || '?').substring(0, 2).toUpperCase();
 
-  if (pic) return <img src={pic} alt="" className={`${size} rounded-full object-cover flex-shrink-0`} onError={() => setPic(null)} />;
+  if (pic) return <img src={pic} alt="" loading="lazy" decoding="async" className={`${size} rounded-full object-cover flex-shrink-0`} onError={() => setPic(null)} />;
   if (isGroup) return (
     <div className={`${size} rounded-full flex items-center justify-center bg-blue-100 flex-shrink-0`}>
       <Users2 className="w-4 h-4 text-blue-700" />
