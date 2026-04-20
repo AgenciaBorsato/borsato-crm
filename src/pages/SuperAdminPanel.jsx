@@ -3,11 +3,13 @@ import {
   TrendingUp, Plus, Search,
   LogIn, Edit2, ChevronUp, ChevronDown,
   BarChart2, AlertCircle, CheckCircle, Users, X,
-  LogOut, LayoutDashboard, Building2, RefreshCw, Trash2
+  LogOut, LayoutDashboard, Building2, RefreshCw, Trash2, Brain
 } from 'lucide-react';
 import CreateCrmModal from '../components/modals/CreateCrmModal.jsx';
 import EditCrmModal from '../components/modals/EditCrmModal.jsx';
 import api from '../api.js';
+// ÚNICO ponto de contato com a Torre Intel no frontend
+import IntelPanel from '../intelligence/IntelPanel.jsx';
 
 function fmt(n) {
   return `R$ ${Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
@@ -28,6 +30,10 @@ export default function SuperAdminPanel({ user, tenants = [], onLogout, onRefres
   const [sort, setSort]             = useState('name');
   const [sortDir, setSortDir]       = useState('asc');
   const [planFilter, setPlanFilter] = useState('all');
+  const [showIntel, setShowIntel] = useState(false);
+
+  // Se Intel ativo, renderiza só o painel Intel (isolado — nao mexe no resto)
+  if (showIntel) return <IntelPanel onBack={() => setShowIntel(false)} />;
   const [statusFilter, setStatus]   = useState('all');
 
   const mrr        = tenants.reduce((a, t) => a + (parseFloat(t.monthly_value) || 0), 0);
@@ -120,6 +126,13 @@ export default function SuperAdminPanel({ user, tenants = [], onLogout, onRefres
         </nav>
 
         <div className="border-t border-white/10 py-2">
+          <button onClick={() => setShowIntel(true)}
+            title={!sidebarExpanded ? 'Intel (BI)' : undefined}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-violet-300 hover:text-white hover:bg-violet-500/20 transition-all relative">
+            <Brain className="w-[18px] h-[18px] flex-shrink-0" />
+            {sidebarExpanded && <span className="text-[11px] font-semibold">Intel</span>}
+            {sidebarExpanded && <span className="ml-auto text-[8px] bg-violet-500/30 text-violet-200 px-1.5 py-0.5 rounded font-bold">BETA</span>}
+          </button>
           <button onClick={onRefresh}
             title={!sidebarExpanded ? 'Atualizar' : undefined}
             className="w-full flex items-center gap-2.5 px-3 py-2.5 text-white/50 hover:text-white hover:bg-white/5 transition-all">
