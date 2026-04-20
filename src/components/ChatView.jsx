@@ -761,7 +761,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                 <ProfilePic phone={c.contact_phone || c.remote_jid} tenantId={tenant.id} name={chatDisplayName(c)} isGroup={isGrp(c)} size="w-12 h-12" textSize="text-[11px]" cachedUrl={c.profile_pic_url} />
                 <div className="flex-1 min-w-0 border-b border-gray-100 pb-3 -mb-3">
                   <div className="flex justify-between items-center">
-                    <p className={`text-[14px] truncate ${hasUnread ? 'font-semibold text-gray-900' : 'font-normal text-gray-900'}`}>{chatDisplayName(c)}{isGrp(c) && <span className="ml-1.5 text-[8px] bg-gray-100 text-gray-500 px-1 py-0.5 rounded font-medium align-middle">GRUPO</span>}{c.lead_source === 'meta_ads' && <span className="ml-1.5 text-[8px] bg-[#d1f4cc] text-[#00745a] px-1 py-0.5 rounded font-semibold align-middle">ADS</span>}</p>
+                    <p className={`text-[14px] truncate ${hasUnread ? 'font-semibold text-gray-900' : 'font-normal text-gray-900'}`}>{chatDisplayName(c)}{isGrp(c) && <span className="ml-1.5 text-[8px] bg-gray-100 text-gray-500 px-1 py-0.5 rounded font-medium align-middle">GRUPO</span>}{c.lead_source === 'meta_ads' && <span className="ml-1.5 text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold align-middle border border-green-200">META ADS</span>}</p>
                     <span className={`text-[11px] flex-shrink-0 ml-2 ${hasUnread ? 'text-[#00a884] font-semibold' : 'text-gray-500'}`}>{fmt(c.last_message_time)}</span>
                   </div>
                   <div className="flex justify-between mt-0.5 items-center">
@@ -1098,7 +1098,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                     }`}>
                       {isForwarded && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-medium text-gray-400 flex items-center gap-0.5"><CornerUpRight className="w-2 h-2" /> Encaminhada</span></div>}
                       {isMentionedMsg && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-1 py-0.5 flex items-center gap-0.5"><AtSign className="w-2 h-2" /> mencionado</span></div>}
-                      {m.sender_name && !(isGrp(cur) && isMyMessage) && (() => {
+                      {m.sender_name && (() => {
                         const nameColors = [
                           { text: 'text-blue-600', bg: 'bg-blue-600' },
                           { text: 'text-emerald-600', bg: 'bg-emerald-600' },
