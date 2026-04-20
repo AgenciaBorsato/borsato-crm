@@ -823,7 +823,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
       <div className="flex-1 flex flex-col relative overflow-hidden">
         {cur ? (
           <>
-            <div className="bg-white px-4 py-3 border-b border-gray-100">
+            <div className="bg-[#f0f2f5] px-4 py-3 border-b border-gray-200/70">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <ProfilePic phone={cur.contact_phone || cur.remote_jid} tenantId={tenant.id} name={chatDisplayName(cur)} size="w-9 h-9" isGroup={isGrp(cur)} cachedUrl={cur.profile_pic_url} />
@@ -978,13 +978,14 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                     const g = groupStartMap[idx];
                     const gMsgs = g.indices.map(i => msgs[i]);
                     const fromMe = Number(gMsgs[0].is_from_me) === 1;
+                    const isMyGroup = fromMe || (isGrp(cur) && gMsgs[0].sender_name && myName && gMsgs[0].sender_name.trim().toLowerCase() === myName.trim().toLowerCase());
                     const lastMsg = gMsgs[gMsgs.length - 1];
                     return (
                       <React.Fragment key={`group-${gMsgs[0].id}`}>
                       {_sep}
-                      <div className={`flex ${fromMe ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[75%] rounded-xl px-2 py-2 ${fromMe ? 'bg-blue-50 border border-blue-100' : 'bg-white border border-gray-100'}`}>
-                          {gMsgs[0].sender_name && <p className="text-[10px] font-bold mb-1 text-gray-500">{gMsgs[0].sender_name}</p>}
+                      <div className={`flex ${isMyGroup ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[75%] rounded-xl px-2 py-2 ${isMyGroup ? 'bg-[#d9fdd3] border border-[#c5e8b7]' : 'bg-white border border-gray-100'}`}>
+                          {gMsgs[0].sender_name && !isMyGroup && <p className="text-[10px] font-bold mb-1 text-gray-500">{gMsgs[0].sender_name}</p>}
                           <div className={`grid gap-1 ${gMsgs.length === 2 ? 'grid-cols-2' : gMsgs.length === 3 ? 'grid-cols-2' : 'grid-cols-2'}`}>
                             {gMsgs.slice(0, 4).map((gm, gi) => (
                               <div key={gm.id} id={`msg-${gm.id}`} className={`relative overflow-hidden rounded-lg ${gMsgs.length === 3 && gi === 0 ? 'col-span-2' : ''}`}>
@@ -999,7 +1000,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                           </div>
                           <div className="flex items-center justify-end gap-0.5 mt-1">
                             <span className="text-[9px] text-gray-400">{fmt(lastMsg.timestamp)}</span>
-                            {fromMe && getStatus(lastMsg.status)}
+                            {isMyGroup && getStatus(lastMsg.status)}
                           </div>
                         </div>
                       </div>
@@ -1025,6 +1026,11 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                 );
                 // Mensagem normal (não agrupada)
                 const fromMe = Number(m.is_from_me) === 1 || m.is_from_me === true;
+                // isMyMessage: a MINHA mensagem visualmente — inclui quando o sender em grupo é eu (mesmo usuario CRM logado)
+                const isMyMessage = fromMe || (
+                  isGrp(cur) && m.sender_name && myName &&
+                  m.sender_name.trim().toLowerCase() === myName.trim().toLowerCase()
+                );
                 const cachedSrc = fromMe ? (localMediaCache.current[m.id] || null) : null;
                 const isMedia = ['image','video','document','audio','sticker'].includes(m.message_type);
                 const hasMedia = isMedia && (m.media_url || cachedSrc);
@@ -1049,11 +1055,11 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                 return (
                   <React.Fragment key={m.id}>
                   {_sep}
-                  <div className={`flex ${fromMe ? 'justify-end' : 'justify-start'} group items-end gap-1 ${m.timestamp && (Date.now() - new Date(m.timestamp).getTime()) < 15000 ? 'msg-enter' : ''}`}>
-                    {!fromMe && isGrp(cur) && m.sender_name && (
+                  <div className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'} group items-end gap-1 ${m.timestamp && (Date.now() - new Date(m.timestamp).getTime()) < 15000 ? 'msg-enter' : ''}`}>
+                    {!isMyMessage && isGrp(cur) && m.sender_name && (
                       <ParticipantAvatar name={m.sender_name} size="w-6 h-6" textSize="text-[9px]" />
                     )}
-                    {fromMe && (
+                    {isMyMessage && (
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mb-1 self-end">
                         <div className="bg-white border border-gray-100 rounded-lg shadow-sm py-0.5 flex flex-col min-w-[110px]">
                           <button onClick={() => { setReplyTo(m); setTimeout(() => inputRef.current?.focus(), 50); }} className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 transition-colors text-left">
@@ -1071,8 +1077,8 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                         </div>
                       </div>
                     )}
-                    <div id={`msg-${m.id}`} className={`msg-bubble ${!hasMedia ? (fromMe ? 'msg-bubble-out' : 'msg-bubble-in') : ''} max-w-[75%] rounded-xl px-3 py-2 transition-all ${
-                      fromMe ? (isAI ? 'bg-purple-100/80 border border-purple-200' : (() => {
+                    <div id={`msg-${m.id}`} className={`msg-bubble ${!hasMedia ? (isMyMessage ? 'msg-bubble-out' : 'msg-bubble-in') : ''} max-w-[75%] rounded-xl px-3 py-2 transition-all ${
+                      isMyMessage ? (isAI ? 'bg-purple-100/80 border border-purple-200' : (() => {
                           if (!m.sender_name) return 'bg-[#d9fdd3] border border-[#c5e8b7]';
                           const opColors = [
                             'bg-[#d9fdd3] border border-[#c5e8b7]',
@@ -1090,7 +1096,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                     }`}>
                       {isForwarded && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-medium text-gray-400 flex items-center gap-0.5"><CornerUpRight className="w-2 h-2" /> Encaminhada</span></div>}
                       {isMentionedMsg && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-1 py-0.5 flex items-center gap-0.5"><AtSign className="w-2 h-2" /> mencionado</span></div>}
-                      {m.sender_name && (() => {
+                      {m.sender_name && !isMyMessage && (() => {
                         const nameColors = [
                           { text: 'text-blue-600', bg: 'bg-blue-600' },
                           { text: 'text-emerald-600', bg: 'bg-emerald-600' },
@@ -1105,7 +1111,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                         ];
                         const hash = Math.abs([...m.sender_name].reduce((a, c) => a + c.charCodeAt(0), 0));
                         const color = nameColors[hash % nameColors.length];
-                        const isCrmUser = fromMe && !isAI;
+                        const isCrmUser = isMyMessage && !isAI;
                         return (
                           <p className={`text-[11px] font-bold mb-1.5 pb-1 border-b border-black/5 flex items-center gap-1.5 ${isAI ? 'text-violet-600' : color.text}`}>
                             {isAI && <Bot className="w-2.5 h-2.5" />}
@@ -1132,10 +1138,10 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                       {_firstUrl && !hasMedia && <LinkPreviewCard url={_firstUrl.startsWith('http') ? _firstUrl : 'https://'+_firstUrl} tenantId={tenant.id} />}
                       <div className="flex items-center justify-end gap-0.5 mt-0.5">
                         <span className="text-[9px] text-gray-400">{fmt(m.timestamp)}</span>
-                        {fromMe && getStatus(m.status)}
+                        {isMyMessage && getStatus(m.status)}
                       </div>
                     </div>
-                    {!fromMe && (
+                    {!isMyMessage && (
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mb-1 self-end">
                         <div className="bg-white border border-gray-100 rounded-full px-1.5 py-0.5 flex items-center gap-0.5">
                           {REACTION_EMOJIS.map(emoji => (
