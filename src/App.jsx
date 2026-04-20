@@ -145,7 +145,7 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
   useEffect(() => { loadCols(); }, [tenant.id]);
   useEffect(() => {
     const checkWA = async () => {
-      try { const status = await api.getWhatsAppStatus(tenant.id); const connected = status?.connected === true; setWhatsappConnected(connected); if (connected) setWaBannerDismissed(false); } catch {}
+      try { const status = await api.getWhatsAppStatus(tenant.id); const connected = status?.connected === true; setWhatsappConnected(connected); if (connected) setWaBannerDismissed(false); } catch (e) { console.error('APP_WA_STATUS_CHECK_ERROR:', e.message); }
     };
     checkWA(); const i = setInterval(checkWA, 60000); return () => clearInterval(i);
   }, [tenant.id]);
@@ -160,7 +160,7 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
     return () => { clearInterval(i); document.removeEventListener('visibilitychange', onVis); api.sendHeartbeat('offline').catch(() => {}); };
   }, [tenant.id]);
 
-  const loadCols = async () => { try { setColumns(await api.getKanbanColumns(tenant.id)); } catch {} };
+  const loadCols = async () => { try { setColumns(await api.getKanbanColumns(tenant.id)); } catch (e) { console.error('LOAD_KANBAN_COLS_ERROR:', e.message); } };
   const refreshAll = useCallback(async () => { await onRefresh(); await loadCols(); }, [onRefresh, tenant.id]);
   const openChatByPhone = useCallback((phone) => { setRequestedPhone(phone); setActiveTab('chat'); }, []);
 

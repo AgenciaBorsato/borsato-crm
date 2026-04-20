@@ -37,13 +37,13 @@ export default function LeadSummaryCard({ lead, onRefresh, compact = false }) {
     try {
       const mem = typeof lead.structured_memory === 'string' ? JSON.parse(lead.structured_memory) : lead.structured_memory;
       memoryEntries = Object.entries(mem).filter(([k, v]) => k !== 'estagio_comercial' && v && v !== '' && !(Array.isArray(v) && v.length === 0));
-    } catch {}
+    } catch (e) { console.error('LEAD_MEMORY_PARSE_ERROR:', e.message, 'leadId:', lead?.id); }
   }
 
   const handleRefresh = async (e) => {
     e.stopPropagation();
     setRefreshing(true);
-    try { await api.refreshLeadContext(lead.id); onRefresh?.(); } catch {}
+    try { await api.refreshLeadContext(lead.id); onRefresh?.(); } catch (e) { console.error('LEAD_CARD_REFRESH_ERROR:', e.message, 'leadId:', lead?.id); }
     finally { setRefreshing(false); }
   };
 

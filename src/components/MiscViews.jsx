@@ -11,7 +11,7 @@ export function WhatsAppView({ tenant }) {
   const [syncResult, setSyncResult] = useState(null);
   const nm = `tenant_${tenant.id}`;
   useEffect(() => { ck(); const i = setInterval(ck, 5000); return () => clearInterval(i); }, []);
-  const ck = async () => { try { setStatus(await api.getWhatsAppStatus(tenant.id)); } catch {} };
+  const ck = async () => { try { setStatus(await api.getWhatsAppStatus(tenant.id)); } catch (e) { console.error('WA_STATUS_POLL_ERROR:', e.message); } };
   const syncContacts = async () => {
     setSyncing(true);
     setSyncResult(null);
@@ -568,7 +568,7 @@ export function TeamView({ users, tenant, currentUser, onRefresh }) {
   const [editing, setEditing] = useState(null);
   const [onlineIds, setOnlineIds] = useState([]);
   React.useEffect(() => {
-    const load = async () => { try { const r = await api.getOnlineUsers(tenant.id); setOnlineIds(r.map(u => u.id)); } catch {} };
+    const load = async () => { try { const r = await api.getOnlineUsers(tenant.id); setOnlineIds(r.map(u => u.id)); } catch (e) { console.error('ONLINE_USERS_POLL_ERROR:', e.message); } };
     load(); const i = setInterval(load, 10000); return () => clearInterval(i);
   }, [tenant.id]);
   const onlineCount = onlineIds.length;

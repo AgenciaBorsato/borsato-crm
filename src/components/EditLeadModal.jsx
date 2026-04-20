@@ -8,7 +8,7 @@ export default function EditLeadModal({ lead, columns, onClose, onSave, onRefres
   const [custom, setCustom] = useState(() => { try { return JSON.parse(lead.custom_data || '{}'); } catch { return {}; } });
   const [nf, setNf] = useState('');
   const [localLead, setLocalLead] = useState(lead);
-  const handleRefreshContext = async () => { try { const result = await api.refreshLeadContext(lead.id); if (result?.lead) { setLocalLead(prev => ({ ...prev, ...result.lead })); onRefresh?.(); } } catch {} };
+  const handleRefreshContext = async () => { try { const result = await api.refreshLeadContext(lead.id); if (result?.lead) { setLocalLead(prev => ({ ...prev, ...result.lead })); onRefresh?.(); } } catch (e) { console.error('REFRESH_LEAD_CONTEXT_MODAL_ERROR:', e.message, 'leadId:', lead?.id); } };
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">

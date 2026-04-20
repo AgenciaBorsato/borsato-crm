@@ -425,9 +425,9 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
       if (!initialLoadRef.current && totalUnread > prevUnreadRef.current) playNotificationSound();
       document.title = totalUnread > 0 ? `(${totalUnread}) Borsato CRM` : 'Borsato CRM';
       prevUnreadRef.current = totalUnread; initialLoadRef.current = false;
-    } catch {}
+    } catch (e) { console.error('LOAD_CHATS_ERROR:', e.message, 'tenant:', tenant.id); }
   };
-  const loadMsgs = async (id) => { try { setMsgs(await api.getChatMessages(id, 100, 0)); } catch {} };
+  const loadMsgs = async (id) => { try { setMsgs(await api.getChatMessages(id, 100, 0)); } catch (e) { console.error('LOAD_MSGS_ERROR:', e.message, 'chatId:', id); } };
   const loadLead = async (c) => {
     if (isGrp(c)) { setLead(null); return; }
     const ph = c.contact_phone || c.remote_jid?.split('@')[0];
@@ -436,10 +436,10 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   };
   const loadParticipants = async (groupJid) => {
     setLoadingPart(true);
-    try { const d = await api.getGroupParticipants(tenant.id, groupJid); setParticipants(d?.participants || []); } catch {}
+    try { const d = await api.getGroupParticipants(tenant.id, groupJid); setParticipants(d?.participants || []); } catch (e) { console.error('LOAD_PARTICIPANTS_ERROR:', e.message, 'groupJid:', groupJid); }
     finally { setLoadingPart(false); }
   };
-  const loadDeletedChats = async () => { setLoadingTrash(true); try { setDeletedChats(await api.getDeletedChats(tenant.id)); } catch {} finally { setLoadingTrash(false); } };
+  const loadDeletedChats = async () => { setLoadingTrash(true); try { setDeletedChats(await api.getDeletedChats(tenant.id)); } catch (e) { console.error('LOAD_DELETED_CHATS_ERROR:', e.message); } finally { setLoadingTrash(false); } };
   const restoreChat = async (chatId) => {
     try { await api.restoreChat(chatId); setDeletedChats(prev => prev.filter(c => c.id !== chatId)); await load(); }
     catch { alert('Erro ao restaurar conversa'); }
@@ -676,7 +676,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
 
   const handleLeadContextRefresh = async () => {
     if (!lead) return;
-    try { const result = await api.refreshLeadContext(lead.id); if (result?.lead) setLead(prev => ({ ...prev, ...result.lead })); } catch {}
+    try { const result = await api.refreshLeadContext(lead.id); if (result?.lead) setLead(prev => ({ ...prev, ...result.lead })); } catch (e) { console.error('REFRESH_LEAD_CTX_ERROR:', e.message, 'leadId:', lead.id); }
   };
 
   const renderStageButtons = () => {
@@ -1065,7 +1065,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                         </div>
                         <div className="bg-white border border-gray-100 rounded-full px-1.5 py-0.5 flex items-center gap-0.5">
                           {REACTION_EMOJIS.map(emoji => (
-                            <button key={emoji} onClick={async () => { try { await api.sendReaction(tenant.id, cur?.id, m.id, m.remote_jid || cur?.remote_jid, emoji); await loadMsgs(cur.id); } catch {} }}
+                            <button key={emoji} onClick={async () => { try { await api.sendReaction(tenant.id, cur?.id, m.id, m.remote_jid || cur?.remote_jid, emoji); await loadMsgs(cur.id); } catch (e) { console.error('SEND_REACTION_ERROR:', e.message, 'msgId:', m.id, 'emoji:', emoji); } }}
                               className="text-sm hover:scale-125 transition-transform p-0.5 rounded-full hover:bg-gray-50">{emoji}</button>
                           ))}
                         </div>
@@ -1139,7 +1139,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mb-1 self-end">
                         <div className="bg-white border border-gray-100 rounded-full px-1.5 py-0.5 flex items-center gap-0.5">
                           {REACTION_EMOJIS.map(emoji => (
-                            <button key={emoji} onClick={async () => { try { await api.sendReaction(tenant.id, cur?.id, m.id, m.remote_jid || cur?.remote_jid, emoji); await loadMsgs(cur.id); } catch {} }}
+                            <button key={emoji} onClick={async () => { try { await api.sendReaction(tenant.id, cur?.id, m.id, m.remote_jid || cur?.remote_jid, emoji); await loadMsgs(cur.id); } catch (e) { console.error('SEND_REACTION_ERROR:', e.message, 'msgId:', m.id, 'emoji:', emoji); } }}
                               className="text-sm hover:scale-125 transition-transform p-0.5 rounded-full hover:bg-gray-50">{emoji}</button>
                           ))}
                         </div>
