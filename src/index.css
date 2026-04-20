@@ -6,7 +6,9 @@
 
 
 * {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 ::-webkit-scrollbar {
@@ -25,4 +27,135 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
+}
+
+/* ============ UX Fase 1 — animações e utilitários ============ */
+
+/* Background pattern estilo WhatsApp (tile SVG leve, ~2KB inline) */
+.chat-bg-pattern {
+  background-color: #efeae2;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><g fill='none' stroke='%23d9d2c3' stroke-width='0.6' opacity='0.55'><circle cx='20' cy='20' r='3'/><circle cx='160' cy='40' r='5'/><circle cx='80' cy='80' r='2'/><circle cx='40' cy='140' r='4'/><circle cx='140' cy='160' r='3'/><path d='M100 20 L105 30 L100 40 L95 30 Z'/><path d='M60 60 L65 70 L60 80 L55 70 Z'/><path d='M170 110 L175 120 L170 130 L165 120 Z'/><path d='M30 100 Q35 95 40 100 Q35 105 30 100'/><path d='M130 70 Q135 65 140 70 Q135 75 130 70'/><path d='M110 150 Q115 145 120 150 Q115 155 110 150'/></g></svg>");
+  background-size: 200px 200px;
+  background-repeat: repeat;
+}
+
+/* Bolha de mensagem com tail (bico) — usado apenas em bolhas de texto */
+.msg-bubble {
+  position: relative;
+  box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+  line-height: 1.45;
+}
+
+.msg-bubble-in::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -7px;
+  width: 8px;
+  height: 13px;
+  background: inherit;
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+}
+
+.msg-bubble-out::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -7px;
+  width: 8px;
+  height: 13px;
+  background: inherit;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+/* Slide-in suave para mensagens novas */
+@keyframes msg-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.msg-enter {
+  animation: msg-slide-in 200ms ease-out;
+}
+
+/* Skeleton shimmer */
+@keyframes skeleton-shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #e5e7eb 0px, #f3f4f6 200px, #e5e7eb 400px);
+  background-size: 800px 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+/* Typing indicator bouncing dots */
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+.typing-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8696a0;
+  animation: typing-bounce 1.3s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+/* Ripple em botões (feedback tátil) */
+@keyframes ripple-effect {
+  to {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-ripple::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  pointer-events: none;
+  transition: none;
+}
+
+.btn-ripple:active::after {
+  animation: ripple-effect 500ms ease-out;
+}
+
+/* Hover suave em lista de chats */
+.chat-list-item {
+  transition: background-color 150ms ease, transform 100ms ease;
+}
+
+.chat-list-item:hover {
+  background-color: #f5f6f6;
+}
+
+.chat-list-item:active {
+  transform: scale(0.998);
 }
