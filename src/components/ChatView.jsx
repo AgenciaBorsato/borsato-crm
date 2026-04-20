@@ -1079,9 +1079,11 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                     )}
                     <div id={`msg-${m.id}`} className={`msg-bubble ${!hasMedia ? (isMyMessage ? 'msg-bubble-out' : 'msg-bubble-in') : ''} max-w-[75%] rounded-xl px-3 py-2 transition-all ${
                       isMyMessage ? (isAI ? 'bg-purple-100/80 border border-purple-200' : (() => {
-                          if (!m.sender_name) return 'bg-[#d9fdd3] border border-[#c5e8b7]';
+                          // Se é a MINHA própria msg (sender = usuário logado OU sem sender) → sempre verde WhatsApp
+                          const isMeSender = !m.sender_name || (myName && m.sender_name.trim().toLowerCase() === myName.trim().toLowerCase());
+                          if (isMeSender) return 'bg-[#d9fdd3] border border-[#c5e8b7]';
+                          // Outro operador CRM enviou — cor distinta (hash) para diferenciar
                           const opColors = [
-                            'bg-[#d9fdd3] border border-[#c5e8b7]',
                             'bg-blue-100 border border-blue-200',
                             'bg-indigo-100 border border-indigo-200',
                             'bg-teal-100 border border-teal-200',
