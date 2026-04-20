@@ -703,27 +703,27 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
     <div className="flex h-full bg-gray-50 overflow-hidden">
       <div className="w-[340px] min-w-[340px] border-r border-gray-200 flex flex-col bg-white">
         {/* Header da lista de chats */}
-        <div className="bg-[#075e54] px-3 py-3 space-y-2.5">
+        <div className="bg-[#f0f2f5] px-3 py-3 space-y-2.5 border-b border-gray-200/70">
           <div className="flex items-center justify-between">
-            <h2 className="text-white font-bold text-sm">Conversas</h2>
+            <h2 className="text-gray-800 font-semibold text-[15px]">Conversas</h2>
             <div className="flex items-center gap-1">
-              <button onClick={toggleSound} className="w-8 h-8 bg-white/15 hover:bg-white/25 text-white rounded-lg flex items-center justify-center transition-colors" title={soundEnabled ? 'Desativar som' : 'Ativar som'}>
+              <button onClick={toggleSound} className="w-9 h-9 hover:bg-gray-200 text-gray-500 rounded-full flex items-center justify-center transition-colors" title={soundEnabled ? 'Desativar som' : 'Ativar som'}>
                 {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 opacity-50" />}
               </button>
-              <button onClick={() => setShowNewChat(true)} className="w-8 h-8 bg-white/15 hover:bg-white/25 text-white rounded-lg flex items-center justify-center transition-colors" title="Nova conversa"><Plus className="w-4 h-4" /></button>
+              <button onClick={() => setShowNewChat(true)} className="w-9 h-9 hover:bg-gray-200 text-gray-500 rounded-full flex items-center justify-center transition-colors" title="Nova conversa"><Plus className="w-4 h-4" /></button>
             </div>
           </div>
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar conversa..." className="w-full bg-white/10 text-white placeholder-white/40 rounded-lg pl-9 pr-3 py-2 text-xs outline-none focus:bg-white/15 transition-all" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Pesquisar conversa..." className="w-full bg-white text-gray-700 placeholder-gray-400 rounded-lg pl-9 pr-3 py-2 text-xs outline-none border border-transparent focus:border-gray-300 transition-all" />
           </div>
-          <div className="flex gap-1">
-            {[{ id: 'all', l: 'Tudo' }, { id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }, { id: 'unread', l: 'Nao lidas' }].map(f => {
+          <div className="flex gap-1.5">
+            {[{ id: 'all', l: 'Tudo' }, { id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }, { id: 'unread', l: 'Não lidas' }].map(f => {
               const count = f.id === 'unread' ? chats.filter(c => Number(c.user_unread_count) > 0).length : null;
               return (
-                <button key={f.id} onClick={() => setFilter(f.id)} className={`flex-1 py-1.5 text-[10px] font-semibold rounded-full transition-all flex items-center justify-center gap-1 ${filter === f.id ? 'bg-[#25d366] text-white shadow-sm' : 'bg-white/10 text-white/60 hover:bg-white/15 hover:text-white'}`}>
+                <button key={f.id} onClick={() => setFilter(f.id)} className={`px-2.5 py-1 text-[11px] font-medium rounded-full transition-all flex items-center justify-center gap-1 ${filter === f.id ? 'bg-[#d1f4cc] text-[#00745a]' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}`}>
                   {f.l}
-                  {count > 0 && <span className={`min-w-[14px] h-[14px] rounded-full text-[8px] font-bold flex items-center justify-center px-0.5 ${filter === f.id ? 'bg-white/25 text-white' : 'bg-red-500 text-white'}`}>{count}</span>}
+                  {count > 0 && <span className={`min-w-[15px] h-[15px] rounded-full text-[9px] font-bold flex items-center justify-center px-1 ${filter === f.id ? 'bg-[#00745a] text-white' : 'bg-[#00a884] text-white'}`}>{count}</span>}
                 </button>
               );
             })}
@@ -757,12 +757,12 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
             const isMentionedInLast = isGrp(c) && myName && (c.last_message || '').toLowerCase().includes(`@${myName.toLowerCase()}`);
             const hasUnread = Number(c.user_unread_count) > 0;
             return (
-              <div key={c.id} onClick={() => selectChat(c)} className={`group flex items-center gap-3 px-3 py-3 cursor-pointer transition-all border-b border-gray-100/60 ${cur?.id === c.id ? 'bg-[#075e54]/5 border-l-[3px] border-l-[#25d366]' : 'hover:bg-gray-50 border-l-[3px] border-l-transparent'}`}>
+              <div key={c.id} onClick={() => selectChat(c)} className={`group flex items-center gap-3 px-3 py-3 cursor-pointer transition-colors ${cur?.id === c.id ? 'bg-[#f0f2f5]' : 'hover:bg-gray-50'}`}>
                 <ProfilePic phone={c.contact_phone || c.remote_jid} tenantId={tenant.id} name={chatDisplayName(c)} isGroup={isGrp(c)} size="w-12 h-12" textSize="text-[11px]" cachedUrl={c.profile_pic_url} />
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 border-b border-gray-100 pb-3 -mb-3">
                   <div className="flex justify-between items-center">
-                    <p className={`text-[13px] truncate ${hasUnread ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>{chatDisplayName(c)}{isGrp(c) && <span className="ml-1.5 text-[7px] bg-gray-100 text-gray-400 px-1 py-0.5 rounded font-medium align-middle">GRUPO</span>}{c.lead_source === 'meta_ads' && <span className="ml-1.5 text-[7px] bg-green-100 text-green-700 px-1 py-0.5 rounded font-bold align-middle">META ADS</span>}</p>
-                    <span className={`text-[10px] flex-shrink-0 ml-2 ${hasUnread ? 'text-[#25d366] font-semibold' : 'text-gray-400'}`}>{fmt(c.last_message_time)}</span>
+                    <p className={`text-[14px] truncate ${hasUnread ? 'font-semibold text-gray-900' : 'font-normal text-gray-900'}`}>{chatDisplayName(c)}{isGrp(c) && <span className="ml-1.5 text-[8px] bg-gray-100 text-gray-500 px-1 py-0.5 rounded font-medium align-middle">GRUPO</span>}{c.lead_source === 'meta_ads' && <span className="ml-1.5 text-[8px] bg-[#d1f4cc] text-[#00745a] px-1 py-0.5 rounded font-semibold align-middle">ADS</span>}</p>
+                    <span className={`text-[11px] flex-shrink-0 ml-2 ${hasUnread ? 'text-[#00a884] font-semibold' : 'text-gray-500'}`}>{fmt(c.last_message_time)}</span>
                   </div>
                   <div className="flex justify-between mt-0.5 items-center">
                     <p className={`text-[11px] truncate flex items-center gap-1 ${hasUnread ? 'text-gray-700' : 'text-gray-500'}`}>
@@ -784,7 +784,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                     <div className="flex items-center gap-1 flex-shrink-0 ml-2">
                       {Number(c.awaiting_response) === 1 && hasUnread && <span className="bg-red-500 text-white text-[7px] font-bold w-4 h-4 rounded-full flex items-center justify-center" title="Aguardando resposta">!</span>}
                       {isMentionedInLast && <span className="bg-blue-600 text-white text-[7px] font-bold w-4 h-4 rounded-full flex items-center justify-center"><AtSign className="w-2.5 h-2.5" /></span>}
-                      {hasUnread && <span className="bg-[#25d366] text-white text-[9px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{Number(c.user_unread_count) > 9 ? '9+' : c.user_unread_count}</span>}
+                      {hasUnread && <span className="bg-[#00a884] text-white text-[10px] font-semibold rounded-full min-w-[19px] h-[19px] flex items-center justify-center px-1">{Number(c.user_unread_count) > 9 ? '9+' : c.user_unread_count}</span>}
                     </div>
                   </div>
                 </div>
@@ -1224,7 +1224,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
               </div>
             )}
 
-            <div className={`px-4 py-3 flex items-end gap-2.5 border-t relative ${isNoteMode ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
+            <div className={`px-4 py-3 flex items-end gap-2.5 border-t relative ${isNoteMode ? 'bg-amber-50 border-amber-200' : 'bg-[#f0f2f5] border-gray-200/70'}`}>
               {mentionSuggestions.length > 0 && (
                 <div className="absolute bottom-full left-4 right-4 mb-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-20 max-h-52 overflow-y-auto">
                   <div className="px-3 py-1.5 border-b border-gray-100 flex items-center gap-1.5"><AtSign className="w-3 h-3 text-blue-700" /><span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide">Mencionar participante</span></div>
@@ -1283,7 +1283,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
               </button>
               <textarea ref={inputRef} value={msg} onChange={handleMsgChange} onKeyDown={handleKeyDown} onPaste={handlePaste} disabled={sending} rows={2}
                 placeholder={isNoteMode ? 'Escreva uma nota interna...' : files.length > 0 ? 'Legenda (opcional)...' : (isGrp(cur) ? 'Mensagem... (@ para mencionar)' : 'Escreva uma mensagem...')}
-                className={`flex-1 rounded-2xl px-4 py-2.5 text-sm outline-none resize-none overflow-y-auto leading-relaxed transition-all ${isNoteMode ? 'bg-amber-100/60 focus:bg-amber-50 focus:ring-1 focus:ring-amber-300' : 'bg-gray-100 focus:bg-white focus:ring-1 focus:ring-blue-200'}`}
+                className={`flex-1 rounded-lg px-4 py-2.5 text-sm outline-none resize-none overflow-y-auto leading-relaxed transition-all ${isNoteMode ? 'bg-amber-100/60 focus:bg-amber-50 focus:ring-1 focus:ring-amber-300' : 'bg-white focus:bg-white focus:ring-1 focus:ring-[#00a884]/30'}`}
                 style={{ minHeight: '52px', maxHeight: '120px' }} onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
               {/* Agendar mensagem */}
               <div className="relative flex-shrink-0 mb-0.5">
@@ -1320,7 +1320,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                   </div>
                 )}
               </div>
-              <button onClick={send} disabled={sending || (!msg.trim() && !files.length)} className={`p-2.5 text-white rounded-xl disabled:opacity-30 flex-shrink-0 mb-0.5 transition-colors ${isNoteMode ? 'bg-amber-500 hover:bg-amber-600' : 'bg-[#075e54] hover:bg-[#064a43]'}`}>{isNoteMode ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4" />}</button>
+              <button onClick={send} disabled={sending || (!msg.trim() && !files.length)} className={`p-2.5 text-white rounded-full disabled:opacity-30 flex-shrink-0 mb-0.5 transition-colors ${isNoteMode ? 'bg-amber-500 hover:bg-amber-600' : 'bg-[#00a884] hover:bg-[#008f72]'}`}>{isNoteMode ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4" />}</button>
             </div>
 
             {showParticipants && isGrp(cur) && (

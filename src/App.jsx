@@ -191,17 +191,17 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
       <div
         onMouseEnter={() => setSidebarExpanded(true)}
         onMouseLeave={() => setSidebarExpanded(false)}
-        className={`flex flex-col bg-[#075e54] transition-all duration-200 ease-in-out flex-shrink-0 ${sidebarExpanded ? 'w-48' : 'w-14'}`}
+        className={`flex flex-col bg-[#f0f2f5] border-r border-gray-200 transition-all duration-200 ease-in-out flex-shrink-0 ${sidebarExpanded ? 'w-48' : 'w-14'}`}
       >
         {/* Logo / Tenant avatar */}
-        <div className="flex items-center gap-2.5 px-3 py-4 border-b border-white/10">
-          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center font-bold text-xs text-white flex-shrink-0">
+        <div className="flex items-center gap-2.5 px-3 py-4 border-b border-gray-200">
+          <div className="w-8 h-8 bg-[#00a884] rounded-full flex items-center justify-center font-bold text-xs text-white flex-shrink-0">
             {tenant.name.substring(0, 2).toUpperCase()}
           </div>
           {sidebarExpanded && (
             <div className="overflow-hidden">
-              <p className="font-bold text-white text-xs truncate">{tenant.name}</p>
-              <p className="text-[9px] text-white/40 truncate">{user.name}</p>
+              <p className="font-semibold text-gray-800 text-xs truncate">{tenant.name}</p>
+              <p className="text-[9px] text-gray-500 truncate">{user.name}</p>
             </div>
           )}
         </div>
@@ -210,19 +210,19 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
         <div className="px-2 pt-2">
           {sidebarExpanded ? (
             <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-white/30" />
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 value={sidebarSearch}
                 onChange={e => setSidebarSearch(e.target.value)}
                 placeholder="Buscar..."
-                className="w-full bg-white/10 text-white placeholder-white/30 rounded-lg pl-8 pr-3 py-2 text-[11px] outline-none focus:bg-white/15 transition-all"
+                className="w-full bg-white text-gray-700 placeholder-gray-400 border border-gray-200 rounded-lg pl-8 pr-3 py-2 text-[11px] outline-none focus:border-gray-300 transition-all"
               />
             </div>
           ) : (
             <button
               onClick={() => setSidebarExpanded(true)}
               title="Buscar"
-              className="w-full flex items-center justify-center py-2 text-white/40 hover:text-white/70 transition-colors"
+              className="w-full flex items-center justify-center py-2 text-gray-500 hover:text-gray-700 transition-colors"
             >
               <Search className="w-[18px] h-[18px]" />
             </button>
@@ -243,14 +243,14 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
                   title={!sidebarExpanded ? tab.label : undefined}
                   className={`w-full flex items-center gap-2.5 px-3 py-2.5 transition-all duration-150 relative group
                     ${isActive
-                      ? 'bg-white/15 text-white'
-                      : 'text-white/50 hover:text-white hover:bg-white/5'
+                      ? 'bg-white text-[#00a884]'
+                      : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100'
                     }`}
                 >
-                  {isActive && <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-[#25d366] rounded-r" />}
+                  {isActive && <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-[#00a884] rounded-r" />}
                   <tab.icon className="w-[18px] h-[18px] flex-shrink-0" />
                   {sidebarExpanded && <span className="text-[11px] font-semibold truncate">{tab.label}</span>}
-                  {hasAlert && <span className="absolute top-1.5 left-7 w-2 h-2 bg-red-400 rounded-full border border-[#075e54]" />}
+                  {hasAlert && <span className="absolute top-1.5 left-7 w-2 h-2 bg-red-500 rounded-full border-2 border-[#f0f2f5]" />}
                 </button>
               );
             })}
@@ -258,15 +258,15 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
 
           {/* Separador Avancado */}
           {tabs.some(t => advancedTabs.some(a => a.id === t.id)) && (
-            <div className="mx-3 my-2 border-t border-white/10">
+            <div className="mx-3 my-2 border-t border-gray-200">
               {sidebarExpanded ? (
                 <div className="flex items-center gap-1.5 mt-2 mb-1 px-0.5">
-                  <Wrench className="w-3 h-3 text-white/25" />
-                  <span className="text-[9px] font-bold text-white/25 uppercase tracking-wider">Avancado</span>
+                  <Wrench className="w-3 h-3 text-gray-400" />
+                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Avancado</span>
                 </div>
               ) : (
                 <div className="mt-2 mb-1 flex justify-center">
-                  <div className="w-1 h-1 bg-white/20 rounded-full" />
+                  <div className="w-1 h-1 bg-gray-300 rounded-full" />
                 </div>
               )}
             </div>
@@ -284,14 +284,14 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
                   title={!sidebarExpanded ? tab.label : undefined}
                   className={`w-full flex items-center gap-2.5 px-3 py-2.5 transition-all duration-150 relative group
                     ${isActive
-                      ? 'bg-white/15 text-white'
-                      : 'text-white/50 hover:text-white hover:bg-white/5'
+                      ? 'bg-white text-[#00a884]'
+                      : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100'
                     }`}
                 >
-                  {isActive && <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-[#25d366] rounded-r" />}
+                  {isActive && <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-[#00a884] rounded-r" />}
                   <tab.icon className="w-[18px] h-[18px] flex-shrink-0" />
                   {sidebarExpanded && <span className="text-[11px] font-semibold truncate">{tab.label}</span>}
-                  {hasAlert && <span className="absolute top-1.5 left-7 w-2 h-2 bg-red-400 rounded-full border border-[#075e54]" />}
+                  {hasAlert && <span className="absolute top-1.5 left-7 w-2 h-2 bg-red-500 rounded-full border-2 border-[#f0f2f5]" />}
                 </button>
               );
             })}
@@ -299,18 +299,18 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
         </nav>
 
         {/* Bottom actions */}
-        <div className="border-t border-white/10 py-2 space-y-0.5">
+        <div className="border-t border-gray-200 py-2 space-y-0.5">
           {onBackToSuperAdmin && (
             <button onClick={onBackToSuperAdmin}
               title={!sidebarExpanded ? 'Painel Mestre' : undefined}
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-white/50 hover:text-white hover:bg-white/5 transition-all">
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-all">
               <ArrowLeft className="w-[18px] h-[18px] flex-shrink-0" />
               {sidebarExpanded && <span className="text-[11px] font-semibold">Mestre</span>}
             </button>
           )}
           <button onClick={onLogout}
             title={!sidebarExpanded ? 'Sair' : undefined}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-white/50 hover:text-red-300 hover:bg-white/5 transition-all">
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-gray-500 hover:text-red-600 hover:bg-gray-100 transition-all">
             <LogOut className="w-[18px] h-[18px] flex-shrink-0" />
             {sidebarExpanded && <span className="text-[11px] font-semibold">Sair</span>}
           </button>

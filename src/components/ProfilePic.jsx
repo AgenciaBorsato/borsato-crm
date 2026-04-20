@@ -43,13 +43,13 @@ export default function ProfilePic({ phone, tenantId, name, size = 'w-9 h-9', te
 
   if (pic) return <img src={pic} alt="" loading="lazy" decoding="async" className={`${size} rounded-full object-cover flex-shrink-0`} onError={() => setPic(null)} />;
   if (isGroup) return (
-    <div className={`${size} rounded-full flex items-center justify-center bg-blue-100 flex-shrink-0`}>
-      <Users2 className="w-4 h-4 text-blue-700" />
+    <div className={`${size} rounded-full flex items-center justify-center bg-[#dfe5e7] flex-shrink-0`}>
+      <Users2 className="w-4 h-4 text-[#54656f]" />
     </div>
   );
   return (
-    <div className={`${size} rounded-full flex items-center justify-center bg-gray-200 flex-shrink-0`}>
-      <span className={`${textSize} font-semibold text-gray-600`}>{fallbackInitials}</span>
+    <div className={`${size} rounded-full flex items-center justify-center bg-[#dfe5e7] flex-shrink-0`}>
+      <span className={`${textSize} font-semibold text-[#54656f]`}>{fallbackInitials}</span>
     </div>
   );
 }
