@@ -27,6 +27,16 @@ async function request(path, opts = {}) {
 export const intelApi = {
   health: () => request('/api/intel/health'),
   ping: () => request('/api/intel/ping'),
+
+  nichesOptions: () => request('/api/intel/niches/options'),
+  nichesTenants: () => request('/api/intel/niches/tenants'),
+  setTenantNiche: (tenantId, niche) =>
+    request(`/api/intel/niches/${tenantId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ niche }),
+    }),
+  inferTenantNiche: (tenantId) =>
+    request(`/api/intel/niches/${tenantId}/infer`, { method: 'POST' }),
 };
 
 export default intelApi;

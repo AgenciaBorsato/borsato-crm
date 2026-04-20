@@ -5,6 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { Brain, Tags, AlertTriangle, Timer, Sparkles, HeartPulse } from 'lucide-react';
 import intelApi from './api';
+import NichesView from './NichesView';
 
 const MODULES = [
   { id: 'niches', label: 'Nichos', icon: Tags, desc: 'Classificacao dos clientes por segmento (manual + IA)' },
@@ -111,10 +112,14 @@ export default function IntelPanel({ onBack }) {
             <button onClick={() => setModule(null)} className="text-xs text-gray-400 hover:text-white mb-4">
               ← Todos os módulos
             </button>
-            <h2 className="text-lg font-bold mb-2">{MODULES.find(m => m.id === module)?.label}</h2>
-            <div className="bg-[#131920] border border-white/5 rounded-xl p-6 text-center text-gray-500 text-sm">
-              Módulo em construção — Fase {['niches','objections','health','response','insights'].indexOf(module) + 2}
-            </div>
+            <h2 className="text-lg font-bold mb-4">{MODULES.find(m => m.id === module)?.label}</h2>
+            {module === 'niches' ? (
+              <NichesView />
+            ) : (
+              <div className="bg-[#131920] border border-white/5 rounded-xl p-6 text-center text-gray-500 text-sm">
+                Módulo em construção — Fase {['niches','objections','health','response','insights'].indexOf(module) + 2}
+              </div>
+            )}
           </div>
         )}
       </div>
