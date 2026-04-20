@@ -330,6 +330,9 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   const fileRef = useRef(null);
   const prevUnreadRef = useRef(0);
   const initialLoadRef = useRef(true);
+  // Optimistic UI: msgs enviadas localmente antes do servidor confirmar
+  // Guardadas num ref pra sobreviver aos re-renders do polling
+  const pendingMsgsRef = useRef(new Map()); // clientId -> tempMsg
   const myName = currentUser?.name || '';
   const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem('borsato_sound') !== 'off');
 
@@ -427,7 +430,26 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
       prevUnreadRef.current = totalUnread; initialLoadRef.current = false;
     } catch (e) { console.error('LOAD_CHATS_ERROR:', e.message, 'tenant:', tenant.id); }
   };
-  const loadMsgs = async (id) => { try { setMsgs(await api.getChatMessages(id, 100, 0)); } catch (e) { console.error('LOAD_MSGS_ERROR:', e.message, 'chatId:', id); } };
+  const loadMsgs = async (id) => {
+    try {
+      const serverMsgs = await api.getChatMessages(id, 100, 0);
+      // Mantem msgs pendentes (optimistic UI) que ainda nao chegaram do servidor
+      const pending = [];
+      for (const [cid, pm] of pendingMsgsRef.current.entries()) {
+        if (pm.chat_id !== id) continue;
+        // Se servidor ja tem essa msg (por realId ou conteudo+timestamp), remove da ref
+        if (pm._realId && serverMsgs.find(sm => sm.id === pm._realId)) {
+          pendingMsgsRef.current.delete(cid); continue;
+        }
+        // Timeout: se tem mais de 60s e não confirmou, remove pra nao ficar fantasma
+        if (Date.now() - (pm._createdAt || 0) > 60000) {
+          pendingMsgsRef.current.delete(cid); continue;
+        }
+        pending.push(pm);
+      }
+      setMsgs(pending.length ? [...serverMsgs, ...pending] : serverMsgs);
+    } catch (e) { console.error('LOAD_MSGS_ERROR:', e.message, 'chatId:', id); }
+  };
   const loadLead = async (c) => {
     if (isGrp(c)) { setLead(null); return; }
     const ph = c.contact_phone || c.remote_jid?.split('@')[0];
@@ -498,12 +520,49 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
       return;
     }
     const ph = cur.remote_jid && (isGrp(cur) || cur.remote_jid.includes('@lid')) ? cur.remote_jid : cur.contact_phone || cur.remote_jid?.split('@')[0];
+    // Optimistic UI: cria msg local imediatamente com status 'pending'
+    const clientId = `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const savedMsg = msg;
+    const savedReply = replyTo;
+    const tempMsg = {
+      id: clientId,
+      _clientId: clientId,
+      _createdAt: Date.now(),
+      chat_id: cur.id,
+      remote_jid: cur.remote_jid,
+      content: savedMsg,
+      is_from_me: 1,
+      message_type: 'text',
+      status: 'pending',
+      timestamp: new Date().toISOString(),
+      sender_name: myName || 'Eu',
+      quoted_message_id: savedReply?.id || null,
+      quoted_content: savedReply?.content || null,
+      quoted_sender: savedReply?.sender_name || null,
+      quoted_type: savedReply?.message_type || null,
+    };
+    pendingMsgsRef.current.set(clientId, tempMsg);
+    setMsgs(prev => [...prev, tempMsg]);
+    // Limpa o input na hora — feedback instantaneo
+    setMsg(''); setReplyTo(null); if (inputRef.current) inputRef.current.style.height = 'auto';
+    setSending(false); // libera input imediatamente, não trava enquanto envia
     try {
-      await api.sendWhatsAppMessage(ph, msg, tenant.id, cur.id, replyTo?.id || null);
-      setMsg(''); setReplyTo(null); if (inputRef.current) inputRef.current.style.height = 'auto';
-      await loadMsgs(cur.id); await load();
+      const result = await api.sendWhatsAppMessage(ph, savedMsg, tenant.id, cur.id, savedReply?.id || null);
+      const realId = result?.messageId || null;
+      const pm = pendingMsgsRef.current.get(clientId);
+      if (pm) pm._realId = realId;
+      // Atualiza visualmente: troca clientId por realId e marca como enviado
+      setMsgs(prev => prev.map(m => m._clientId === clientId ? { ...m, id: realId || m.id, status: 'sent' } : m));
+      // Atualiza lista de chats em background (nao bloqueia)
+      load();
+    } catch (e) {
+      // Falha: marca msg com status error e restaura input pra tentar de novo
+      setMsgs(prev => prev.map(m => m._clientId === clientId ? { ...m, status: 'error' } : m));
+      pendingMsgsRef.current.delete(clientId);
+      alert(e.message || 'Erro ao enviar');
+      setMsg(savedMsg);
+      setReplyTo(savedReply);
     }
-    catch (e) { alert(e.message || 'Erro ao enviar'); } finally { setSending(false); }
   };
 
   const handleForward = async (targetChat) => {
@@ -643,6 +702,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
     if (s === 'read') return <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb]" />;
     if (s === 'delivered') return <CheckCheck className="w-3.5 h-3.5 text-gray-400" />;
     if (s === 'pending') return <Clock className="w-3 h-3 text-gray-400" />;
+    if (s === 'error') return <X className="w-3 h-3 text-red-500" />;
     return <Check className="w-3.5 h-3.5 text-gray-400" />;
   };
 
