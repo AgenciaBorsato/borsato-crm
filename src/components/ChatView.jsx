@@ -77,8 +77,8 @@ function EmojiPicker({ onSelect, onClose, onGif }) {
     <div ref={ref} className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 w-80 overflow-hidden">
       {/* Tabs */}
       <div className="flex border-b border-gray-100">
-        <button onClick={() => setTab('emoji')} className={`flex-1 py-2 text-sm font-medium transition-colors ${tab==='emoji'?'text-[#25d366] border-b-2 border-[#25d366]':'text-gray-400 hover:text-gray-600'}`}>😀 Emoji</button>
-        <button onClick={() => setTab('gif')} className={`flex-1 py-2 text-sm font-medium transition-colors ${tab==='gif'?'text-[#25d366] border-b-2 border-[#25d366]':'text-gray-400 hover:text-gray-600'}`}>GIF</button>
+        <button onClick={() => setTab('emoji')} className={`flex-1 py-2 text-sm font-medium transition-colors ${tab==='emoji'?'text-[#00a884] border-b-2 border-[#25d366]':'text-gray-400 hover:text-gray-600'}`}>😀 Emoji</button>
+        <button onClick={() => setTab('gif')} className={`flex-1 py-2 text-sm font-medium transition-colors ${tab==='gif'?'text-[#00a884] border-b-2 border-[#25d366]':'text-gray-400 hover:text-gray-600'}`}>GIF</button>
       </div>
 
       {tab === 'emoji' && (<>
@@ -799,14 +799,14 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
               {contactResults.map(c => (
                 <div key={c.id} onClick={() => startNewChat(c.phone, c.name || c.push_name || c.phone)}
                   className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-green-50/50 transition-colors border-b border-gray-50">
-                  <div className="w-10 h-10 rounded-full bg-[#25d366]/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[10px] font-bold text-[#075e54]">{(c.name || c.push_name || c.phone || '?').substring(0, 2).toUpperCase()}</span>
+                  <div className="w-10 h-10 rounded-full bg-[#00a884]/10 flex items-center justify-center flex-shrink-0">
+                    <span className="text-[10px] font-bold text-[#00a884]">{(c.name || c.push_name || c.phone || '?').substring(0, 2).toUpperCase()}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-[13px] text-gray-900 truncate">{c.name || c.push_name || c.phone}</p>
                     <p className="text-[10px] text-gray-400 font-mono">{c.phone}</p>
                   </div>
-                  <span className="text-[8px] text-[#075e54] font-bold bg-[#25d366]/10 px-2 py-0.5 rounded-full uppercase">Iniciar</span>
+                  <span className="text-[8px] text-[#00a884] font-bold bg-[#00a884]/10 px-2 py-0.5 rounded-full uppercase">Iniciar</span>
                 </div>
               ))}
             </div>
@@ -1098,7 +1098,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                     }`}>
                       {isForwarded && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-medium text-gray-400 flex items-center gap-0.5"><CornerUpRight className="w-2 h-2" /> Encaminhada</span></div>}
                       {isMentionedMsg && <div className="flex items-center gap-1 mb-0.5"><span className="text-[8px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-1 py-0.5 flex items-center gap-0.5"><AtSign className="w-2 h-2" /> mencionado</span></div>}
-                      {m.sender_name && !isMyMessage && (() => {
+                      {m.sender_name && !(isGrp(cur) && isMyMessage) && (() => {
                         const nameColors = [
                           { text: 'text-blue-600', bg: 'bg-blue-600' },
                           { text: 'text-emerald-600', bg: 'bg-emerald-600' },
@@ -1246,7 +1246,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
               <input type="file" ref={fileRef} onChange={handleFile} className="hidden" accept="image/*,video/*,.pdf,.doc,.docx" multiple />
               <button onClick={() => fileRef.current?.click()} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg flex-shrink-0 mb-0.5 transition-colors"><Paperclip className="w-4 h-4" /></button>
               <div className="relative flex-shrink-0 mb-0.5">
-                <button onClick={() => setShowEmojiPicker(v => !v)} className={`p-2 rounded-lg transition-colors ${showEmojiPicker ? 'text-[#25d366] bg-[#25d366]/10' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`} title="Emoji">
+                <button onClick={() => setShowEmojiPicker(v => !v)} className={`p-2 rounded-lg transition-colors ${showEmojiPicker ? 'text-[#00a884] bg-[#00a884]/10' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`} title="Emoji">
                   <Smile className="w-4 h-4" />
                 </button>
                 {showEmojiPicker && (
@@ -1288,7 +1288,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
               {/* Agendar mensagem */}
               <div className="relative flex-shrink-0 mb-0.5">
                 <button onClick={() => setShowScheduleMsg(!showScheduleMsg)} disabled={!msg.trim()} title="Agendar envio"
-                  className="p-2 text-[#25d366] hover:text-[#075e54] hover:bg-[#25d366]/10 rounded-lg disabled:opacity-30 transition-colors">
+                  className="p-2 text-[#00a884] hover:text-[#00a884] hover:bg-[#00a884]/10 rounded-lg disabled:opacity-30 transition-colors">
                   <CalendarClock className="w-4 h-4" />
                 </button>
                 {showScheduleMsg && msg.trim() && (
@@ -1304,7 +1304,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                         { l: '1h', fn: () => { const d = new Date(); d.setHours(d.getHours() + 1); setScheduleDate(d.toISOString().split('T')[0]); setScheduleTime(d.toTimeString().slice(0, 5)); } },
                         { l: 'Amanha 9h', fn: () => { const d = new Date(); d.setDate(d.getDate() + 1); setScheduleDate(d.toISOString().split('T')[0]); setScheduleTime('09:00'); } },
                       ].map(s => (
-                        <button key={s.l} type="button" onClick={s.fn} className="px-2 py-1 bg-gray-100 hover:bg-[#25d366]/10 text-gray-600 hover:text-[#075e54] rounded text-[9px] font-semibold transition-colors">{s.l}</button>
+                        <button key={s.l} type="button" onClick={s.fn} className="px-2 py-1 bg-gray-100 hover:bg-[#00a884]/10 text-gray-600 hover:text-[#00a884] rounded text-[9px] font-semibold transition-colors">{s.l}</button>
                       ))}
                     </div>
                     <button onClick={async () => {
@@ -1314,7 +1314,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                         await api.createScheduledMessage({ tenantId: tenant.id, chatId: cur.id, contactName: chatDisplayName(cur), contactPhone: ph, remoteJid: cur.remote_jid, message: msg, scheduledAt: `${scheduleDate}T${scheduleTime}:00` });
                         setMsg(''); setShowScheduleMsg(false); setScheduleDate(''); setScheduleTime('09:00');
                       } catch { alert('Erro ao agendar'); }
-                    }} disabled={!scheduleDate} className="w-full py-2 bg-[#25d366] text-white rounded-lg text-xs font-bold disabled:opacity-50">
+                    }} disabled={!scheduleDate} className="w-full py-2 bg-[#00a884] hover:bg-[#008f72] text-white rounded-lg text-xs font-bold disabled:opacity-50 transition-colors">
                       Agendar envio
                     </button>
                   </div>
