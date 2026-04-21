@@ -33,9 +33,6 @@ export default function SuperAdminPanel({ user, tenants = [], onLogout, onRefres
   const [statusFilter, setStatus]   = useState('all');
   const [showIntel, setShowIntel] = useState(false);
 
-  // Se Intel ativo, renderiza só o painel Intel (isolado — nao mexe no resto)
-  if (showIntel) return <IntelPanel onBack={() => setShowIntel(false)} />;
-
   const mrr        = tenants.reduce((a, t) => a + (parseFloat(t.monthly_value) || 0), 0);
   const totalLeads = tenants.reduce((a, t) => a + (t.leadCount || 0), 0);
   const active     = tenants.filter(t => t.active !== false).length;
@@ -90,6 +87,9 @@ export default function SuperAdminPanel({ user, tenants = [], onLogout, onRefres
   ];
 
   const [activeSection, setActiveSection] = useState('dashboard');
+
+  // Se Intel ativo, renderiza só o painel Intel (isolado — nao mexe no resto)
+  if (showIntel) return <IntelPanel onBack={() => setShowIntel(false)} />;
 
   return (
     <div className="h-screen flex bg-[#f0f2f5] overflow-hidden">
