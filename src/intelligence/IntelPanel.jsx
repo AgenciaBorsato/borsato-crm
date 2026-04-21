@@ -92,8 +92,10 @@ export default function IntelPanel({ onBack }) {
                       <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{m.desc}</p>
                     </div>
                   </div>
-                  <div className="mt-3 text-[10px] text-gray-600 uppercase tracking-wider font-medium">
-                    em breve
+                  <div className={`mt-3 text-[10px] uppercase tracking-wider font-medium ${
+                    m.id === 'niches' ? 'text-violet-400' : 'text-gray-600'
+                  }`}>
+                    {m.id === 'niches' ? 'ativo' : 'em breve'}
                   </div>
                 </button>
               ))}
