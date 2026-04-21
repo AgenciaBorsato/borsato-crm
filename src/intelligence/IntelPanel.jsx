@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { Brain, Tags, AlertTriangle, Timer, Sparkles, HeartPulse } from 'lucide-react';
 import intelApi from './api';
 import NichesView from './NichesView';
+import ObjectionsView from './ObjectionsView';
 
 const MODULES = [
   { id: 'niches', label: 'Nichos', icon: Tags, desc: 'Classificacao dos clientes por segmento (manual + IA)' },
@@ -93,9 +94,9 @@ export default function IntelPanel({ onBack }) {
                     </div>
                   </div>
                   <div className={`mt-3 text-[10px] uppercase tracking-wider font-medium ${
-                    m.id === 'niches' ? 'text-violet-400' : 'text-gray-600'
+                    ['niches','objections'].includes(m.id) ? 'text-violet-400' : 'text-gray-600'
                   }`}>
-                    {m.id === 'niches' ? 'ativo' : 'em breve'}
+                    {['niches','objections'].includes(m.id) ? 'ativo' : 'em breve'}
                   </div>
                 </button>
               ))}
@@ -117,6 +118,8 @@ export default function IntelPanel({ onBack }) {
             <h2 className="text-lg font-bold mb-4">{MODULES.find(m => m.id === module)?.label}</h2>
             {module === 'niches' ? (
               <NichesView />
+            ) : module === 'objections' ? (
+              <ObjectionsView />
             ) : (
               <div className="bg-[#131920] border border-white/5 rounded-xl p-6 text-center text-gray-500 text-sm">
                 Módulo em construção — Fase {['niches','objections','health','response','insights'].indexOf(module) + 2}

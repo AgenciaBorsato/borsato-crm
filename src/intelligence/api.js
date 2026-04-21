@@ -37,6 +37,11 @@ export const intelApi = {
     }),
   inferTenantNiche: (tenantId) =>
     request(`/api/intel/niches/${tenantId}/infer`, { method: 'POST' }),
+
+  topObjections: (niche, { force = false } = {}) =>
+    request(`/api/intel/objections/${niche}${force ? '?force=1' : ''}`),
+  invalidateObjectionsCache: (niche) =>
+    request(`/api/intel/objections/${niche}/cache`, { method: 'DELETE' }),
 };
 
 export default intelApi;
