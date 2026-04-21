@@ -7,6 +7,9 @@ import { Brain, Tags, AlertTriangle, Timer, Sparkles, HeartPulse } from 'lucide-
 import intelApi from './api';
 import NichesView from './NichesView';
 import ObjectionsView from './ObjectionsView';
+import HealthView from './HealthView';
+import ResponseView from './ResponseView';
+import InsightsView from './InsightsView';
 
 const MODULES = [
   { id: 'niches', label: 'Nichos', icon: Tags, desc: 'Classificacao dos clientes por segmento (manual + IA)' },
@@ -16,11 +19,41 @@ const MODULES = [
   { id: 'insights', label: 'Insights com IA', icon: Sparkles, desc: 'Pergunta livre ao Claude com dados de todos os CRMs' },
 ];
 
+function readModuleFromHash() {
+  const h = (window.location.hash || '').replace(/^#/, '');
+  const parts = h.split('/');
+  if (parts[0] === 'intel' && parts[1]) {
+    if (MODULES.some(m => m.id === parts[1])) return parts[1];
+  }
+  return null;
+}
+
 export default function IntelPanel({ onBack }) {
-  const [module, setModule] = useState(null);
+  const [module, setModuleState] = useState(readModuleFromHash());
   const [health, setHealth] = useState(null);
   const [connecting, setConnecting] = useState(true);
   const [error, setError] = useState(null);
+
+  // wrapper que sincroniza hash
+  const setModule = (id) => {
+    setModuleState(id);
+    if (id) window.location.hash = `intel/${id}`;
+    else window.location.hash = 'intel';
+  };
+
+  // Escuta mudanças externas (back/forward)
+  useEffect(() => {
+    const onHash = () => setModuleState(readModuleFromHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  // Se entrou no painel sem hash, seta #intel
+  useEffect(() => {
+    if (!window.location.hash.startsWith('#intel')) {
+      window.location.hash = 'intel';
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -50,7 +83,7 @@ export default function IntelPanel({ onBack }) {
           </div>
         </div>
         {onBack && (
-          <button onClick={onBack} className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-300 transition-colors">
+          <button onClick={() => { window.location.hash = ''; onBack(); }} className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-300 transition-colors">
             ← Voltar ao painel
           </button>
         )}
@@ -93,10 +126,8 @@ export default function IntelPanel({ onBack }) {
                       <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{m.desc}</p>
                     </div>
                   </div>
-                  <div className={`mt-3 text-[10px] uppercase tracking-wider font-medium ${
-                    ['niches','objections'].includes(m.id) ? 'text-violet-400' : 'text-gray-600'
-                  }`}>
-                    {['niches','objections'].includes(m.id) ? 'ativo' : 'em breve'}
+                  <div className="mt-3 text-[10px] uppercase tracking-wider font-medium text-violet-400">
+                    ativo
                   </div>
                 </button>
               ))}
@@ -120,11 +151,13 @@ export default function IntelPanel({ onBack }) {
               <NichesView />
             ) : module === 'objections' ? (
               <ObjectionsView />
-            ) : (
-              <div className="bg-[#131920] border border-white/5 rounded-xl p-6 text-center text-gray-500 text-sm">
-                Módulo em construção — Fase {['niches','objections','health','response','insights'].indexOf(module) + 2}
-              </div>
-            )}
+            ) : module === 'health' ? (
+              <HealthView />
+            ) : module === 'response' ? (
+              <ResponseView />
+            ) : module === 'insights' ? (
+              <InsightsView />
+            ) : null}
           </div>
         )}
       </div>

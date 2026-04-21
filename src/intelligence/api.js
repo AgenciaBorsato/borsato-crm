@@ -42,6 +42,24 @@ export const intelApi = {
     request(`/api/intel/objections/${niche}${force ? '?force=1' : ''}`),
   invalidateObjectionsCache: (niche) =>
     request(`/api/intel/objections/${niche}/cache`, { method: 'DELETE' }),
+
+  healthOverview: () => request('/api/intel/health-overview'),
+
+  responseConversion: ({ tenantId, niche, days = 30 } = {}) => {
+    const qs = new URLSearchParams();
+    if (tenantId) qs.set('tenant', tenantId);
+    if (niche) qs.set('niche', niche);
+    if (days) qs.set('days', String(days));
+    return request(`/api/intel/response-conversion?${qs.toString()}`);
+  },
+
+  askInsight: (question) =>
+    request('/api/intel/insights/ask', {
+      method: 'POST',
+      body: JSON.stringify({ question }),
+    }),
+  recentInsights: (limit = 20) =>
+    request(`/api/intel/insights/recent?limit=${limit}`),
 };
 
 export default intelApi;

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   TrendingUp, Plus, Search,
   LogIn, Edit2, ChevronUp, ChevronDown,
@@ -31,7 +31,14 @@ export default function SuperAdminPanel({ user, tenants = [], onLogout, onRefres
   const [sortDir, setSortDir]       = useState('asc');
   const [planFilter, setPlanFilter] = useState('all');
   const [statusFilter, setStatus]   = useState('all');
-  const [showIntel, setShowIntel] = useState(false);
+  const [showIntel, setShowIntel] = useState(() => (window.location.hash || '').startsWith('#intel'));
+
+  // Abre/fecha Intel baseado no hash (preserva state em refresh e back/forward)
+  useEffect(() => {
+    const sync = () => setShowIntel((window.location.hash || '').startsWith('#intel'));
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
+  }, []);
 
   const mrr        = tenants.reduce((a, t) => a + (parseFloat(t.monthly_value) || 0), 0);
   const totalLeads = tenants.reduce((a, t) => a + (t.leadCount || 0), 0);
@@ -126,7 +133,7 @@ export default function SuperAdminPanel({ user, tenants = [], onLogout, onRefres
         </nav>
 
         <div className="border-t border-white/10 py-2">
-          <button onClick={() => setShowIntel(true)}
+          <button onClick={() => { window.location.hash = 'intel'; setShowIntel(true); }}
             title={!sidebarExpanded ? 'Intel (BI)' : undefined}
             className="w-full flex items-center gap-2.5 px-3 py-2.5 text-violet-300 hover:text-white hover:bg-violet-500/20 transition-all relative">
             <Brain className="w-[18px] h-[18px] flex-shrink-0" />
