@@ -30,11 +30,11 @@ export default function SuperAdminPanel({ user, tenants = [], onLogout, onRefres
   const [sort, setSort]             = useState('name');
   const [sortDir, setSortDir]       = useState('asc');
   const [planFilter, setPlanFilter] = useState('all');
+  const [statusFilter, setStatus]   = useState('all');
   const [showIntel, setShowIntel] = useState(false);
 
   // Se Intel ativo, renderiza só o painel Intel (isolado — nao mexe no resto)
   if (showIntel) return <IntelPanel onBack={() => setShowIntel(false)} />;
-  const [statusFilter, setStatus]   = useState('all');
 
   const mrr        = tenants.reduce((a, t) => a + (parseFloat(t.monthly_value) || 0), 0);
   const totalLeads = tenants.reduce((a, t) => a + (t.leadCount || 0), 0);
