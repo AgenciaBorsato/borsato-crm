@@ -323,6 +323,9 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
   const typingDebounceRef = useRef(null);
   const mentionStartRef = useRef(-1);
   const inputRef = useRef(null);
+  const sidebarSearchRef = useRef(null);
+  const filteredRef = useRef([]);
+  const kbStateRef = useRef({});
   const curRef = useRef(cur);
   const endRef = useRef(null);
   const scrollContainerRef = useRef(null);
@@ -575,6 +578,66 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
     } catch (e) { alert(e.message || 'Erro ao encaminhar'); }
   };
 
+  // ─── Atalhos de teclado globais (estilo WhatsApp Web) ───────────────────────
+  useEffect(() => {
+    const handle = (e) => {
+      const s = kbStateRef.current;
+      const tag = document.activeElement?.tagName?.toLowerCase();
+      const typing = tag === 'input' || tag === 'textarea' || document.activeElement?.isContentEditable;
+
+      // ESC — fecha modais em cascata, depois deseleciona conversa
+      if (e.key === 'Escape') {
+        if (s.showEmojiPicker)  { setShowEmojiPicker(false); return; }
+        if (s.forwardMsg)       { setForwardMsg(null); setForwardSearch(''); return; }
+        if (s.showNewChat)      { setShowNewChat(false); setNewChatPhone(''); setNewChatName(''); return; }
+        if (s.showTrash)        { setShowTrash(false); return; }
+        if (s.showParticipants) { setShowParticipants(false); return; }
+        if (s.showScheduleMsg)  { setShowScheduleMsg(false); return; }
+        if (s.showQuickFollowUp){ setShowQuickFollowUp(false); return; }
+        if (s.showChatSearch)   { setShowChatSearch(false); setChatSearchQuery(''); return; }
+        if (s.cur)              { setCur(null); setSearch(''); return; }
+        return;
+      }
+
+      // Não disparar demais atalhos enquanto o usuário está digitando
+      if (typing) return;
+
+      // Ctrl+F ou Cmd+F — busca dentro da conversa aberta
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f' && s.cur) {
+        e.preventDefault();
+        setShowChatSearch(true);
+        setTimeout(() => {
+          document.querySelector('input[placeholder="Buscar nesta conversa..."]')?.focus();
+        }, 60);
+        return;
+      }
+
+      // / — foca a busca de conversas na sidebar
+      if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        sidebarSearchRef.current?.focus();
+        return;
+      }
+
+      // ArrowDown / ArrowUp — navega entre conversas da lista
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const list = filteredRef.current;
+        if (list.length === 0) return;
+        const idx = s.cur ? list.findIndex(c => c.id === s.cur.id) : -1;
+        const next = e.key === 'ArrowDown'
+          ? list[idx < list.length - 1 ? idx + 1 : 0]
+          : list[idx > 0 ? idx - 1 : list.length - 1];
+        setCur(next);
+        setSearch('');
+        return;
+      }
+    };
+
+    document.addEventListener('keydown', handle);
+    return () => document.removeEventListener('keydown', handle);
+  }, []); // usa refs — sem dependências
+
   const handleKeyDown = (e) => {
     if (mentionQuery !== null && mentionSuggestions.length > 0) {
       if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIdx(i => Math.min(i + 1, mentionSuggestions.length - 1)); return; }
@@ -668,6 +731,13 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
     if (!search) return true;
     return chatDisplayName(c).toLowerCase().includes(search.toLowerCase());
   });
+
+  // Mantém refs atualizados para usar nos atalhos de teclado sem stale closures
+  filteredRef.current = filtered;
+  kbStateRef.current = {
+    cur, forwardMsg, showNewChat, showTrash, showChatSearch,
+    showScheduleMsg, showParticipants, showQuickFollowUp, showEmojiPicker,
+  };
 
   // Buscar contatos WhatsApp quando search tem 2+ chars e não encontra nos chats
   useEffect(() => {
@@ -775,7 +845,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
           </div>
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Pesquisar conversa..." className="w-full bg-white text-gray-700 placeholder-gray-400 rounded-lg pl-9 pr-3 py-2 text-xs outline-none border border-transparent focus:border-gray-300 transition-all" />
+            <input ref={sidebarSearchRef} value={search} onChange={e => setSearch(e.target.value)} placeholder="Pesquisar conversa..." className="w-full bg-white text-gray-700 placeholder-gray-400 rounded-lg pl-9 pr-3 py-2 text-xs outline-none border border-transparent focus:border-gray-300 transition-all" />
           </div>
           <div className="flex gap-1.5">
             {[{ id: 'all', l: 'Tudo' }, { id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }, { id: 'unread', l: 'Não lidas' }].map(f => {

@@ -129,6 +129,14 @@ export default function MediaBubble({ msg, tenantId, cachedSrc }) {
 
   const [lightbox, setLightbox] = useState(false);
 
+  // Fechar lightbox com ESC
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e) => { if (e.key === 'Escape') setLightbox(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [lightbox]);
+
   if (msg.message_type === 'image') return (
     <div className="mb-1">
       {loading && !media && (
