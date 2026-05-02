@@ -9,7 +9,11 @@ function KanbanCard({ lead, col, columns, onDragStart, onDragEnd, onOpenChat, on
   const days = daysAgo(lead.updated_at);
   const otherCols = columns.filter(c2 => c2.id !== col.id);
 
-  const initials = (lead.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  // Trata nomes que sao apenas digitos (legado de leads sem senderName real
+  // — antes o backend salvava o ID numerico do @lid no campo name).
+  const isNumericName = lead.name && /^\d{8,}$/.test(lead.name.trim());
+  const displayName = (!lead.name || isNumericName) ? null : lead.name;
+  const initials = (displayName || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   return (
     <div
@@ -29,7 +33,11 @@ function KanbanCard({ lead, col, columns, onDragStart, onDragEnd, onOpenChat, on
             {initials}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-[13px] text-gray-800 leading-tight truncate">{lead.name || '\u2014'}</p>
+            {displayName ? (
+              <p className="font-semibold text-[13px] text-gray-800 leading-tight truncate">{displayName}</p>
+            ) : (
+              <p className="font-semibold text-[13px] text-gray-400 italic leading-tight truncate">Sem nome</p>
+            )}
             {lead.phone && (
               <p className="text-[10px] text-gray-400 font-mono flex items-center gap-1 mt-0.5">
                 <Phone className="w-2.5 h-2.5" />{lead.phone}
@@ -37,11 +45,13 @@ function KanbanCard({ lead, col, columns, onDragStart, onDragEnd, onOpenChat, on
             )}
           </div>
           <div className="flex-shrink-0">
+            {/* Tempo de pipeline: cinza ate 3 dias (recente), amber ate 14 (vale lembrar),
+                vermelho 15+ (lead esfriando, atencao real). */}
             {days === 0 ? (
-              <span className="text-[9px] font-bold text-green-600">Hoje</span>
-            ) : days <= 2 ? (
+              <span className="text-[9px] font-medium text-gray-400">Hoje</span>
+            ) : days <= 3 ? (
               <span className="text-[9px] text-gray-400">{days}d</span>
-            ) : days <= 7 ? (
+            ) : days <= 14 ? (
               <span className="text-[9px] font-medium text-amber-500">{days}d</span>
             ) : (
               <span className="text-[9px] font-bold text-red-500">{days}d</span>
