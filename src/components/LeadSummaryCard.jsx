@@ -9,7 +9,7 @@ export function StageBadge({ structured_memory, className = '' }) {
     const e = mem?.estagio_comercial?.toLowerCase();
     if (!e) return null;
     const map = {
-      frio:   { color: '#16a34a', label: 'FRIO' },
+      frio:   { color: '#3b82f6', label: 'FRIO' },
       morno:  { color: '#d97706', label: 'MORNO' },
       quente: { color: '#dc2626', label: 'QUENTE' },
     };

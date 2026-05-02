@@ -73,10 +73,16 @@ export default function LeadsView({ leads, columns, tenant, onRefresh, onOpenCha
               const colInfo = columns.find(c => c.id === l.stage);
               const c = CM[colInfo?.color] || CM.zinc;
               const days = daysAgo(l.updated_at);
+              const isLidPhone = l.phone && /^\d{14,}$/.test(l.phone);
               return (
                 <tr key={l.id} className="hover:bg-gray-50/50">
                   <td className="px-3 py-2.5 font-bold text-xs truncate">{l.name}</td>
-                  <td className="px-3 py-2.5 text-[11px] text-gray-400 font-mono truncate">{l.phone}</td>
+                  <td className="px-3 py-2.5 text-[11px] truncate">
+                    {isLidPhone
+                      ? <span className="text-[9px] font-bold text-blue-600 bg-blue-50 rounded px-1.5 py-0.5">📣 ID Meta</span>
+                      : <span className="text-gray-400 font-mono">{l.phone || '—'}</span>
+                    }
+                  </td>
                   <td className="px-3 py-2.5">
                     {l.conversation_summary ? (
                       <div className="space-y-1">
@@ -108,7 +114,7 @@ export default function LeadsView({ leads, columns, tenant, onRefresh, onOpenCha
                   </td>
                   <td className="px-3 py-2.5">
                     <div className="flex gap-1 justify-end items-center">
-                      {l.phone && (
+                      {l.phone && !isLidPhone && (
                         <button onClick={() => onOpenChat(l.phone)} className="flex items-center gap-1 px-2 py-1 bg-[#25d366]/10 hover:bg-[#25d366]/20 text-[#075e54] rounded text-[9px] font-bold">
                           <MessageCircle className="w-3 h-3" /> Conversar
                         </button>
