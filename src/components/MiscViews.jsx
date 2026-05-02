@@ -316,14 +316,23 @@ export function AnalyticsView({ leads, columns, tenant }) {
                 const mins = Number(u.avg_minutes);
                 const isAlert = mins > 30;
                 const isWarn  = mins > 5 && mins <= 30;
+                // Badge de origem: de onde veio a resposta
+                const originBadge = u.origin === 'ai'
+                  ? { label: 'IA', cls: 'bg-purple-100 text-purple-700' }
+                  : u.origin === 'crm'
+                  ? { label: 'CRM', cls: 'bg-blue-100 text-blue-700' }
+                  : { label: 'Externo', cls: 'bg-gray-100 text-gray-500' };
                 return (
                   <div key={i} className={`flex items-center justify-between rounded-lg px-2 py-1 ${isAlert ? 'bg-red-50 border border-red-200' : ''}`}>
-                    <span className={`text-xs truncate flex-1 ${isAlert ? 'text-red-700 font-semibold' : 'text-gray-700'}`}>
-                      {isAlert && <span className="mr-1">⚠️</span>}
-                      {u.responder || 'Desconhecido'}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 ${originBadge.cls}`}>{originBadge.label}</span>
+                      <span className={`text-xs truncate ${isAlert ? 'text-red-700 font-semibold' : 'text-gray-700'}`}>
+                        {isAlert && <span className="mr-1">⚠️</span>}
+                        {u.origin === 'ai' ? 'IA' : (u.responder || 'Desconhecido')}
+                      </span>
+                    </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-[10px] text-gray-400">{u.responses} respostas</span>
+                      <span className="text-[10px] text-gray-400">{u.responses} resp.</span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                         mins <= 5  ? 'bg-green-100 text-green-700' :
                         isWarn     ? 'bg-amber-100 text-amber-700' :
