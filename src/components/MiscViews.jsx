@@ -638,17 +638,85 @@ export function TeamView({ users, tenant, currentUser, onRefresh }) {
   );
 }
 
+const DAYS_CONFIG = [
+  { key: '1', label: 'Segunda' },
+  { key: '2', label: 'Terça' },
+  { key: '3', label: 'Quarta' },
+  { key: '4', label: 'Quinta' },
+  { key: '5', label: 'Sexta' },
+  { key: '6', label: 'Sábado' },
+  { key: '0', label: 'Domingo' },
+];
+const DEFAULT_BH = { '0': null, '1': { open: '08:00', close: '18:00' }, '2': { open: '08:00', close: '18:00' }, '3': { open: '08:00', close: '18:00' }, '4': { open: '08:00', close: '18:00' }, '5': { open: '08:00', close: '18:00' }, '6': { open: '08:00', close: '12:00' } };
+
 export function SettingsView({ tenant, onRefresh }) {
   const [syncingPics, setSyncingPics] = useState(false);
   const [syncResult, setSyncResult] = useState(null);
+  const [bh, setBh] = useState(() => {
+    try { return tenant.business_hours ? JSON.parse(tenant.business_hours) : { ...DEFAULT_BH }; }
+    catch { return { ...DEFAULT_BH }; }
+  });
+  const [savingBh, setSavingBh] = useState(false);
+  const [bhSaved, setBhSaved] = useState(false);
+
   const syncProfilePics = async () => {
     setSyncingPics(true); setSyncResult(null);
     try { const r = await api.syncProfilePics(tenant.id); setSyncResult(r); }
     catch { alert('Erro ao sincronizar fotos'); } finally { setSyncingPics(false); }
   };
+
+  const toggleDay = (key) => setBh(prev => ({ ...prev, [key]: prev[key] ? null : { open: '08:00', close: '18:00' } }));
+  const setTime = (key, field, val) => setBh(prev => ({ ...prev, [key]: { ...(prev[key] || { open: '08:00', close: '18:00' }), [field]: val } }));
+
+  const saveBh = async () => {
+    setSavingBh(true); setBhSaved(false);
+    try {
+      await api.updateTenant(tenant.id, { businessHours: bh });
+      setBhSaved(true);
+      setTimeout(() => setBhSaved(false), 2000);
+      if (onRefresh) onRefresh();
+    } catch { alert('Erro ao salvar horários'); }
+    finally { setSavingBh(false); }
+  };
+
   return (
     <div className="max-w-sm space-y-4">
       <h2 className="font-semibold text-sm text-gray-700">Configurações</h2>
+
+      {/* Horário de Expediente */}
+      <div className="bg-white rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-base">🕐</span>
+          <span className="font-semibold text-sm text-gray-800">Horário de Expediente</span>
+        </div>
+        <p className="text-xs text-gray-400 mb-4">Usado para calcular o tempo de resposta apenas dentro do horário de atendimento.</p>
+        <div className="space-y-2">
+          {DAYS_CONFIG.map(({ key, label }) => {
+            const open = !!bh[key];
+            return (
+              <div key={key} className="flex items-center gap-2">
+                <button onClick={() => toggleDay(key)} className={`w-16 text-[10px] font-bold px-2 py-1 rounded-lg border transition-colors flex-shrink-0 ${open ? 'bg-green-50 border-green-300 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
+                  {open ? label : <span className="line-through">{label}</span>}
+                </button>
+                {open ? (
+                  <div className="flex items-center gap-1 flex-1">
+                    <input type="time" value={bh[key]?.open || '08:00'} onChange={e => setTime(key, 'open', e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-1 w-24 focus:outline-none focus:ring-1 focus:ring-blue-300" />
+                    <span className="text-xs text-gray-400">até</span>
+                    <input type="time" value={bh[key]?.close || '18:00'} onChange={e => setTime(key, 'close', e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-1 w-24 focus:outline-none focus:ring-1 focus:ring-blue-300" />
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-300 flex-1">Fechado</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <button onClick={saveBh} disabled={savingBh} className={`mt-4 px-4 py-2 font-semibold rounded-xl text-sm disabled:opacity-50 transition-colors ${bhSaved ? 'bg-green-600 text-white' : 'bg-gray-900 text-white hover:bg-gray-700'}`}>
+          {savingBh ? 'Salvando...' : bhSaved ? '✓ Salvo!' : 'Salvar horários'}
+        </button>
+      </div>
+
+      {/* Fotos de Perfil */}
       <div className="bg-white rounded-2xl p-5">
         <div className="flex items-center gap-2 mb-1">
           <Users2 className="w-4 h-4 text-gray-400" />
