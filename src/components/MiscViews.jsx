@@ -312,15 +312,27 @@ export function AnalyticsView({ leads, columns, tenant }) {
           <h3 className="font-bold text-sm mb-3 flex items-center gap-2">⏱️ Tempo de Resposta</h3>
           {(d.responseTime || []).length > 0 ? (
             <div className="space-y-2">
-              {d.responseTime.map((u, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <span className="text-xs text-gray-700 truncate flex-1">{u.responder || 'Desconhecido'}</span>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[10px] text-gray-400">{u.responses} respostas</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${Number(u.avg_minutes) <= 5 ? 'bg-green-50 text-green-700' : Number(u.avg_minutes) <= 30 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>{u.avg_minutes} min</span>
+              {d.responseTime.map((u, i) => {
+                const mins = Number(u.avg_minutes);
+                const isAlert = mins > 30;
+                const isWarn  = mins > 5 && mins <= 30;
+                return (
+                  <div key={i} className={`flex items-center justify-between rounded-lg px-2 py-1 ${isAlert ? 'bg-red-50 border border-red-200' : ''}`}>
+                    <span className={`text-xs truncate flex-1 ${isAlert ? 'text-red-700 font-semibold' : 'text-gray-700'}`}>
+                      {isAlert && <span className="mr-1">⚠️</span>}
+                      {u.responder || 'Desconhecido'}
+                    </span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-[10px] text-gray-400">{u.responses} respostas</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        mins <= 5  ? 'bg-green-100 text-green-700' :
+                        isWarn     ? 'bg-amber-100 text-amber-700' :
+                                     'bg-red-200 text-red-800 ring-1 ring-red-400'
+                      }`}>{u.avg_minutes} min</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : <p className="text-[10px] text-gray-300 text-center py-4">Sem dados no periodo</p>}
         </div>
