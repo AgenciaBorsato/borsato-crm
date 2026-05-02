@@ -728,6 +728,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
     if (filter === 'individual' && isGrp(c)) return false;
     if (filter === 'group' && !isGrp(c)) return false;
     if (filter === 'unread' && !(Number(c.user_unread_count) > 0)) return false;
+    if (filter === 'meta_ads' && c.lead_source !== 'meta_ads') return false;
     if (!search) return true;
     return chatDisplayName(c).toLowerCase().includes(search.toLowerCase());
   });
@@ -848,8 +849,12 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
             <input ref={sidebarSearchRef} value={search} onChange={e => setSearch(e.target.value)} placeholder="Pesquisar conversa..." className="w-full bg-white text-gray-700 placeholder-gray-400 rounded-lg pl-9 pr-3 py-2 text-xs outline-none border border-transparent focus:border-gray-300 transition-all" />
           </div>
           <div className="flex gap-1.5">
-            {[{ id: 'all', l: 'Tudo' }, { id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }, { id: 'unread', l: 'Não lidas' }].map(f => {
-              const count = f.id === 'unread' ? chats.filter(c => Number(c.user_unread_count) > 0).length : null;
+            {[{ id: 'all', l: 'Tudo' }, { id: 'individual', l: 'Contatos' }, { id: 'group', l: 'Grupos' }, { id: 'unread', l: 'Não lidas' }, { id: 'meta_ads', l: '📣 Ads' }].map(f => {
+              const count = f.id === 'unread'
+                ? chats.filter(c => Number(c.user_unread_count) > 0).length
+                : f.id === 'meta_ads'
+                ? chats.filter(c => c.lead_source === 'meta_ads').length
+                : null;
               return (
                 <button key={f.id} onClick={() => setFilter(f.id)} className={`px-2.5 py-1 text-[11px] font-medium rounded-full transition-all flex items-center justify-center gap-1 ${filter === f.id ? 'bg-[#d1f4cc] text-[#00745a]' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}`}>
                   {f.l}
@@ -891,7 +896,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                 <ProfilePic phone={c.contact_phone || c.remote_jid} tenantId={tenant.id} name={chatDisplayName(c)} isGroup={isGrp(c)} size="w-12 h-12" textSize="text-[11px]" cachedUrl={c.profile_pic_url} />
                 <div className="flex-1 min-w-0 border-b border-gray-100 pb-3 -mb-3">
                   <div className="flex justify-between items-center">
-                    <p className={`text-[14px] truncate ${hasUnread ? 'font-semibold text-gray-900' : 'font-normal text-gray-900'}`}>{chatDisplayName(c)}{isGrp(c) && <span className="ml-1.5 text-[8px] bg-gray-100 text-gray-500 px-1 py-0.5 rounded font-medium align-middle">GRUPO</span>}{c.lead_source === 'meta_ads' && <span className="ml-1.5 text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold align-middle border border-green-200">META ADS</span>}</p>
+                    <p className={`text-[14px] truncate ${hasUnread ? 'font-semibold text-gray-900' : 'font-normal text-gray-900'}`}>{chatDisplayName(c)}{isGrp(c) && <span className="ml-1.5 text-[8px] bg-gray-100 text-gray-500 px-1 py-0.5 rounded font-medium align-middle">GRUPO</span>}{c.lead_source === 'meta_ads' && <span title="Lead veio de tráfego pago Meta Ads" className="ml-1.5 text-[10px] bg-[#1877F2] text-white px-1.5 py-0.5 rounded font-bold align-middle inline-flex items-center gap-0.5">📣 ADS</span>}</p>
                     <span className={`text-[11px] flex-shrink-0 ml-2 ${hasUnread ? 'text-[#00a884] font-semibold' : 'text-gray-500'}`}>{fmt(c.last_message_time)}</span>
                   </div>
                   <div className="flex justify-between mt-0.5 items-center">
