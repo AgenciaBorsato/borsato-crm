@@ -454,6 +454,14 @@ export function IAView({ knowledge, tenant, onRefresh }) {
   const [syncResult, setSyncResult] = useState(null);
 
   const savePrompt = async () => {
+    // Guard: se o textarea estiver vazio mas existe prompt salvo, confirmar antes de apagar.
+    // Sem isso, um F5 ou recarregamento que zere o state envia "" e apaga a config do cliente.
+    const hadPrompt = (tenant.ai_prompt || '').trim().length > 0;
+    const willEmpty = !prompt.trim();
+    if (hadPrompt && willEmpty) {
+      const ok = window.confirm('Voce esta prestes a apagar a personalidade da IA. Isso vai zerar o comportamento configurado. Deseja continuar?');
+      if (!ok) return;
+    }
     setSaving(true);
     try { await api.updateTenant(tenant.id, { name: tenant.name, plan: tenant.plan, monthlyValue: tenant.monthly_value, aiPrompt: prompt, customFields: JSON.parse(tenant.custom_fields || '[]'), active: tenant.active }); onRefresh(); }
     catch { alert('Erro'); } finally { setSaving(false); }
