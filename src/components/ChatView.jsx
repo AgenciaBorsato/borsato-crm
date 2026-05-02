@@ -165,7 +165,7 @@ import { renderText } from '../utils/renderText';
 import api from '../api';
 import ProfilePic, { ParticipantAvatar } from './ProfilePic';
 import MediaBubble from './MediaBubble';
-import LeadSummaryCard from './LeadSummaryCard';
+import LeadSummaryCard, { StageBadge } from './LeadSummaryCard';
 import EditLeadModal from './EditLeadModal';
 
 // ─── Separador de data ───────────────────────────────────────────────────────
@@ -896,7 +896,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                 <ProfilePic phone={c.contact_phone || c.remote_jid} tenantId={tenant.id} name={chatDisplayName(c)} isGroup={isGrp(c)} size="w-12 h-12" textSize="text-[11px]" cachedUrl={c.profile_pic_url} />
                 <div className="flex-1 min-w-0 border-b border-gray-100 pb-3 -mb-3">
                   <div className="flex justify-between items-center">
-                    <p className={`text-[14px] truncate ${hasUnread ? 'font-semibold text-gray-900' : 'font-normal text-gray-900'}`}>{chatDisplayName(c)}{isGrp(c) && <span className="ml-1.5 text-[8px] bg-gray-100 text-gray-500 px-1 py-0.5 rounded font-medium align-middle">GRUPO</span>}{c.lead_source === 'meta_ads' && <span title="Lead veio de tráfego pago Meta Ads" className="ml-1.5 text-[10px] bg-[#1877F2] text-white px-1.5 py-0.5 rounded font-bold align-middle inline-flex items-center gap-0.5">📣 ADS</span>}</p>
+                    <p className={`text-[14px] truncate ${hasUnread ? 'font-semibold text-gray-900' : 'font-normal text-gray-900'}`}>{chatDisplayName(c)}{isGrp(c) && <span title="Grupo" className="ml-1 text-gray-400 align-middle inline-flex"><Users2 className="w-3 h-3" /></span>}{c.lead_source === 'meta_ads' && <span title="Lead veio de tráfego pago Meta Ads" className="ml-1.5 text-[10px] bg-[#1877F2] text-white px-1.5 py-0.5 rounded font-bold align-middle inline-flex items-center gap-0.5">📣 ADS</span>}</p>
                     <span className={`text-[11px] flex-shrink-0 ml-2 ${hasUnread ? 'text-[#00a884] font-semibold' : 'text-gray-500'}`}>{fmt(c.last_message_time)}</span>
                   </div>
                   <div className="flex justify-between mt-0.5 items-center">
@@ -917,13 +917,13 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                       })()}
                     </p>
                     <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                      {Number(c.awaiting_response) === 1 && hasUnread && <span className="bg-red-500 text-white text-[7px] font-bold w-4 h-4 rounded-full flex items-center justify-center" title="Aguardando resposta">!</span>}
-                      {isMentionedInLast && <span className="bg-blue-600 text-white text-[7px] font-bold w-4 h-4 rounded-full flex items-center justify-center"><AtSign className="w-2.5 h-2.5" /></span>}
-                      {hasUnread && <span className="bg-[#00a884] text-white text-[10px] font-semibold rounded-full min-w-[19px] h-[19px] flex items-center justify-center px-1">{Number(c.user_unread_count) > 9 ? '9+' : c.user_unread_count}</span>}
+                      {Number(c.awaiting_response) === 1 && hasUnread && <span className="bg-red-400/80 text-white text-[7px] font-bold w-4 h-4 rounded-full flex items-center justify-center" title="Aguardando resposta">!</span>}
+                      {isMentionedInLast && <span className="bg-blue-500/90 text-white text-[7px] font-bold w-4 h-4 rounded-full flex items-center justify-center"><AtSign className="w-2.5 h-2.5" /></span>}
+                      {hasUnread && <span className={`text-[10px] font-semibold rounded-full min-w-[19px] h-[19px] flex items-center justify-center px-1 ${cur?.id === c.id ? 'bg-[#00a884] text-white' : 'bg-[#00a884]/85 text-white'}`}>{Number(c.user_unread_count) > 9 ? '9+' : c.user_unread_count}</span>}
                     </div>
                   </div>
                 </div>
-                <button onClick={e => { e.stopPropagation(); deleteChat(c.id); }} className="p-1 text-gray-300 hover:text-red-400 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-3 h-3" /></button>
+                <button onClick={e => { e.stopPropagation(); deleteChat(c.id); }} className="p-1 text-gray-300 hover:text-red-400 flex-shrink-0 hidden group-hover:block"><Trash2 className="w-3 h-3" /></button>
               </div>
             );
           })}
@@ -963,7 +963,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                 <div className="flex items-center gap-3">
                   <ProfilePic phone={cur.contact_phone || cur.remote_jid} tenantId={tenant.id} name={chatDisplayName(cur)} size="w-9 h-9" isGroup={isGrp(cur)} cachedUrl={cur.profile_pic_url} />
                   <div>
-                    <p className="font-semibold text-sm text-gray-900">{chatDisplayName(cur)}</p>
+                    <p className="font-semibold text-sm text-gray-900 flex items-center gap-1.5">{chatDisplayName(cur)}{lead?.structured_memory && <StageBadge structured_memory={lead.structured_memory} />}</p>
                     <div className="flex items-center gap-2">
                       {isGrp(cur) ? (
                         <button onClick={() => setShowParticipants(v => !v)} className="text-[10px] text-blue-700 font-medium hover:underline flex items-center gap-0.5">
@@ -1195,7 +1195,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                       <ParticipantAvatar name={m.sender_name} size="w-6 h-6" textSize="text-[9px]" />
                     )}
                     {isMyMessage && (
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mb-1 self-end">
+                      <div className="hidden group-hover:flex items-center gap-1 mb-1 self-end">
                         <div className="bg-white border border-gray-100 rounded-lg shadow-sm py-0.5 flex flex-col min-w-[110px]">
                           <button onClick={() => { setReplyTo(m); setTimeout(() => inputRef.current?.focus(), 50); }} className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 transition-colors text-left">
                             <Reply className="w-3 h-3 text-gray-400" /><span className="text-[10px] font-medium text-gray-600">Responder</span>
@@ -1279,7 +1279,7 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                       </div>
                     </div>
                     {!isMyMessage && (
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mb-1 self-end">
+                      <div className="hidden group-hover:flex items-center gap-1 mb-1 self-end">
                         <div className="bg-white border border-gray-100 rounded-full px-1.5 py-0.5 flex items-center gap-0.5">
                           {REACTION_EMOJIS.map(emoji => (
                             <button key={emoji} onClick={async () => { try { await api.sendReaction(tenant.id, cur?.id, m.id, m.remote_jid || cur?.remote_jid, emoji); await loadMsgs(cur.id); } catch (e) { console.error('SEND_REACTION_ERROR:', e.message, 'msgId:', m.id, 'emoji:', emoji); } }}
