@@ -4,7 +4,7 @@ import SuperAdminPanel from './pages/SuperAdminPanel';
 import {
   MessageSquare, LayoutGrid, Users, Settings, UserPlus, ArrowLeft,
   Smartphone, BarChart3, Brain, AlertTriangle, X, LogOut, Search,
-  Bell, CalendarClock, Home, Wrench
+  Bell, CalendarClock, Wrench
 } from 'lucide-react';
 import ChatView from './components/ChatView';
 import KanbanView from './components/KanbanView';
@@ -12,8 +12,6 @@ import LeadsView from './components/LeadsView';
 import FollowUpView from './components/FollowUpView';
 import ScheduleView from './components/ScheduleView';
 import { WhatsAppView, AnalyticsView, IAView, TeamView, SettingsView } from './components/MiscViews';
-import HomeSimples from './components/HomeSimples';
-
 export default function BorsatoCRM() {
   const [currentUser, setCurrentUser] = useState(null);
   const [currentView, setCurrentView] = useState('login');
@@ -133,7 +131,7 @@ function LoginScreen({ onLogin, loading, error }) {
 }
 
 function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh }) {
-  const [activeTab, setActiveTab] = useState(() => localStorage.getItem(`activeTab_${tenant.id}`) || 'home');
+  const [activeTab, setActiveTab] = useState(() => { const saved = localStorage.getItem(`activeTab_${tenant.id}`); return saved && saved !== 'home' ? saved : 'chat'; });
   const [columns, setColumns] = useState([]);
   const [requestedPhone, setRequestedPhone] = useState(null);
   const [whatsappConnected, setWhatsappConnected] = useState(true);
@@ -165,7 +163,6 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
   const openChatByPhone = useCallback((phone) => { setRequestedPhone(phone); setActiveTab('chat'); }, []);
 
   const mainTabs = [
-    { id: 'home',      label: 'Inicio',       icon: Home },
     { id: 'chat',      label: 'Conversas',    icon: MessageSquare },
     { id: 'kanban',    label: 'Kanban',       icon: LayoutGrid },
     { id: 'leads',     label: 'Leads',        icon: Users },
@@ -332,7 +329,6 @@ function ClientDashboard({ user, tenant, onLogout, onBackToSuperAdmin, onRefresh
 
         {/* Content */}
         <div className={`flex-1 overflow-auto ${activeTab === 'chat' ? '' : 'max-w-[1800px] w-full mx-auto px-4 py-4'}`}>
-          {activeTab === 'home'      && <HomeSimples tenant={tenant} columns={columns} onRefresh={refreshAll} onOpenChat={openChatByPhone} currentUser={user} onNavigate={setActiveTab} />}
           {activeTab === 'kanban'    && <KanbanView leads={tenant.leads || []} columns={columns} tenant={tenant} onRefresh={refreshAll} onOpenChat={openChatByPhone} />}
           {activeTab === 'chat'      && <ChatView tenant={tenant} columns={columns} onRefresh={refreshAll} requestedPhone={requestedPhone} onPhoneHandled={() => setRequestedPhone(null)} currentUser={user} />}
           {activeTab === 'leads'     && <LeadsView leads={tenant.leads || []} columns={columns} tenant={tenant} onRefresh={refreshAll} onOpenChat={openChatByPhone} />}
