@@ -50,7 +50,8 @@ export default function LeadSummaryCard({ lead, onRefresh, compact = false }) {
   const labelMap = {
     tipo_contato: 'Tipo', nome: 'Nome', empresa: 'Empresa', nicho: 'Segmento',
     objetivo_principal: 'Objetivo', dor_principal: 'Dor', interesse_servicos: 'Interesse',
-    interesse_reuniao: 'Reuniao', ultimo_assunto: 'Ultimo assunto'
+    interesse_reuniao: 'Reuniao', ultimo_assunto: 'Ultimo assunto',
+    objecoes: 'Objeções', melhor_horario_contato: 'Melhor horário', perfil_comportamental: 'Perfil'
   };
 
   if (compact) {

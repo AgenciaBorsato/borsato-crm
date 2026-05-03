@@ -20,9 +20,23 @@ export default function EditLeadModal({ lead, columns, onClose, onSave, onRefres
           {columns.length > 0 && <div><label className="text-[10px] font-bold text-gray-400 uppercase">Etapa</label><select value={f.stage} onChange={e => setF({ ...f, stage: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">{columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>}
           <div><label className="text-[10px] font-bold text-gray-400 uppercase">Observacoes</label><textarea value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} rows={2} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" /></div>
           <LeadSummaryCard lead={localLead} onRefresh={handleRefreshContext} compact={false} />
+          {Array.isArray(custom.meta_ads_history) && custom.meta_ads_history.length > 0 && (
+            <div className="border-t border-gray-100 pt-3">
+              <p className="text-[10px] font-bold text-blue-600 uppercase mb-2">📣 Histórico Meta Ads ({custom.meta_ads_history.length})</p>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                {custom.meta_ads_history.map((ad, i) => (
+                  <div key={i} className="bg-blue-50/50 border border-blue-100 rounded-lg p-2 text-[11px]">
+                    <p className="font-semibold text-blue-900 truncate">{ad.ad_name || ad.title || ad.name || `Anúncio ${i + 1}`}</p>
+                    {ad.campaign_name && <p className="text-[10px] text-blue-700/70 truncate">Campanha: {ad.campaign_name}</p>}
+                    {(ad.received_at || ad.date || ad.timestamp) && <p className="text-[10px] text-blue-500/70">{new Date(ad.received_at || ad.date || ad.timestamp).toLocaleString('pt-BR')}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="border-t border-gray-100 pt-3">
             <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Campos Personalizados</p>
-            {Object.entries(custom).map(([k, v]) => (
+            {Object.entries(custom).filter(([k, v]) => k !== 'meta_ads_history' && typeof v !== 'object').map(([k, v]) => (
               <div key={k} className="flex gap-2 mb-2 items-center">
                 <span className="text-xs text-gray-500 w-28 truncate">{k}</span>
                 <input value={v} onChange={e => setCustom({ ...custom, [k]: e.target.value })} className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs" />

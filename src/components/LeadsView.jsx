@@ -74,6 +74,11 @@ export default function LeadsView({ leads, columns, tenant, onRefresh, onOpenCha
               const c = CM[colInfo?.color] || CM.zinc;
               const days = daysAgo(l.updated_at);
               const isLidPhone = l.phone && /^\d{14,}$/.test(l.phone);
+              let adsCount = 0;
+              try {
+                const cd = typeof l.custom_data === 'string' ? JSON.parse(l.custom_data || '{}') : (l.custom_data || {});
+                if (Array.isArray(cd.meta_ads_history)) adsCount = cd.meta_ads_history.length;
+              } catch {}
               return (
                 <tr key={l.id} className="hover:bg-gray-50/50">
                   <td className="px-3 py-2.5 font-bold text-xs truncate">{l.name}</td>
@@ -103,7 +108,7 @@ export default function LeadsView({ leads, columns, tenant, onRefresh, onOpenCha
                   </td>
                   <td className="px-3 py-2.5">
                     {l.source === 'meta_ads'
-                      ? <span className="text-[9px] font-bold text-blue-700 bg-blue-50 rounded px-1.5 py-0.5 inline-flex items-center gap-0.5">📣 Ads</span>
+                      ? <span className="text-[9px] font-bold text-blue-700 bg-blue-50 rounded px-1.5 py-0.5 inline-flex items-center gap-0.5" title={adsCount > 0 ? `${adsCount} anúncio(s) no histórico` : undefined}>📣 Ads{adsCount > 0 ? ` · ${adsCount}` : ''}</span>
                       : l.source === 'whatsapp'
                       ? <span className="text-[9px] font-bold text-green-700 bg-green-50 rounded px-1.5 py-0.5 inline-flex items-center gap-0.5"><Zap className="w-2.5 h-2.5" /> WA</span>
                       : <span className="text-[9px] text-gray-400 bg-gray-100 rounded px-1.5 py-0.5">{l.source || 'manual'}</span>

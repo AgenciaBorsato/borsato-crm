@@ -1143,22 +1143,34 @@ export default function ChatView({ tenant, columns, onRefresh, requestedPhone, o
                     );
                   }
                   // Nota interna
-                if (Number(m.is_internal) === 1) return (
+                if (Number(m.is_internal) === 1) {
+                  const isHotAlert = typeof m.content === 'string' && m.content.trim().startsWith('🔥');
+                  return (
                   <React.Fragment key={`note-${m.id}`}>
                   {_sep}
                   <div className="flex justify-center my-1">
-                    <div className="max-w-[70%] bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                    <div className={`max-w-[80%] rounded-xl px-3 py-2 ${isHotAlert ? 'bg-red-50 border-2 border-red-400 shadow-md shadow-red-200/60' : 'bg-amber-50 border border-amber-200'}`}>
                       <div className="flex items-center gap-1.5 mb-1">
-                        <Lock className="w-2.5 h-2.5 text-amber-500" />
-                        <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wider">Nota interna</span>
-                        {m.sender_name && <span className="text-[9px] text-amber-500">• {m.sender_name}</span>}
-                        <span className="text-[8px] text-amber-400 ml-auto">{fmt(m.timestamp)}</span>
+                        {isHotAlert ? (
+                          <>
+                            <span className="text-[11px] animate-pulse">🔥</span>
+                            <span className="text-[9px] font-black text-red-600 uppercase tracking-widest">Lead Quente</span>
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="w-2.5 h-2.5 text-amber-500" />
+                            <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wider">Nota interna</span>
+                          </>
+                        )}
+                        {m.sender_name && <span className={`text-[9px] ${isHotAlert ? 'text-red-500' : 'text-amber-500'}`}>• {m.sender_name}</span>}
+                        <span className={`text-[8px] ml-auto ${isHotAlert ? 'text-red-400' : 'text-amber-400'}`}>{fmt(m.timestamp)}</span>
                       </div>
-                      <p className="text-xs text-amber-900 leading-relaxed">{m.content}</p>
+                      <p className={`text-xs leading-relaxed ${isHotAlert ? 'text-red-900 font-medium' : 'text-amber-900'}`}>{m.content}</p>
                     </div>
                   </div>
                   </React.Fragment>
-                );
+                  );
+                }
                 // Mensagem normal (não agrupada)
                 const fromMe = Number(m.is_from_me) === 1 || m.is_from_me === true;
                 // isMyMessage: a MINHA mensagem visualmente — inclui quando o sender em grupo é eu (mesmo usuario CRM logado)

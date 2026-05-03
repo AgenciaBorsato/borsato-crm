@@ -15,6 +15,13 @@ function KanbanCard({ lead, col, columns, onDragStart, onDragEnd, onOpenChat, on
   const displayName = (!lead.name || isNumericName) ? null : lead.name;
   const initials = (displayName || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
+  // Conta anuncios do historico Meta Ads (custom_data.meta_ads_history)
+  let adsCount = 0;
+  try {
+    const cd = typeof lead.custom_data === 'string' ? JSON.parse(lead.custom_data || '{}') : (lead.custom_data || {});
+    if (Array.isArray(cd.meta_ads_history)) adsCount = cd.meta_ads_history.length;
+  } catch {}
+
   return (
     <div
       draggable
@@ -62,8 +69,8 @@ function KanbanCard({ lead, col, columns, onDragStart, onDragEnd, onOpenChat, on
         {/* Source badge */}
         <div className="flex items-center gap-1.5 mb-1.5">
           {lead.source === 'meta_ads' ? (
-            <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-blue-700 bg-blue-50 rounded-full px-2 py-0.5">
-              📣 Meta Ads
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-blue-700 bg-blue-50 rounded-full px-2 py-0.5" title={adsCount > 0 ? `${adsCount} anúncio(s) no histórico` : undefined}>
+              📣 Meta Ads{adsCount > 0 ? ` · ${adsCount}` : ''}
             </span>
           ) : lead.source === 'whatsapp' ? (
             <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-green-700 bg-green-50 rounded-full px-2 py-0.5">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Brain, Bot, Plus, Trash2, Users2, TrendingUp, TrendingDown, BarChart3, Target, Sparkles, RefreshCw, Filter, ArrowRight, Zap, Users, MessageSquare, Eye, Edit2, Search, Megaphone, Contact2 } from 'lucide-react';
+import { Brain, Bot, Plus, Trash2, Users2, TrendingUp, TrendingDown, BarChart3, Target, Sparkles, RefreshCw, Filter, ArrowRight, Zap, Users, MessageSquare, Eye, Edit2, Search, Megaphone, Contact2, X } from 'lucide-react';
 import { CM } from '../constants';
 import api from '../api';
 
@@ -393,18 +393,32 @@ const SCRIPT_COLORS = [
   'bg-orange-50 text-orange-700',
 ];
 
-function ScriptModal({ tenant, item, onClose, onSuccess }) {
+function ScriptModal({ tenant, item, defaultType = 'faq', onClose, onSuccess }) {
   const [name, setName] = useState(item?.category || '');
   const [content, setContent] = useState(item?.answer || '');
+  const [type, setType] = useState(item?.type || defaultType);
+  const initialTags = (() => {
+    try { const t = item?.tags; if (!t) return []; const parsed = typeof t === 'string' ? JSON.parse(t) : t; return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+  })();
+  const [tags, setTags] = useState(initialTags);
+  const [tagDraft, setTagDraft] = useState('');
   const [saving, setSaving] = useState(false);
+  const addTag = () => {
+    const t = tagDraft.trim();
+    if (!t) return;
+    if (tags.includes(t)) { setTagDraft(''); return; }
+    setTags([...tags, t]); setTagDraft('');
+  };
+  const removeTag = (t) => setTags(tags.filter(x => x !== t));
   const save = async () => {
     if (!name.trim() || !content.trim()) return;
     setSaving(true);
     try {
+      const payload = { category: name.trim(), answer: content, type, tags };
       if (item) {
-        await api.updateKnowledge(item.id, { category: name.trim(), answer: content });
+        await api.updateKnowledge(item.id, payload);
       } else {
-        await api.createKnowledge({ category: name.trim(), question: name.trim(), answer: content, tenantId: tenant.id });
+        await api.createKnowledge({ ...payload, question: name.trim(), tenantId: tenant.id });
       }
       onSuccess();
     } catch { alert('Erro ao salvar'); } finally { setSaving(false); }
@@ -417,15 +431,34 @@ function ScriptModal({ tenant, item, onClose, onSuccess }) {
         </div>
         <div className="px-6 py-5 space-y-4">
           <div>
+            <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-1.5">Tipo</label>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setType('faq')} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${type === 'faq' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>FAQ / Script</button>
+              <button type="button" onClick={() => setType('oferta')} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${type === 'oferta' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>Oferta</button>
+            </div>
+          </div>
+          <div>
             <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-1.5">Nome de referência</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: FLUXO COMPRADOR, FAQ, OBJEÇÃO PREÇO" className="w-full bg-gray-50 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:bg-white focus:ring-1 focus:ring-gray-300 transition-all" autoFocus />
+            <input value={name} onChange={e => setName(e.target.value)} placeholder={type === 'oferta' ? 'Ex: PROMO BLACK FRIDAY, COMBO MENSAL' : 'Ex: FLUXO COMPRADOR, FAQ, OBJEÇÃO PREÇO'} className="w-full bg-gray-50 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:bg-white focus:ring-1 focus:ring-gray-300 transition-all" autoFocus />
           </div>
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Script</label>
+              <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{type === 'oferta' ? 'Descrição da oferta' : 'Script'}</label>
               <span className="text-[10px] text-gray-300">{content.length} chars</span>
             </div>
-            <textarea value={content} onChange={e => setContent(e.target.value)} rows={8} placeholder="Descreva o fluxo ou instrução específica para a IA usar nesse contexto..." className="w-full bg-gray-50 rounded-lg px-3 py-2.5 text-xs leading-relaxed resize-y focus:outline-none focus:bg-white focus:ring-1 focus:ring-gray-300 transition-all" />
+            <textarea value={content} onChange={e => setContent(e.target.value)} rows={8} placeholder={type === 'oferta' ? 'Descreva a oferta: o que inclui, valor, prazo, condições...' : 'Descreva o fluxo ou instrução específica para a IA usar nesse contexto...'} className="w-full bg-gray-50 rounded-lg px-3 py-2.5 text-xs leading-relaxed resize-y focus:outline-none focus:bg-white focus:ring-1 focus:ring-gray-300 transition-all" />
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-1.5">Tags</label>
+            <div className="flex flex-wrap gap-1.5 mb-1.5">
+              {tags.map(t => (
+                <span key={t} className="inline-flex items-center gap-1 text-[11px] bg-gray-100 text-gray-700 rounded-full px-2 py-0.5">
+                  {t}
+                  <button type="button" onClick={() => removeTag(t)} className="text-gray-400 hover:text-red-500"><X className="w-3 h-3" /></button>
+                </span>
+              ))}
+            </div>
+            <input value={tagDraft} onChange={e => setTagDraft(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } else if (e.key === 'Backspace' && !tagDraft && tags.length) { setTags(tags.slice(0, -1)); } }} onBlur={addTag} placeholder="Digite e tecle Enter para adicionar tag" className="w-full bg-gray-50 rounded-lg px-3 py-2 text-xs focus:outline-none focus:bg-white focus:ring-1 focus:ring-gray-300 transition-all" />
           </div>
         </div>
         <div className="px-6 pb-5 flex gap-2">
@@ -442,12 +475,20 @@ function ScriptItem({ item, tenant, onRefresh }) {
   const [modal, setModal] = useState(false);
   const isLong = (item.answer || '').length > 180;
   const ci = (item.category || ' ').charCodeAt(0) % SCRIPT_COLORS.length;
+  const itemTags = (() => {
+    try { const t = item.tags; if (!t) return []; const parsed = typeof t === 'string' ? JSON.parse(t) : t; return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+  })();
   return (
     <>
       <div className="flex items-start gap-3 py-3.5 border-b border-gray-100 last:border-0 group">
         <span className={`text-[10px] font-bold px-2 py-1 rounded-md whitespace-nowrap mt-0.5 flex-shrink-0 ${SCRIPT_COLORS[ci]}`}>{item.category || 'SEM NOME'}</span>
         <div className="flex-1 min-w-0">
           <p className={`text-xs text-gray-500 leading-relaxed ${!expanded && isLong ? 'line-clamp-2' : ''}`}>{item.answer}</p>
+          {itemTags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {itemTags.map(t => <span key={t} className="text-[9px] bg-gray-100 text-gray-600 rounded-full px-2 py-0.5">{t}</span>)}
+            </div>
+          )}
           {isLong && <button onClick={() => setExpanded(!expanded)} className="text-[10px] text-gray-400 hover:text-gray-600 mt-0.5">{expanded ? 'ver menos' : 'ver mais'}</button>}
         </div>
         <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5">
@@ -471,6 +512,7 @@ export function IAView({ knowledge, tenant, onRefresh }) {
   const [togglingAI, setTogglingAI] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState('faq');
   const [syncingPics, setSyncingPics] = useState(false);
   const [syncResult, setSyncResult] = useState(null);
 
@@ -497,7 +539,20 @@ export function IAView({ knowledge, tenant, onRefresh }) {
     try { const r = await api.syncProfilePics(tenant.id); setSyncResult(r); }
     catch { alert('Erro ao sincronizar fotos'); } finally { setSyncingPics(false); }
   };
-  const filtered = search ? knowledge.filter(k => (k.answer || '').toLowerCase().includes(search.toLowerCase()) || (k.category || '').toLowerCase().includes(search.toLowerCase())) : knowledge;
+  // Tipos: 'faq' (default, retrocompat com itens sem type) e 'oferta'
+  const faqItems = knowledge.filter(k => (k.type || 'faq') === 'faq');
+  const offerItems = knowledge.filter(k => k.type === 'oferta');
+  const tabItems = activeTab === 'oferta' ? offerItems : faqItems;
+  const filtered = search ? tabItems.filter(k => {
+    const s = search.toLowerCase();
+    if ((k.answer || '').toLowerCase().includes(s)) return true;
+    if ((k.category || '').toLowerCase().includes(s)) return true;
+    try {
+      const tags = typeof k.tags === 'string' ? JSON.parse(k.tags || '[]') : (k.tags || []);
+      if (Array.isArray(tags) && tags.some(t => String(t).toLowerCase().includes(s))) return true;
+    } catch {}
+    return false;
+  }) : tabItems;
 
   return (
     <div className="grid grid-cols-2 gap-6 h-full">
@@ -535,30 +590,34 @@ export function IAView({ knowledge, tenant, onRefresh }) {
         </div>
       </div>
 
-      {/* RIGHT — Scripts */}
+      {/* RIGHT — Scripts / Ofertas */}
       <div className="flex flex-col min-h-0">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-sm text-gray-700">Scripts</span>
-            <span className="text-[10px] text-gray-400">{knowledge.length} {knowledge.length === 1 ? 'item' : 'itens'}</span>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setActiveTab('faq')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${activeTab === 'faq' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
+              FAQ / Scripts <span className="ml-1 opacity-60">{faqItems.length}</span>
+            </button>
+            <button onClick={() => setActiveTab('oferta')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${activeTab === 'oferta' ? 'bg-emerald-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
+              Ofertas <span className="ml-1 opacity-60">{offerItems.length}</span>
+            </button>
           </div>
           <div className="flex items-center gap-2">
-            {knowledge.length > 0 && (
+            {tabItems.length > 0 && (
               <div className="relative">
                 <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300" />
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="bg-white border border-gray-200 rounded-lg pl-7 pr-3 py-1.5 text-xs w-36 focus:outline-none focus:ring-1 focus:ring-gray-200" />
               </div>
             )}
             <button onClick={() => setShowModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-lg hover:bg-gray-700 transition-colors">
-              <Plus className="w-3 h-3" /> Novo script
+              <Plus className="w-3 h-3" /> {activeTab === 'oferta' ? 'Nova oferta' : 'Novo script'}
             </button>
           </div>
         </div>
         <div className="bg-white rounded-2xl px-4 flex-1 overflow-y-auto">
           {filtered.length === 0 && !search && (
             <div className="py-10 text-center">
-              <p className="text-sm text-gray-400">Nenhum script criado</p>
-              <p className="text-xs text-gray-300 mt-1">Scripts ensinam a IA a lidar com situações específicas</p>
+              <p className="text-sm text-gray-400">{activeTab === 'oferta' ? 'Nenhuma oferta cadastrada' : 'Nenhum script criado'}</p>
+              <p className="text-xs text-gray-300 mt-1">{activeTab === 'oferta' ? 'Cadastre promoções e combos que a IA pode oferecer aos leads' : 'Scripts ensinam a IA a lidar com situações específicas'}</p>
             </div>
           )}
           {filtered.length === 0 && search && <p className="py-8 text-center text-sm text-gray-400">Nenhum resultado para "{search}"</p>}
@@ -566,7 +625,7 @@ export function IAView({ knowledge, tenant, onRefresh }) {
         </div>
       </div>
 
-      {showModal && <ScriptModal tenant={tenant} item={null} onClose={() => setShowModal(false)} onSuccess={() => { setShowModal(false); onRefresh(); }} />}
+      {showModal && <ScriptModal tenant={tenant} item={null} defaultType={activeTab} onClose={() => setShowModal(false)} onSuccess={() => { setShowModal(false); onRefresh(); }} />}
     </div>
   );
 }
@@ -659,6 +718,25 @@ export function SettingsView({ tenant, onRefresh }) {
   const [savingBh, setSavingBh] = useState(false);
   const [bhSaved, setBhSaved] = useState(false);
 
+  // Resumo Semanal + telefone do dono
+  const [ownerPhone, setOwnerPhone] = useState(tenant.owner_phone || '');
+  const [weeklyEnabled, setWeeklyEnabled] = useState(Number(tenant.weekly_summary_enabled) === 1 || tenant.weekly_summary_enabled === true);
+  const [savingWs, setSavingWs] = useState(false);
+  const [wsSaved, setWsSaved] = useState(false);
+
+  // Perfis comportamentais (tags)
+  const [profiles, setProfiles] = useState(() => {
+    try {
+      const raw = tenant.profile_taxonomy;
+      if (!raw) return [];
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch { return []; }
+  });
+  const [profileDraft, setProfileDraft] = useState('');
+  const [savingProfiles, setSavingProfiles] = useState(false);
+  const [profilesSaved, setProfilesSaved] = useState(false);
+
   const syncProfilePics = async () => {
     setSyncingPics(true); setSyncResult(null);
     try { const r = await api.syncProfilePics(tenant.id); setSyncResult(r); }
@@ -677,6 +755,36 @@ export function SettingsView({ tenant, onRefresh }) {
       if (onRefresh) onRefresh();
     } catch { alert('Erro ao salvar horários'); }
     finally { setSavingBh(false); }
+  };
+
+  const saveWeeklySummary = async () => {
+    setSavingWs(true); setWsSaved(false);
+    try {
+      await api.updateTenant(tenant.id, { ownerPhone: ownerPhone.trim(), weeklySummaryEnabled: weeklyEnabled });
+      setWsSaved(true);
+      setTimeout(() => setWsSaved(false), 2000);
+      if (onRefresh) onRefresh();
+    } catch { alert('Erro ao salvar resumo semanal'); }
+    finally { setSavingWs(false); }
+  };
+
+  const addProfile = () => {
+    const v = profileDraft.trim();
+    if (!v) return;
+    if (profiles.includes(v)) { setProfileDraft(''); return; }
+    setProfiles([...profiles, v]); setProfileDraft('');
+  };
+  const removeProfile = (p) => setProfiles(profiles.filter(x => x !== p));
+
+  const saveProfiles = async () => {
+    setSavingProfiles(true); setProfilesSaved(false);
+    try {
+      await api.updateTenant(tenant.id, { profileTaxonomy: profiles });
+      setProfilesSaved(true);
+      setTimeout(() => setProfilesSaved(false), 2000);
+      if (onRefresh) onRefresh();
+    } catch { alert('Erro ao salvar perfis'); }
+    finally { setSavingProfiles(false); }
   };
 
   return (
@@ -713,6 +821,60 @@ export function SettingsView({ tenant, onRefresh }) {
         </div>
         <button onClick={saveBh} disabled={savingBh} className={`mt-4 px-4 py-2 font-semibold rounded-xl text-sm disabled:opacity-50 transition-colors ${bhSaved ? 'bg-green-600 text-white' : 'bg-gray-900 text-white hover:bg-gray-700'}`}>
           {savingBh ? 'Salvando...' : bhSaved ? '✓ Salvo!' : 'Salvar horários'}
+        </button>
+      </div>
+
+      {/* Resumo Semanal + Telefone do Dono */}
+      <div className="bg-white rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-base">📊</span>
+          <span className="font-semibold text-sm text-gray-800">Resumo Semanal</span>
+        </div>
+        <p className="text-xs text-gray-400 mb-4">Toda segunda-feira você recebe no WhatsApp um resumo da semana anterior (leads novos, conversões, alertas).</p>
+        <div className="space-y-3">
+          <div>
+            <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1.5">Telefone do dono (WhatsApp)</label>
+            <input value={ownerPhone} onChange={e => setOwnerPhone(e.target.value)} placeholder="5511999999999" className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:bg-white focus:ring-1 focus:ring-gray-300" />
+            <p className="text-[10px] text-gray-300 mt-1">Formato internacional, sem espaços ou símbolos. Ex: 5511999999999</p>
+          </div>
+          <label className="flex items-center justify-between gap-2 cursor-pointer">
+            <span className="text-xs text-gray-600">Enviar resumo semanal automaticamente</span>
+            <button type="button" onClick={() => setWeeklyEnabled(v => !v)} className={`w-11 h-6 rounded-full transition-all relative flex-shrink-0 ${weeklyEnabled ? 'bg-purple-500' : 'bg-gray-200'}`}>
+              <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${weeklyEnabled ? 'left-5' : 'left-0.5'}`} />
+            </button>
+          </label>
+          <button onClick={saveWeeklySummary} disabled={savingWs} className={`px-4 py-2 font-semibold rounded-xl text-sm disabled:opacity-50 transition-colors ${wsSaved ? 'bg-green-600 text-white' : 'bg-gray-900 text-white hover:bg-gray-700'}`}>
+            {savingWs ? 'Salvando...' : wsSaved ? '✓ Salvo!' : 'Salvar configuração'}
+          </button>
+        </div>
+      </div>
+
+      {/* Perfis Comportamentais */}
+      <div className="bg-white rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <Brain className="w-4 h-4 text-violet-500" />
+          <span className="font-semibold text-sm text-gray-800">Perfis Comportamentais</span>
+        </div>
+        <p className="text-xs text-gray-400 mb-4">Lista de perfis que a IA pode usar para classificar leads (campo "perfil_comportamental"). Digite e tecle Enter.</p>
+        <div className="flex flex-wrap gap-1.5 mb-2 min-h-[28px]">
+          {profiles.length === 0 && <span className="text-[11px] text-gray-300 italic">Nenhum perfil cadastrado</span>}
+          {profiles.map(p => (
+            <span key={p} className="inline-flex items-center gap-1 text-[11px] bg-violet-50 text-violet-700 rounded-full px-2.5 py-1">
+              {p}
+              <button type="button" onClick={() => removeProfile(p)} className="text-violet-400 hover:text-red-500"><X className="w-3 h-3" /></button>
+            </span>
+          ))}
+        </div>
+        <input
+          value={profileDraft}
+          onChange={e => setProfileDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addProfile(); } else if (e.key === 'Backspace' && !profileDraft && profiles.length) { setProfiles(profiles.slice(0, -1)); } }}
+          onBlur={addProfile}
+          placeholder="Ex: Decidido, Indeciso, Pesquisador de preço..."
+          className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:bg-white focus:ring-1 focus:ring-gray-300 mb-3"
+        />
+        <button onClick={saveProfiles} disabled={savingProfiles} className={`px-4 py-2 font-semibold rounded-xl text-sm disabled:opacity-50 transition-colors ${profilesSaved ? 'bg-green-600 text-white' : 'bg-gray-900 text-white hover:bg-gray-700'}`}>
+          {savingProfiles ? 'Salvando...' : profilesSaved ? '✓ Salvo!' : 'Salvar perfis'}
         </button>
       </div>
 
